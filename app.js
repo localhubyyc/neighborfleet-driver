@@ -4,8 +4,8 @@
 const SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MzM3MDUsImV4cCI6MjA4MzQwOTcwNX0.zWDiVBwgeRDlnvb2FQxAnU-VDX6Yee4EiLmyWHRYYjM';
 
-// Initialize Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// Initialize Supabase Client
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ============================================
 // STATE
@@ -58,12 +58,15 @@ loginForm.addEventListener('submit', async (e) => {
 
     try {
         let formattedPhone = '+1' + phone.slice(-10);
+        console.log('Looking for phone:', formattedPhone);
 
-        const { data: driver, error } = await supabase
+        const { data: driver, error } = await supabaseClient
             .from('drivers')
             .select('*')
             .eq('phone', formattedPhone)
             .single();
+
+        console.log('Query result:', driver, error);
 
         if (error || !driver) {
             showToast('Driver not found. Contact admin.', 'error');
@@ -88,7 +91,7 @@ async function checkExistingSession() {
     if (!driverId) return;
 
     try {
-        const { data: driver, error } = await supabase
+        const { data: driver, error } = await supabaseClient
             .from('drivers')
             .select('*')
             .eq('id', driverId)
@@ -137,7 +140,7 @@ async function setOnline(online) {
     updateStatusUI();
 
     try {
-        await supabase
+        await supabaseClient
             .from('drivers')
             .update({ is_online: online })
             .eq('id', currentDriver.id);
@@ -179,7 +182,7 @@ function startLocationTracking() {
         async (position) => {
             const { latitude, longitude } = position.coords;
             
-            await supabase
+            await supabaseClient
                 .from('drivers')
                 .update({
                     current_lat: latitude,
@@ -188,7 +191,7 @@ function startLocationTracking() {
                 })
                 .eq('id', currentDriver.id);
 
-            await supabase
+            await supabaseClient
                 .from('driver_locations')
                 .insert({
                     driver_id: currentDriver.id,
@@ -213,7 +216,7 @@ function stopLocationTracking() {
 // ============================================
 async function loadOrders() {
     try {
-        const { data: orders, error } = await supabase
+        const { data: orders, error } = await supabaseClient
             .from('deliveries')
             .select('*')
             .eq('driver_id', currentDriver.id)
@@ -232,7 +235,7 @@ async function loadOrders() {
 }
 
 function subscribeToOrders() {
-    supabase
+    supabaseClient
         .channel('deliveries-channel')
         .on('postgres_changes', 
             { 
@@ -350,7 +353,7 @@ function navigate(address) {
 
 async function markPickedUp(orderId) {
     try {
-        await supabase
+        await supabaseClient
             .from('deliveries')
             .update({ 
                 status: 'picked_up',
@@ -403,10 +406,7 @@ async function confirmDelivery() {
     try {
         let photoUrl = null;
 
-        // For now, skip photo upload (we'll add storage later)
-        // Just mark as delivered
-
-        await supabase
+        await supabaseClient
             .from('deliveries')
             .update({ 
                 status: 'delivered',
@@ -437,7 +437,7 @@ async function updateStats() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const { data: completed, error } = await supabase
+        const { data: completed, error } = await supabaseClient
             .from('deliveries')
             .select('*')
             .eq('driver_id', currentDriver.id)
