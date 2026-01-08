@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f0f1a">
+    <title>Track Your Order - NeighborFleet</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #252542;
+            --accent-green: #00d26a;
+            --accent-green-dim: rgba(0, 210, 106, 0.15);
+            --accent-orange: #ff6b35;
+            --accent-blue: #4dabf7;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b8;
+            --text-dim: #6b6b80;
+            --border-color: #353550;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            padding: 1.5rem 0;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+            padding: 0.5rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-badge.pending {
+            background: rgba(255, 107, 53, 0.15);
+            color: var(--accent-orange);
+        }
+
+        .status-badge .dot {
+            width: 8px;
+            height: 8px;
+            background: currentColor;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 800;
+            margin-bottom: 0.25rem;
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* Map Container */
+        .map-container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+            aspect-ratio: 16/10;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dim);
+        }
+
+        .map-placeholder svg {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 0.5rem;
+            fill: var(--text-dim);
+        }
+
+        /* ETA Card */
+        .eta-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .eta-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.25rem;
+        }
+
+        .eta-time {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--accent-green);
+        }
+
+        .eta-time span {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        /* Driver Card */
+        .driver-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .driver-avatar {
+            width: 56px;
+            height: 56px;
+            background: var(--bg-secondary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .driver-avatar svg {
+            width: 28px;
+            height: 28px;
+            fill: var(--text-dim);
+        }
+
+        .driver-avatar img {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .driver-info {
+            flex: 1;
+        }
+
+        .driver-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+
+        .driver-status {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .driver-action {
+            background: var(--accent-green);
+            color: white;
+            border: none;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .driver-action:hover {
+            transform: scale(1.1);
+        }
+
+        .driver-action svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+
+        /* Order Details */
+        .order-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .order-id {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .restaurant-name {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .order-items {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+
+        /* Address */
+        .address-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 1.25rem;
+        }
+
+        .address-label {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5rem;
+        }
+
+        .address-text {
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        /* Progress Steps */
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            padding: 0 1rem;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            flex: 1;
+            position: relative;
+        }
+
+        .step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: var(--border-color);
+            z-index: 0;
+        }
+
+        .step.completed:not(:last-child)::after {
+            background: var(--accent-green);
+        }
+
+        .step-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+        }
+
+        .step.completed .step-icon {
+            background: var(--accent-green);
+        }
+
+        .step.active .step-icon {
+            background: var(--accent-orange);
+            animation: pulse 1.5s infinite;
+        }
+
+        .step-icon svg {
+            width: 12px;
+            height: 12px;
+            fill: white;
+        }
+
+        .step-label {
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            text-align: center;
+        }
+
+        .step.completed .step-label,
+        .step.active .step-label {
+            color: var(--text-secondary);
+        }
+
+        /* Loading State */
+        .loading {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error State */
+        .error {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .error-icon {
+            width: 64px;
+            height: 64px;
+            background: rgba(255, 71, 87, 0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1rem;
+        }
+
+        .error-icon svg {
+            width: 32px;
+            height: 32px;
+            fill: #ff4757;
+        }
+
+        .error h2 {
+            margin-bottom: 0.5rem;
+        }
+
+        .error p {
+            color: var(--text-secondary);
+        }
+
+        /* Delivered State */
+        .delivered-banner {
+            background: var(--accent-green-dim);
+            border: 2px solid var(--accent-green);
+            border-radius: 16px;
+            padding: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        .delivered-banner h2 {
+            color: var(--accent-green);
+            margin-bottom: 0.5rem;
+        }
+
+        .delivered-banner p {
+            color: var(--text-secondary);
+        }
+
+        .delivery-photo {
+            width: 100%;
+            border-radius: 12px;
+            margin-top: 1rem;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 2rem 0;
+            color: var(--text-dim);
+            font-size: 0.8rem;
+        }
+
+        .footer a {
+            color: var(--accent-green);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Loading State -->
+        <div class="loading" id="loadingState">
+            <div class="loading-spinner"></div>
+            <p>Finding your order...</p>
+        </div>
+
+        <!-- Error State -->
+        <div class="error" id="errorState" style="display: none;">
+            <div class="error-icon">
+                <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
+            </div>
+            <h2>Order not found</h2>
+            <p>This tracking link may have expired or is invalid.</p>
+        </div>
+
+        <!-- Main Content -->
+        <div id="mainContent" style="display: none;">
+            <!-- Header -->
+            <div class="header">
+                <div class="status-badge" id="statusBadge">
+                    <span class="dot"></span>
+                    <span id="statusText">On the way</span>
+                </div>
+                <h1 id="headerTitle">Your order is coming!</h1>
+                <p id="headerSubtitle">Estimated arrival in a few minutes</p>
+            </div>
+
+            <!-- Progress Steps -->
+            <div class="progress-steps" id="progressSteps">
+                <div class="step completed" id="step1">
+                    <div class="step-icon">
+                        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    </div>
+                    <span class="step-label">Confirmed</span>
+                </div>
+                <div class="step" id="step2">
+                    <div class="step-icon">
+                        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    </div>
+                    <span class="step-label">Picked Up</span>
+                </div>
+                <div class="step" id="step3">
+                    <div class="step-icon">
+                        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    </div>
+                    <span class="step-label">On the way</span>
+                </div>
+                <div class="step" id="step4">
+                    <div class="step-icon">
+                        <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    </div>
+                    <span class="step-label">Delivered</span>
+                </div>
+            </div>
+
+            <!-- Map -->
+            <div class="map-container">
+                <div id="map">
+                    
+                </div>
+            </div>
+
+            <!-- ETA Card -->
+            <div class="eta-card" id="etaCard">
+                <div class="eta-label">Estimated Arrival</div>
+                <div class="eta-time"><span id="etaTime">--</span> <span>min</span></div>
+            </div>
+
+            <!-- Driver Card -->
+            <div class="driver-card" id="driverCard">
+                <div class="driver-avatar" id="driverAvatar">
+                    <svg viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                </div>
+                <div class="driver-info">
+                    <div class="driver-name" id="driverName">Your driver</div>
+                    <div class="driver-status" id="driverStatus">Picking up your order</div>
+                </div>
+                <button class="driver-action" id="callDriver" title="Message driver">
+                    <svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H6l-2 2V4h16v12z"/></svg>
+                </button>
+            </div>
+
+            <!-- Delivered Banner (hidden by default) -->
+            <div class="delivered-banner" id="deliveredBanner" style="display: none;">
+                <h2>✅ Order Delivered!</h2>
+                <p>Thank you for ordering with NeighborFleet</p>
+                <img class="delivery-photo" id="deliveryPhoto" style="display: none;">
+            </div>
+
+            <!-- Order Details -->
+            <div class="order-card">
+                <div class="order-header">
+                    <div>
+                        <div class="order-id" id="orderId">#ORDER</div>
+                        <div class="restaurant-name" id="restaurantName">Restaurant</div>
+                    </div>
+                </div>
+                <div class="order-items" id="orderItems">
+                    Loading order details...
+                </div>
+            </div>
+
+            <!-- Delivery Address -->
+            <div class="address-card">
+                <div class="address-label">Delivering to</div>
+                <div class="address-text" id="deliveryAddress">Loading address...</div>
+            </div>
+
+            <!-- Footer -->
+            <div class="footer">
+                Powered by <a href="#">NeighborFleet</a><br>
+                Supporting local restaurants 💚
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Maps -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD4T_RiDo2RqzDZNnhoUwwsrEQqf1AjUMs&callback=initMap" async defer></script>
+    
+    <!-- Supabase JS -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        const SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MzM3MDUsImV4cCI6MjA4MzQwOTcwNX0.zWDiVBwgeRDlnvb2FQxAnU-VDX6Yee4EiLmyWHRYYjM';
+        
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // ============================================
+        // STATE
+        // ============================================
+        let currentDelivery = null;
+        let currentDriver = null;
+
+        // ============================================
+        // DOM ELEMENTS
+        // ============================================
+        const loadingState = document.getElementById('loadingState');
+        const errorState = document.getElementById('errorState');
+        const mainContent = document.getElementById('mainContent');
+
+        // ============================================
+        // GET TRACKING TOKEN FROM URL
+        // ============================================
+        function getTrackingToken() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('token');
+        }
+
+        // ============================================
+        // LOAD DELIVERY
+        // ============================================
+        async function loadDelivery() {
+            const token = getTrackingToken();
+            
+            if (!token) {
+                showError();
+                return;
+            }
+
+            try {
+                // Get delivery by tracking token
+                const { data: delivery, error } = await supabaseClient
+                    .from('deliveries')
+                    .select('*')
+                    .eq('tracking_token', token)
+                    .single();
+
+                if (error || !delivery) {
+                    showError();
+                    return;
+                }
+
+                currentDelivery = delivery;
+
+                // Get driver info if assigned
+                if (delivery.driver_id) {
+                    const { data: driver } = await supabaseClient
+                        .from('drivers')
+                        .select('*')
+                        .eq('id', delivery.driver_id)
+                        .single();
+                    
+                    currentDriver = driver;
+                }
+
+                showContent();
+                updateUI();
+                subscribeToUpdates();
+
+            } catch (err) {
+                console.error('Error loading delivery:', err);
+                showError();
+            }
+        }
+
+        // ============================================
+        // SUBSCRIBE TO REALTIME UPDATES
+        // ============================================
+        function subscribeToUpdates() {
+            // Subscribe to delivery updates
+            supabaseClient
+                .channel('tracking-channel')
+                .on('postgres_changes', 
+                    { 
+                        event: '*', 
+                        schema: 'public', 
+                        table: 'deliveries',
+                        filter: `id=eq.${currentDelivery.id}`
+                    }, 
+                    async (payload) => {
+                        console.log('Delivery update:', payload);
+                        currentDelivery = payload.new;
+                        updateUI();
+                    }
+                )
+                .subscribe();
+
+            // Subscribe to driver location updates if assigned
+            if (currentDriver) {
+                supabaseClient
+                    .channel('driver-location-channel')
+                    .on('postgres_changes', 
+                        { 
+                            event: 'UPDATE', 
+                            schema: 'public', 
+                            table: 'drivers',
+                            filter: `id=eq.${currentDriver.id}`
+                        }, 
+                        (payload) => {
+                            console.log('Driver location update:', payload);
+                            currentDriver = payload.new;
+                            updateDriverLocation();
+                        }
+                    )
+                    .subscribe();
+            }
+        }
+
+        // ============================================
+        // UPDATE UI
+        // ============================================
+        function updateUI() {
+            if (!currentDelivery) return;
+
+            // Order details
+            document.getElementById('orderId').textContent = `#${currentDelivery.order_id}`;
+            document.getElementById('restaurantName').textContent = currentDelivery.restaurant_name;
+            document.getElementById('orderItems').textContent = currentDelivery.items_summary || 'Order items';
+            document.getElementById('deliveryAddress').textContent = currentDelivery.customer_address;
+
+            // Driver info
+            if (currentDriver) {
+                document.getElementById('driverName').textContent = currentDriver.name;
+                document.getElementById('driverCard').style.display = 'flex';
+                
+                // WhatsApp link
+                document.getElementById('callDriver').onclick = () => {
+                    const phone = currentDriver.phone.replace('+', '');
+                    window.open(`https://wa.me/${phone}`, '_blank');
+                };
+            } else {
+                document.getElementById('driverCard').style.display = 'none';
+            }
+
+            // Update based on status
+            updateStatus(currentDelivery.status);
+        }
+
+        // ============================================
+        // UPDATE STATUS
+        // ============================================
+        function updateStatus(status) {
+            const statusBadge = document.getElementById('statusBadge');
+            const statusText = document.getElementById('statusText');
+            const headerTitle = document.getElementById('headerTitle');
+            const headerSubtitle = document.getElementById('headerSubtitle');
+            const driverStatus = document.getElementById('driverStatus');
+            const etaCard = document.getElementById('etaCard');
+            const deliveredBanner = document.getElementById('deliveredBanner');
+
+            // Reset steps
+            document.querySelectorAll('.step').forEach(step => {
+                step.classList.remove('completed', 'active');
+            });
+
+            switch (status) {
+                case 'pending':
+                    statusText.textContent = 'Order received';
+                    statusBadge.className = 'status-badge pending';
+                    headerTitle.textContent = 'Preparing your order';
+                    headerSubtitle.textContent = 'Finding a driver for you';
+                    driverStatus.textContent = 'Finding a driver...';
+                    document.getElementById('step1').classList.add('active');
+                    document.getElementById('etaTime').textContent = '--';
+                    break;
+
+                case 'assigned':
+                    statusText.textContent = 'Driver assigned';
+                    statusBadge.className = 'status-badge pending';
+                    headerTitle.textContent = 'Driver on the way to restaurant';
+                    headerSubtitle.textContent = 'Your order will be picked up soon';
+                    driverStatus.textContent = 'Heading to pickup';
+                    document.getElementById('step1').classList.add('completed');
+                    document.getElementById('step2').classList.add('active');
+                    document.getElementById('etaTime').textContent = '15-20';
+                    break;
+
+                case 'picked_up':
+                case 'delivering':
+                    statusText.textContent = 'On the way';
+                    statusBadge.className = 'status-badge';
+                    headerTitle.textContent = 'Your order is on the way!';
+                    headerSubtitle.textContent = 'Driver has picked up your food';
+                    driverStatus.textContent = 'Delivering to you';
+                    document.getElementById('step1').classList.add('completed');
+                    document.getElementById('step2').classList.add('completed');
+                    document.getElementById('step3').classList.add('active');
+                    document.getElementById('etaTime').textContent = '5-10';
+                    break;
+
+                case 'delivered':
+                    statusText.textContent = 'Delivered';
+                    statusBadge.className = 'status-badge';
+                    headerTitle.textContent = 'Order delivered!';
+                    headerSubtitle.textContent = 'Enjoy your meal!';
+                    driverStatus.textContent = 'Delivery completed';
+                    document.querySelectorAll('.step').forEach(step => {
+                        step.classList.add('completed');
+                    });
+                    etaCard.style.display = 'none';
+                    deliveredBanner.style.display = 'block';
+                    
+                    // Show delivery photo if available
+                    if (currentDelivery.delivery_photo_url) {
+                        const photo = document.getElementById('deliveryPhoto');
+                        photo.src = currentDelivery.delivery_photo_url;
+                        photo.style.display = 'block';
+                    }
+                    break;
+            }
+        }
+
+        // ============================================
+        // UPDATE DRIVER LOCATION ON MAP
+        // ============================================
+        function updateDriverLocation() {
+            if (currentDriver && currentDriver.current_lat && currentDriver.current_lng) {
+                console.log('Driver location:', currentDriver.current_lat, currentDriver.current_lng);
+                updateDriverMarker();
+            }
+        }
+
+        // ============================================
+        // GOOGLE MAPS
+        // ============================================
+        let map = null;
+        let driverMarker = null;
+        let customerMarker = null;
+
+        window.initMap = function() {
+            const defaultCenter = { lat: 51.1284, lng: -113.9490 };
+            
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 13,
+                center: defaultCenter,
+                disableDefaultUI: true,
+                zoomControl: true,
+                styles: [
+                    { elementType: "geometry", stylers: [{ color: "#1a1a2e" }] },
+                    { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a2e" }] },
+                    { elementType: "labels.text.fill", stylers: [{ color: "#6b6b80" }] },
+                    { featureType: "road", elementType: "geometry", stylers: [{ color: "#353550" }] },
+                    { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#8a8a8a" }] },
+                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e0e1a" }] }
+                ]
+            });
+
+            // Update map once data is loaded
+            setTimeout(() => {
+                if (currentDelivery) updateMapWithLocations();
+            }, 1000);
+        }
+
+        function updateMapWithLocations() {
+            if (!map || !currentDelivery) return;
+
+            const customerLat = parseFloat(currentDelivery.customer_lat);
+            const customerLng = parseFloat(currentDelivery.customer_lng);
+
+            if (customerLat && customerLng) {
+                const customerPos = { lat: customerLat, lng: customerLng };
+                
+                if (!customerMarker) {
+                    customerMarker = new google.maps.Marker({
+                        position: customerPos,
+                        map: map,
+                        icon: {
+                            url: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#00d26a" stroke="white" stroke-width="2"/><path d="M12 7v5l3 3" stroke="white" stroke-width="2" fill="none"/></svg>'),
+                            scaledSize: new google.maps.Size(32, 32)
+                        },
+                        title: 'Delivery Location'
+                    });
+                }
+                map.setCenter(customerPos);
+            }
+
+            updateDriverMarker();
+        }
+
+        function updateDriverMarker() {
+            if (!map || !currentDriver) return;
+
+            const driverLat = parseFloat(currentDriver.current_lat);
+            const driverLng = parseFloat(currentDriver.current_lng);
+
+            if (!driverLat || !driverLng) return;
+
+            const driverPos = { lat: driverLat, lng: driverLng };
+
+            if (driverMarker) {
+                driverMarker.setPosition(driverPos);
+            } else {
+                driverMarker = new google.maps.Marker({
+                    position: driverPos,
+                    map: map,
+                    icon: {
+                        url: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" fill="#ff6b35"/></svg>'),
+                        scaledSize: new google.maps.Size(40, 40)
+                    },
+                    title: currentDriver.name
+                });
+            }
+
+            // Fit bounds if both markers exist
+            if (customerMarker) {
+                const bounds = new google.maps.LatLngBounds();
+                bounds.extend(driverPos);
+                bounds.extend(customerMarker.getPosition());
+                map.fitBounds(bounds, { padding: 60 });
+            }
+        }
+
+        // ============================================
+        // SHOW/HIDE STATES
+        // ============================================
+        function showContent() {
+            loadingState.style.display = 'none';
+            errorState.style.display = 'none';
+            mainContent.style.display = 'block';
+        }
+
+        function showError() {
+            loadingState.style.display = 'none';
+            errorState.style.display = 'block';
+            mainContent.style.display = 'none';
+        }
+
+        // ============================================
+        // INITIALIZE
+        // ============================================
+        loadDelivery();
+    </script>
+</body>
+</html>
