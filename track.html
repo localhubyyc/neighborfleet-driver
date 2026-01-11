@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0f0f1a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <title>Track Your Order - YYC LocalFirst</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-secondary: #1a1a2e;
+            --bg-card: #252542;
+            --accent-green: #00d26a;
+            --accent-green-dim: rgba(0, 210, 106, 0.15);
+            --accent-orange: #ff6b35;
+            --accent-blue: #4dabf7;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b8;
+            --text-dim: #6b6b80;
+            --border-color: #353550;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 0.75rem;
+        }
+
+        /* Logo */
+        .app-logo {
+            text-align: center;
+            padding: 0.5rem 0;
+        }
+
+        .logo-text {
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+
+        .logo-yyc {
+            background: linear-gradient(135deg, #00d26a, #00a854);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Status Header */
+        .status-header {
+            text-align: center;
+            padding: 0.75rem 0;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+            padding: 0.4rem 1rem;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .status-badge .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background: currentColor;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .status-header h1 {
+            font-size: 1.35rem;
+            font-weight: 800;
+            margin-bottom: 0.2rem;
+        }
+
+        .status-header p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Progress Steps */
+        .progress-container {
+            padding: 0.5rem 0.5rem 1rem;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 14px;
+            left: 40px;
+            right: 40px;
+            height: 3px;
+            background: var(--border-color);
+            z-index: 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-green);
+            width: 75%;
+            transition: width 0.5s ease;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.4rem;
+            z-index: 1;
+        }
+
+        .step-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            transition: all 0.3s;
+        }
+
+        .step.completed .step-icon {
+            background: var(--accent-green);
+        }
+
+        .step.active .step-icon {
+            background: var(--accent-orange);
+            box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.3);
+        }
+
+        .step-label {
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-align: center;
+            font-weight: 500;
+        }
+
+        .step.completed .step-label,
+        .step.active .step-label {
+            color: var(--text-secondary);
+        }
+
+        /* Map */
+        .map-container {
+            background: var(--bg-card);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 0.75rem;
+            height: 320px;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        .map-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(15, 15, 26, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 0.6rem 0.9rem;
+            z-index: 100;
+        }
+
+        .eta-label {
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .eta-value {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--accent-green);
+        }
+
+        .eta-value span {
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .speed-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--accent-orange);
+            color: white;
+            padding: 0.35rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            z-index: 100;
+        }
+
+        .route-info {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            right: 10px;
+            background: rgba(15, 15, 26, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            padding: 0.5rem 0.75rem;
+            z-index: 100;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+        }
+
+        .route-info .label {
+            color: var(--text-dim);
+        }
+
+        .route-info .value {
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        /* Driver Card */
+        .driver-card {
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 0.9rem;
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+        }
+
+        .driver-avatar {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, #4dabf7, #228be6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: white;
+            flex-shrink: 0;
+        }
+
+        .driver-info {
+            flex: 1;
+        }
+
+        .driver-name {
+            font-size: 1rem;
+            font-weight: 700;
+            margin-bottom: 0.1rem;
+        }
+
+        .driver-vehicle {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .driver-rating {
+            color: #fbbf24;
+            font-size: 0.75rem;
+            margin-top: 0.15rem;
+        }
+
+        .call-btn {
+            width: 42px;
+            height: 42px;
+            background: var(--accent-green);
+            border: none;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+
+        .call-btn:hover {
+            transform: scale(1.1);
+            background: #00b85c;
+        }
+
+        .call-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+        }
+
+        /* Order Card */
+        .order-card {
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 0.9rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.6rem;
+            padding-bottom: 0.6rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .restaurant-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .order-total {
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+
+        .order-items {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Address Cards */
+        .addresses {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .address-card {
+            background: var(--bg-card);
+            border-radius: 14px;
+            padding: 0.75rem;
+        }
+
+        .address-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 0.4rem;
+            font-size: 0.9rem;
+        }
+
+        .address-icon.pickup {
+            background: rgba(255, 107, 53, 0.15);
+        }
+
+        .address-icon.delivery {
+            background: var(--accent-green-dim);
+        }
+
+        .address-label {
+            font-size: 0.6rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.2rem;
+        }
+
+        .address-text {
+            font-size: 0.8rem;
+            font-weight: 500;
+            line-height: 1.3;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 1rem 0;
+            color: var(--text-dim);
+            font-size: 0.75rem;
+        }
+
+        .footer a {
+            color: var(--accent-green);
+            text-decoration: none;
+        }
+
+        /* Demo Badge */
+        .demo-badge {
+            position: fixed;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #00d26a, #00a854);
+            color: white;
+            padding: 0.3rem 1rem;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            z-index: 1000;
+            box-shadow: 0 2px 10px rgba(0, 210, 106, 0.3);
+        }
+
+        /* Loading overlay */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--bg-card);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="demo-badge">🚀 Live Demo - 10x Speed</div>
+    
+    <div class="container">
+        <!-- Logo -->
+        <div class="app-logo">
+            <span class="logo-text">
+                <span class="logo-yyc">YYC</span> LocalFirst
+            </span>
+        </div>
+
+        <!-- Status -->
+        <div class="status-header">
+            <div class="status-badge">
+                <span class="pulse-dot"></span>
+                <span id="statusText">On the way</span>
+            </div>
+            <h1 id="mainStatus">Your driver is en route</h1>
+            <p id="subStatus">Raj is heading to your location</p>
+        </div>
+
+        <!-- Progress Steps -->
+        <div class="progress-container">
+            <div class="progress-steps">
+                <div class="progress-line"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="step completed">
+                    <div class="step-icon">✓</div>
+                    <div class="step-label">Ordered</div>
+                </div>
+                <div class="step completed">
+                    <div class="step-icon">✓</div>
+                    <div class="step-label">Preparing</div>
+                </div>
+                <div class="step completed">
+                    <div class="step-icon">✓</div>
+                    <div class="step-label">Picked Up</div>
+                </div>
+                <div class="step active" id="deliveryStep">
+                    <div class="step-icon">🚗</div>
+                    <div class="step-label">Delivering</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map -->
+        <div class="map-container">
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">Loading route...</div>
+            </div>
+            <div class="map-overlay">
+                <div class="eta-label">Arriving in</div>
+                <div class="eta-value" id="etaValue">-- <span>min</span></div>
+            </div>
+            <div class="speed-badge">10x SPEED</div>
+            <div class="route-info">
+                <div><span class="label">Distance:</span> <span class="value" id="distanceValue">-- km</span></div>
+                <div><span class="label">Via:</span> <span class="value" id="routeVia">Loading...</span></div>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <!-- Driver Card -->
+        <div class="driver-card">
+            <div class="driver-avatar">RS</div>
+            <div class="driver-info">
+                <div class="driver-name">Raj Singh</div>
+                <div class="driver-vehicle">Red Toyota Camry • CYY 4R2</div>
+                <div class="driver-rating">⭐ 4.9 (243 deliveries)</div>
+            </div>
+            <button class="call-btn" onclick="alert('Demo mode - calling disabled')">
+                <svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+            </button>
+        </div>
+
+        <!-- Order Card -->
+        <div class="order-card">
+            <div class="order-header">
+                <div class="restaurant-name">🍕 AB King Pizza</div>
+                <div class="order-total">$42.99</div>
+            </div>
+            <div class="order-items">
+                1× Super Loaded Pizza (Large) • 1× Meat Lovers (Medium)<br>
+                1× Garlic Bread • 2× Coke
+            </div>
+        </div>
+
+        <!-- Address Cards -->
+        <div class="addresses">
+            <div class="address-card">
+                <div class="address-icon pickup">🏢</div>
+                <div class="address-label">Picked up from</div>
+                <div class="address-text">Suncor Energy Centre<br>150 6 Ave SW</div>
+            </div>
+            <div class="address-card">
+                <div class="address-icon delivery">🏠</div>
+                <div class="address-label">Delivering to</div>
+                <div class="address-text">36 Sherwood Rise NW<br>Calgary</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            Powered by <a href="#">YYC LocalFirst</a> • 15% commission, supporting local 💚
+        </div>
+    </div>
+
+    <!-- Google Maps with Directions API -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD4T_RiDo2RqzDZNnhoUwwsrEQqf1AjUMs&libraries=geometry&callback=initMap" async defer></script>
+    
+    <script>
+        // ============================================
+        // LOCATIONS
+        // ============================================
+        const START_ADDRESS = "Suncor Energy Centre, 150 6 Ave SW, Calgary, AB";
+        const END_ADDRESS = "36 Sherwood Rise NW, Calgary, AB";
+        
+        const START_POS = { lat: 51.0453, lng: -114.0713 }; // Suncor Energy Centre
+        const END_POS = { lat: 51.1078, lng: -114.1347 };   // 36 Sherwood Rise NW
+        
+        // ============================================
+        // RED CAR ICON - Your original image
+        // ============================================
+        const RED_CAR_ICON = 'data:image/png;base64,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';
+
+        // ============================================
+        // GLOBALS
+        // ============================================
+        let map = null;
+        let carMarker = null;
+        let directionsService = null;
+        let directionsRenderer = null;
+        let routePath = [];
+        let currentIndex = 0;
+        let lastBearing = 0;
+        let totalDistance = 0;
+        let totalDuration = 0;
+
+        // ============================================
+        // INITIALIZE MAP
+        // ============================================
+        function initMap() {
+            const center = { lat: 51.0750, lng: -114.1000 };
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
+                center: center,
+                disableDefaultUI: true,
+                styles: [
+                    { elementType: "geometry", stylers: [{ color: "#1a1a2e" }] },
+                    { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a2e" }] },
+                    { elementType: "labels.text.fill", stylers: [{ color: "#6b6b80" }] },
+                    { featureType: "road", elementType: "geometry", stylers: [{ color: "#353550" }] },
+                    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#454560" }] },
+                    { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#8a8a8a" }] },
+                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e0e1a" }] },
+                    { featureType: "poi", stylers: [{ visibility: "off" }] },
+                    { featureType: "transit", stylers: [{ visibility: "off" }] }
+                ]
+            });
+
+            // Initialize Directions Service
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({
+                map: map,
+                suppressMarkers: true,
+                polylineOptions: {
+                    strokeColor: '#00d26a',
+                    strokeOpacity: 0.7,
+                    strokeWeight: 5
+                }
+            });
+
+            // Get real route
+            calculateRoute();
+        }
+
+        // ============================================
+        // GET REAL ROUTE FROM GOOGLE DIRECTIONS
+        // ============================================
+        function calculateRoute() {
+            const request = {
+                origin: START_POS,
+                destination: END_POS,
+                travelMode: google.maps.TravelMode.DRIVING
+            };
+
+            directionsService.route(request, (result, status) => {
+                if (status === 'OK') {
+                    directionsRenderer.setDirections(result);
+                    
+                    // Extract route points
+                    const route = result.routes[0];
+                    const leg = route.legs[0];
+                    
+                    // Get distance and duration
+                    totalDistance = leg.distance.value / 1000; // km
+                    totalDuration = leg.duration.value / 60; // minutes
+                    
+                    document.getElementById('distanceValue').textContent = totalDistance.toFixed(1) + ' km';
+                    document.getElementById('etaValue').innerHTML = Math.round(totalDuration) + ' <span>min</span>';
+                    
+                    // Get route via
+                    if (leg.steps.length > 0) {
+                        const mainRoad = leg.steps.find(s => s.instructions.includes('Centre St') || s.instructions.includes('Crowchild') || s.instructions.includes('Deerfoot'));
+                        if (mainRoad) {
+                            const match = mainRoad.instructions.match(/onto (.+?)(?:<|$)/);
+                            if (match) {
+                                document.getElementById('routeVia').textContent = match[1].substring(0, 20);
+                            }
+                        } else {
+                            document.getElementById('routeVia').textContent = 'City Streets';
+                        }
+                    }
+                    
+                    // Extract all points from the route for smooth animation
+                    routePath = [];
+                    route.overview_path.forEach(point => {
+                        routePath.push({ lat: point.lat(), lng: point.lng() });
+                    });
+                    
+                    // Add more points for smoother animation (interpolate between points)
+                    routePath = interpolateRoute(routePath, 200); // ~200 points total
+                    
+                    // Add markers
+                    addMarkers();
+                    
+                    // Create car marker
+                    createCarMarker();
+                    
+                    // Hide loading
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                    
+                    // Start animation after delay
+                    setTimeout(startAnimation, 1500);
+                } else {
+                    console.error('Directions failed:', status);
+                    document.getElementById('loadingOverlay').innerHTML = '<div class="loading-text">Route error. Refresh page.</div>';
+                }
+            });
+        }
+
+        // ============================================
+        // INTERPOLATE ROUTE FOR SMOOTHER ANIMATION
+        // ============================================
+        function interpolateRoute(path, targetPoints) {
+            if (path.length >= targetPoints) return path;
+            
+            const result = [];
+            const pointsPerSegment = Math.ceil(targetPoints / path.length);
+            
+            for (let i = 0; i < path.length - 1; i++) {
+                const start = path[i];
+                const end = path[i + 1];
+                
+                for (let j = 0; j < pointsPerSegment; j++) {
+                    const t = j / pointsPerSegment;
+                    result.push({
+                        lat: start.lat + (end.lat - start.lat) * t,
+                        lng: start.lng + (end.lng - start.lng) * t
+                    });
+                }
+            }
+            result.push(path[path.length - 1]);
+            
+            return result;
+        }
+
+        // ============================================
+        // ADD MARKERS
+        // ============================================
+        function addMarkers() {
+            // Start marker (Suncor)
+            new google.maps.Marker({
+                position: START_POS,
+                map: map,
+                icon: {
+                    url: 'data:image/svg+xml,' + encodeURIComponent(`
+                        <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="20" cy="20" r="16" fill="#ff6b35" stroke="#fff" stroke-width="2"/>
+                            <text x="20" y="26" text-anchor="middle" font-size="14">🏢</text>
+                        </svg>
+                    `),
+                    scaledSize: new google.maps.Size(40, 40),
+                    anchor: new google.maps.Point(20, 20)
+                },
+                title: 'Suncor Energy Centre'
+            });
+
+            // End marker (Sherwood Rise)
+            new google.maps.Marker({
+                position: END_POS,
+                map: map,
+                icon: {
+                    url: 'data:image/svg+xml,' + encodeURIComponent(`
+                        <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                            <circle cx="20" cy="20" r="16" fill="#00d26a" stroke="#fff" stroke-width="2"/>
+                            <text x="20" y="26" text-anchor="middle" font-size="14">🏠</text>
+                        </svg>
+                    `),
+                    scaledSize: new google.maps.Size(40, 40),
+                    anchor: new google.maps.Point(20, 20)
+                },
+                title: '36 Sherwood Rise NW'
+            });
+        }
+
+        // ============================================
+        // CREATE CAR MARKER - RED CAR IMAGE
+        // ============================================
+        function createCarMarker() {
+            carMarker = new google.maps.Marker({
+                position: routePath[0],
+                map: map,
+                icon: createCarIcon(0),
+                zIndex: 1000
+            });
+        }
+
+        function createCarIcon(bearing) {
+            // Rotate the car image based on bearing
+            // Car image points RIGHT (90°), so subtract 90 from bearing
+            const rotation = bearing - 90;
+            return {
+                url: 'data:image/svg+xml,' + encodeURIComponent(`
+                    <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60">
+                        <g transform="rotate(${rotation}, 30, 30)">
+                            <image href="${RED_CAR_ICON}" x="5" y="5" width="50" height="50"/>
+                        </g>
+                    </svg>
+                `),
+                scaledSize: new google.maps.Size(60, 60),
+                anchor: new google.maps.Point(30, 30)
+            };
+        }
+
+        // ============================================
+        // BEARING CALCULATION
+        // ============================================
+        function getBearing(from, to) {
+            const dLng = (to.lng - from.lng) * Math.PI / 180;
+            const lat1 = from.lat * Math.PI / 180;
+            const lat2 = to.lat * Math.PI / 180;
+            
+            const y = Math.sin(dLng) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+            
+            return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+        }
+
+        // ============================================
+        // ANIMATION - 10x SPEED (~3 min for full route)
+        // ============================================
+        const MOVE_DURATION = 100; // ms per point at 10x speed
+        let moveStart = null;
+        let fromPos = null;
+        let toPos = null;
+
+        function startAnimation() {
+            currentIndex = 0;
+            animate();
+        }
+
+        function animate() {
+            if (currentIndex >= routePath.length - 1) {
+                showDelivered();
+                return;
+            }
+
+            fromPos = routePath[currentIndex];
+            toPos = routePath[currentIndex + 1];
+            moveStart = performance.now();
+
+            // Update bearing
+            const bearing = getBearing(fromPos, toPos);
+            if (Math.abs(bearing - lastBearing) > 10) {
+                lastBearing = bearing;
+                carMarker.setIcon(createCarIcon(bearing));
+            }
+
+            // Update ETA and distance
+            const progress = currentIndex / routePath.length;
+            const remainingMin = Math.max(1, Math.round(totalDuration * (1 - progress)));
+            const remainingKm = (totalDistance * (1 - progress)).toFixed(1);
+            document.getElementById('etaValue').innerHTML = remainingMin + ' <span>min</span>';
+            document.getElementById('distanceValue').textContent = remainingKm + ' km';
+
+            requestAnimationFrame(step);
+        }
+
+        function step(timestamp) {
+            const elapsed = timestamp - moveStart;
+            const progress = Math.min(elapsed / MOVE_DURATION, 1);
+            
+            // Smooth easing (ease-in-out)
+            const ease = progress < 0.5 
+                ? 2 * progress * progress 
+                : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+            const lat = fromPos.lat + (toPos.lat - fromPos.lat) * ease;
+            const lng = fromPos.lng + (toPos.lng - fromPos.lng) * ease;
+            
+            carMarker.setPosition({ lat, lng });
+
+            // Pan map to follow car every 10 points
+            if (currentIndex % 10 === 0) {
+                map.panTo({ lat, lng });
+            }
+
+            if (progress < 1) {
+                requestAnimationFrame(step);
+            } else {
+                currentIndex++;
+                animate();
+            }
+        }
+
+        function showDelivered() {
+            document.getElementById('statusText').textContent = 'Delivered!';
+            document.getElementById('mainStatus').textContent = 'Order Delivered! 🎉';
+            document.getElementById('subStatus').textContent = 'Enjoy your meal!';
+            document.getElementById('etaValue').innerHTML = '0 <span>min</span>';
+            document.getElementById('distanceValue').textContent = '0 km';
+            document.getElementById('progressFill').style.width = '100%';
+            
+            const step = document.getElementById('deliveryStep');
+            step.classList.remove('active');
+            step.classList.add('completed');
+            step.querySelector('.step-icon').textContent = '✓';
+
+            // Center on destination
+            map.setZoom(16);
+            map.panTo(END_POS);
+
+            // Restart demo after 5 seconds
+            setTimeout(() => location.reload(), 5000);
+        }
+    </script>
+</body>
+</html>
