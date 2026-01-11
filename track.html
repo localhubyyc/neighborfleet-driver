@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Track Your Order - YYC LocalFirst</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-card: #252542;
+            --accent-green: #00d26a;
+            --accent-green-dim: rgba(0, 210, 106, 0.15);
+            --accent-orange: #ff6b35;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b8;
+            --text-dim: #6b6b80;
+            --border-color: #353550;
+        }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; }
+        .container { max-width: 500px; margin: 0 auto; padding: 0.75rem; }
+        .app-logo { text-align: center; padding: 0.5rem 0; }
+        .logo-text { font-size: 1.3rem; font-weight: 800; }
+        .logo-yyc { background: linear-gradient(135deg, #00d26a, #00a854); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        .status-header { text-align: center; padding: 0.75rem 0; }
+        .status-badge { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--accent-green-dim); color: var(--accent-green); padding: 0.4rem 1rem; border-radius: 50px; font-weight: 600; font-size: 0.85rem; }
+        .status-badge.preparing { background: rgba(255, 107, 53, 0.15); color: var(--accent-orange); }
+        .status-badge.delivered { background: rgba(0, 210, 106, 0.3); }
+        .pulse-dot { width: 8px; height: 8px; background: currentColor; border-radius: 50%; animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .status-header h1 { font-size: 1.35rem; font-weight: 800; margin: 0.5rem 0 0.2rem; }
+        .status-header p { color: var(--text-secondary); font-size: 0.9rem; }
+        
+        .progress-container { padding: 0.5rem 0.5rem 1rem; }
+        .progress-steps { display: flex; justify-content: space-between; position: relative; }
+        .progress-line { position: absolute; top: 14px; left: 40px; right: 40px; height: 3px; background: var(--border-color); }
+        .progress-fill { height: 100%; background: var(--accent-green); width: 0%; transition: width 0.5s; }
+        .step { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; z-index: 1; }
+        .step-icon { width: 28px; height: 28px; border-radius: 50%; background: var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+        .step.completed .step-icon { background: var(--accent-green); }
+        .step.active .step-icon { background: var(--accent-orange); box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.3); }
+        .step-label { font-size: 0.65rem; color: var(--text-dim); font-weight: 500; }
+        .step.completed .step-label, .step.active .step-label { color: var(--text-secondary); }
+
+        .map-container { background: var(--bg-card); border-radius: 16px; overflow: hidden; margin-bottom: 0.75rem; height: 300px; position: relative; }
+        #map { width: 100%; height: 100%; }
+        .map-overlay { position: absolute; top: 10px; left: 10px; background: rgba(15, 15, 26, 0.95); border-radius: 12px; padding: 0.6rem 0.9rem; z-index: 100; }
+        .eta-label { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; }
+        .eta-value { font-size: 1.4rem; font-weight: 800; color: var(--accent-green); }
+        .eta-value span { font-size: 0.8rem; font-weight: 600; }
+        .mode-badge { position: absolute; top: 10px; right: 10px; background: var(--accent-orange); color: white; padding: 0.35rem 0.6rem; border-radius: 6px; font-size: 0.65rem; font-weight: 700; z-index: 100; }
+        .route-info { position: absolute; bottom: 10px; left: 10px; right: 10px; background: rgba(15, 15, 26, 0.95); border-radius: 10px; padding: 0.5rem 0.75rem; z-index: 100; display: flex; justify-content: space-between; font-size: 0.75rem; }
+        .route-info .label { color: var(--text-dim); }
+        .route-info .value { color: var(--text-primary); font-weight: 600; }
+
+        .driver-card { background: var(--bg-card); border-radius: 14px; padding: 0.9rem; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.9rem; }
+        .driver-card.hidden { display: none; }
+        .driver-avatar { width: 52px; height: 52px; border-radius: 50%; overflow: hidden; flex-shrink: 0; background: linear-gradient(135deg, #4dabf7, #228be6); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 700; color: white; }
+        .driver-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .driver-info { flex: 1; }
+        .driver-name { font-size: 1rem; font-weight: 700; }
+        .driver-vehicle { font-size: 0.8rem; color: var(--text-secondary); }
+        .driver-rating { font-size: 0.75rem; margin-top: 0.15rem; }
+        .driver-rating .stars { color: #fbbf24; letter-spacing: 1px; }
+        .call-btn { width: 42px; height: 42px; background: var(--accent-green); border: none; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .call-btn svg { width: 20px; height: 20px; fill: white; }
+
+        .order-card { background: var(--bg-card); border-radius: 14px; padding: 0.9rem; margin-bottom: 0.75rem; }
+        .order-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.6rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border-color); }
+        .restaurant-name { font-weight: 700; font-size: 0.95rem; }
+        .order-total { font-weight: 700; color: var(--accent-green); }
+        .order-items { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
+
+        .addresses { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .address-card { background: var(--bg-card); border-radius: 14px; padding: 0.75rem; }
+        .address-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.4rem; font-size: 0.9rem; }
+        .address-icon.pickup { background: rgba(255, 107, 53, 0.15); }
+        .address-icon.delivery { background: var(--accent-green-dim); }
+        .address-label { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.2rem; }
+        .address-text { font-size: 0.8rem; font-weight: 500; line-height: 1.3; }
+
+        .footer { text-align: center; padding: 1rem 0; color: var(--text-dim); font-size: 0.75rem; }
+        .footer a { color: var(--accent-green); text-decoration: none; }
+
+        /* Loading & Error States */
+        .state-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: var(--bg-primary); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        .state-screen.hidden { display: none; }
+        .loading-spinner { width: 50px; height: 50px; border: 4px solid var(--border-color); border-top-color: var(--accent-green); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .state-text { margin-top: 1.5rem; color: var(--text-secondary); font-size: 1rem; }
+        .error-icon { font-size: 4rem; margin-bottom: 1rem; }
+        .error-btn { margin-top: 1.5rem; padding: 0.75rem 2rem; background: var(--accent-green); color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <!-- Loading State -->
+    <div class="state-screen" id="loadingState">
+        <div class="loading-spinner"></div>
+        <div class="state-text">Loading your order...</div>
+    </div>
+
+    <!-- Error State -->
+    <div class="state-screen hidden" id="errorState">
+        <div class="error-icon">😕</div>
+        <div class="state-text">Order not found</div>
+        <p style="color: var(--text-dim); margin-top: 0.5rem; font-size: 0.9rem;">The tracking link may have expired</p>
+        <button class="error-btn" onclick="location.reload()">Try Again</button>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container" id="mainContent" style="display: none;">
+        <div class="app-logo"><span class="logo-text"><span class="logo-yyc">YYC</span> LocalFirst</span></div>
+
+        <div class="status-header">
+            <div class="status-badge" id="statusBadge"><span class="pulse-dot"></span><span id="statusText">Loading...</span></div>
+            <h1 id="mainStatus">Loading...</h1>
+            <p id="subStatus">Please wait...</p>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-steps">
+                <div class="progress-line"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="step" id="step1"><div class="step-icon">1</div><div class="step-label">Ordered</div></div>
+                <div class="step" id="step2"><div class="step-icon">2</div><div class="step-label">Preparing</div></div>
+                <div class="step" id="step3"><div class="step-icon">3</div><div class="step-label">Picked Up</div></div>
+                <div class="step" id="step4"><div class="step-icon">4</div><div class="step-label">Delivered</div></div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div class="map-overlay">
+                <div class="eta-label">Arriving in</div>
+                <div class="eta-value" id="etaValue">-- <span>min</span></div>
+            </div>
+            <div class="mode-badge" id="modeBadge">LIVE</div>
+            <div class="route-info">
+                <div><span class="label">Distance:</span> <span class="value" id="distanceValue">-- km</span></div>
+                <div><span class="label">Order:</span> <span class="value" id="orderIdDisplay">#---</span></div>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <div class="driver-card hidden" id="driverCard">
+            <div class="driver-avatar" id="driverAvatar">RS</div>
+            <div class="driver-info">
+                <div class="driver-name" id="driverName">Driver Name</div>
+                <div class="driver-vehicle" id="driverVehicle">Vehicle Info</div>
+                <div class="driver-rating"><span class="stars">★★★★</span>★ <span id="driverRating">4.9</span></div>
+            </div>
+            <button class="call-btn" id="callDriver">
+                <svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+            </button>
+        </div>
+
+        <div class="order-card">
+            <div class="order-header">
+                <div class="restaurant-name" id="restaurantName">🍕 Restaurant</div>
+                <div class="order-total" id="orderTotal">$0.00</div>
+            </div>
+            <div class="order-items" id="orderItems">Loading order details...</div>
+        </div>
+
+        <div class="addresses">
+            <div class="address-card">
+                <div class="address-icon pickup">🏪</div>
+                <div class="address-label">Picked up from</div>
+                <div class="address-text" id="pickupAddress">Restaurant Address</div>
+            </div>
+            <div class="address-card">
+                <div class="address-icon delivery">🏠</div>
+                <div class="address-label">Delivering to</div>
+                <div class="address-text" id="deliveryAddress">Your Address</div>
+            </div>
+        </div>
+
+        <div class="footer">Powered by <a href="#">YYC LocalFirst</a> • 15% commission, supporting local 💚</div>
+    </div>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Google Maps -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD4T_RiDo2RqzDZNnhoUwwsrEQqf1AjUMs&libraries=geometry&callback=mapsReady" async defer></script>
+    
+    <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        const SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg5OTMxNjEsImV4cCI6MjA2NDU2OTE2MX0.3chHvTDFHmRFzOF5q4Oq6XlhLPKKJ-K1n_ckkimNvNM';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Red car icon - DO NOT CHANGE
+        const carImageBase64 = 'data:image/png;base64,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';
+
+        // ============================================
+        // STATE
+        // ============================================
+        let currentOrder = null;
+        let currentDriver = null;
+        let isDemo = false;
+        let map, carMarker, directionsService, directionsRenderer;
+        let routePath = [], currentRouteIndex = 0, lastBearing = 0;
+
+        // Demo data
+        const DEMO_ORDER = {
+            id: 'DEMO-001',
+            status: 'out_for_delivery',
+            restaurant_name: 'AB King Pizza',
+            restaurant_address: 'Suncor Energy Centre, 150 6 Ave SW',
+            restaurant_lat: 51.0453,
+            restaurant_lng: -114.0713,
+            customer_address: '36 Sherwood Rise NW, Calgary',
+            customer_lat: 51.1078,
+            customer_lng: -114.1347,
+            items_summary: '1× Super Loaded Pizza (Large) • 1× Meat Lovers (Medium) • 1× Garlic Bread • 2× Coke',
+            total: 42.99
+        };
+
+        const DEMO_DRIVER = {
+            id: 'DEMO-DRV',
+            name: 'Raj Singh',
+            phone: '+14035551234',
+            photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&h=100&fit=crop&crop=face',
+            vehicle_color: 'Red',
+            vehicle_model: 'Toyota Camry',
+            license_plate: 'CYY 4R2',
+            rating: 4.9,
+            deliveries_count: 243,
+            current_lat: 51.0453,
+            current_lng: -114.0713
+        };
+
+        // ============================================
+        // MAPS READY CALLBACK
+        // ============================================
+        let mapsLoaded = false;
+        
+        function mapsReady() {
+            mapsLoaded = true;
+            initApp();
+        }
+
+        // ============================================
+        // INIT APP
+        // ============================================
+        async function initApp() {
+            const params = new URLSearchParams(window.location.search);
+            const token = params.get('token');
+            isDemo = !token || params.get('demo') === 'true';
+
+            if (isDemo) {
+                // DEMO MODE
+                currentOrder = DEMO_ORDER;
+                currentDriver = DEMO_DRIVER;
+                document.getElementById('modeBadge').textContent = '10x DEMO';
+                showMainContent();
+                initMap();
+            } else {
+                // REAL MODE - fetch from database
+                await loadRealOrder(token);
+            }
+        }
+
+        // ============================================
+        // LOAD REAL ORDER FROM DATABASE
+        // ============================================
+        async function loadRealOrder(token) {
+            try {
+                // Get delivery by tracking token
+                const { data: delivery, error } = await supabase
+                    .from('deliveries')
+                    .select('*, orders(*)')
+                    .eq('tracking_token', token)
+                    .single();
+
+                if (error || !delivery) {
+                    showError();
+                    return;
+                }
+
+                // Map to our format
+                currentOrder = {
+                    id: delivery.order_id,
+                    status: delivery.status,
+                    restaurant_name: delivery.orders?.restaurant_name || 'Restaurant',
+                    restaurant_address: delivery.pickup_address,
+                    restaurant_lat: delivery.pickup_lat,
+                    restaurant_lng: delivery.pickup_lng,
+                    customer_address: delivery.dropoff_address,
+                    customer_lat: delivery.dropoff_lat,
+                    customer_lng: delivery.dropoff_lng,
+                    items_summary: delivery.orders?.items_summary || 'Order items',
+                    total: delivery.orders?.total || 0
+                };
+
+                // Get driver if assigned
+                if (delivery.driver_id) {
+                    const { data: driver } = await supabase
+                        .from('drivers')
+                        .select('*')
+                        .eq('id', delivery.driver_id)
+                        .single();
+                    
+                    if (driver) {
+                        currentDriver = driver;
+                    }
+                }
+
+                document.getElementById('modeBadge').textContent = 'LIVE';
+                showMainContent();
+                initMap();
+                subscribeToUpdates(delivery.id, delivery.driver_id);
+
+            } catch (err) {
+                console.error('Error loading order:', err);
+                showError();
+            }
+        }
+
+        // ============================================
+        // SUBSCRIBE TO REALTIME UPDATES
+        // ============================================
+        function subscribeToUpdates(deliveryId, driverId) {
+            // Subscribe to delivery status changes
+            supabase
+                .channel('delivery-updates')
+                .on('postgres_changes', {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'deliveries',
+                    filter: `id=eq.${deliveryId}`
+                }, (payload) => {
+                    currentOrder.status = payload.new.status;
+                    updateStatusUI();
+                })
+                .subscribe();
+
+            // Subscribe to driver location updates
+            if (driverId) {
+                supabase
+                    .channel('driver-location')
+                    .on('postgres_changes', {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'drivers',
+                        filter: `id=eq.${driverId}`
+                    }, (payload) => {
+                        if (currentDriver) {
+                            currentDriver.current_lat = payload.new.current_lat;
+                            currentDriver.current_lng = payload.new.current_lng;
+                            updateCarPosition();
+                        }
+                    })
+                    .subscribe();
+            }
+        }
+
+        // ============================================
+        // UI FUNCTIONS
+        // ============================================
+        function showMainContent() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('mainContent').style.display = 'block';
+            updateUI();
+        }
+
+        function showError() {
+            document.getElementById('loadingState').classList.add('hidden');
+            document.getElementById('errorState').classList.remove('hidden');
+        }
+
+        function updateUI() {
+            if (!currentOrder) return;
+
+            // Order details
+            document.getElementById('orderIdDisplay').textContent = '#' + currentOrder.id;
+            document.getElementById('restaurantName').textContent = '🍕 ' + currentOrder.restaurant_name;
+            document.getElementById('orderTotal').textContent = '$' + currentOrder.total.toFixed(2);
+            document.getElementById('orderItems').textContent = currentOrder.items_summary;
+            document.getElementById('pickupAddress').innerHTML = currentOrder.restaurant_address.replace(', ', '<br>');
+            document.getElementById('deliveryAddress').innerHTML = currentOrder.customer_address.replace(', ', '<br>');
+
+            // Driver info
+            if (currentDriver) {
+                document.getElementById('driverCard').classList.remove('hidden');
+                document.getElementById('driverName').textContent = currentDriver.name;
+                document.getElementById('driverVehicle').textContent = `${currentDriver.vehicle_color} ${currentDriver.vehicle_model} • ${currentDriver.license_plate}`;
+                document.getElementById('driverRating').textContent = currentDriver.rating || '4.9';
+                
+                if (currentDriver.photo_url) {
+                    document.getElementById('driverAvatar').innerHTML = `<img src="${currentDriver.photo_url}" alt="${currentDriver.name}">`;
+                } else {
+                    document.getElementById('driverAvatar').textContent = currentDriver.name.split(' ').map(n => n[0]).join('');
+                }
+
+                // Call button - opens WhatsApp
+                document.getElementById('callDriver').onclick = () => {
+                    if (isDemo) {
+                        alert('Demo mode - calling disabled');
+                    } else {
+                        window.open(`https://wa.me/${currentDriver.phone.replace('+', '')}`, '_blank');
+                    }
+                };
+            }
+
+            updateStatusUI();
+        }
+
+        function updateStatusUI() {
+            const status = currentOrder.status;
+            const statusBadge = document.getElementById('statusBadge');
+            const statusText = document.getElementById('statusText');
+            const mainStatus = document.getElementById('mainStatus');
+            const subStatus = document.getElementById('subStatus');
+            const progressFill = document.getElementById('progressFill');
+
+            // Reset steps
+            ['step1', 'step2', 'step3', 'step4'].forEach((id, i) => {
+                const step = document.getElementById(id);
+                step.classList.remove('completed', 'active');
+                step.querySelector('.step-icon').textContent = i + 1;
+            });
+
+            const statusConfig = {
+                'pending': { text: 'Order Received', main: 'Order confirmed!', sub: 'Restaurant is preparing your order', progress: 10, step: 1 },
+                'confirmed': { text: 'Order Received', main: 'Order confirmed!', sub: 'Restaurant is preparing your order', progress: 10, step: 1 },
+                'preparing': { text: 'Preparing', main: 'Food is being prepared', sub: 'Your order will be ready soon', progress: 35, step: 2 },
+                'ready': { text: 'Ready for Pickup', main: 'Order is ready!', sub: 'Waiting for driver pickup', progress: 50, step: 2 },
+                'picked_up': { text: 'On the way', main: 'Driver picked up your order', sub: `${currentDriver?.name || 'Driver'} is heading to you`, progress: 75, step: 3 },
+                'out_for_delivery': { text: 'On the way', main: 'Your driver is en route', sub: `${currentDriver?.name || 'Driver'} is heading to you`, progress: 75, step: 3 },
+                'delivered': { text: 'Delivered!', main: 'Order Delivered! 🎉', sub: 'Enjoy your meal!', progress: 100, step: 4 }
+            };
+
+            const config = statusConfig[status] || statusConfig['pending'];
+            
+            statusText.textContent = config.text;
+            mainStatus.textContent = config.main;
+            subStatus.textContent = config.sub;
+            progressFill.style.width = config.progress + '%';
+
+            // Update steps
+            for (let i = 1; i <= 4; i++) {
+                const step = document.getElementById('step' + i);
+                if (i < config.step) {
+                    step.classList.add('completed');
+                    step.querySelector('.step-icon').textContent = '✓';
+                } else if (i === config.step) {
+                    step.classList.add(status === 'delivered' ? 'completed' : 'active');
+                    step.querySelector('.step-icon').textContent = status === 'delivered' ? '✓' : (i === 3 ? '🚗' : i);
+                }
+            }
+
+            // Badge color
+            statusBadge.className = 'status-badge';
+            if (status === 'preparing' || status === 'ready') statusBadge.classList.add('preparing');
+            if (status === 'delivered') statusBadge.classList.add('delivered');
+        }
+
+        // ============================================
+        // MAP FUNCTIONS
+        // ============================================
+        function initMap() {
+            const center = {
+                lat: (currentOrder.restaurant_lat + currentOrder.customer_lat) / 2,
+                lng: (currentOrder.restaurant_lng + currentOrder.customer_lng) / 2
+            };
+
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
+                center: center,
+                disableDefaultUI: true,
+                styles: [
+                    { elementType: "geometry", stylers: [{ color: "#1a1a2e" }] },
+                    { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a2e" }] },
+                    { elementType: "labels.text.fill", stylers: [{ color: "#6b6b80" }] },
+                    { featureType: "road", elementType: "geometry", stylers: [{ color: "#353550" }] },
+                    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#454560" }] },
+                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e0e1a" }] },
+                    { featureType: "poi", stylers: [{ visibility: "off" }] },
+                    { featureType: "transit", stylers: [{ visibility: "off" }] }
+                ]
+            });
+
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({
+                map: map,
+                suppressMarkers: true,
+                polylineOptions: { strokeColor: '#00d26a', strokeOpacity: 0.7, strokeWeight: 5 }
+            });
+
+            // Add markers
+            addMarkers();
+
+            // Get route
+            calculateRoute();
+        }
+
+        function addMarkers() {
+            // Restaurant marker
+            new google.maps.Marker({
+                position: { lat: currentOrder.restaurant_lat, lng: currentOrder.restaurant_lng },
+                map: map,
+                icon: {
+                    url: 'data:image/svg+xml,' + encodeURIComponent('<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="16" fill="#ff6b35" stroke="#fff" stroke-width="2"/><text x="20" y="26" text-anchor="middle" font-size="14">🏪</text></svg>'),
+                    scaledSize: new google.maps.Size(40, 40),
+                    anchor: new google.maps.Point(20, 20)
+                }
+            });
+
+            // Customer marker
+            new google.maps.Marker({
+                position: { lat: currentOrder.customer_lat, lng: currentOrder.customer_lng },
+                map: map,
+                icon: {
+                    url: 'data:image/svg+xml,' + encodeURIComponent('<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="16" fill="#00d26a" stroke="#fff" stroke-width="2"/><text x="20" y="26" text-anchor="middle" font-size="14">🏠</text></svg>'),
+                    scaledSize: new google.maps.Size(40, 40),
+                    anchor: new google.maps.Point(20, 20)
+                }
+            });
+
+            // Car marker (if driver assigned and status is out for delivery)
+            if (currentDriver && ['picked_up', 'out_for_delivery'].includes(currentOrder.status)) {
+                createCarMarker();
+            }
+        }
+
+        function createCarMarker() {
+            const pos = currentDriver.current_lat && currentDriver.current_lng
+                ? { lat: currentDriver.current_lat, lng: currentDriver.current_lng }
+                : { lat: currentOrder.restaurant_lat, lng: currentOrder.restaurant_lng };
+
+            carMarker = new google.maps.Marker({
+                position: pos,
+                map: map,
+                icon: getCarIcon(0),
+                zIndex: 1000
+            });
+        }
+
+        function getCarIcon(bearing) {
+            const rot = bearing - 90;
+            return {
+                url: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><g transform="rotate(' + rot + ', 40, 40)"><image href="' + carImageBase64 + '" x="0" y="0" width="80" height="80"/></g></svg>'),
+                scaledSize: new google.maps.Size(45, 45),
+                anchor: new google.maps.Point(22, 22)
+            };
+        }
+
+        function calculateRoute() {
+            const start = { lat: currentOrder.restaurant_lat, lng: currentOrder.restaurant_lng };
+            const end = { lat: currentOrder.customer_lat, lng: currentOrder.customer_lng };
+
+            directionsService.route({
+                origin: start,
+                destination: end,
+                travelMode: google.maps.TravelMode.DRIVING
+            }, (result, status) => {
+                if (status === 'OK') {
+                    directionsRenderer.setDirections(result);
+                    
+                    const leg = result.routes[0].legs[0];
+                    document.getElementById('distanceValue').textContent = leg.distance.text;
+                    document.getElementById('etaValue').innerHTML = leg.duration.text.replace(' mins', ' <span>min</span>');
+
+                    // Extract route for animation
+                    routePath = result.routes[0].overview_path.map(p => ({ lat: p.lat(), lng: p.lng() }));
+
+                    // Start demo animation if in demo mode
+                    if (isDemo) {
+                        routePath = interpolate(routePath, 250);
+                        setTimeout(startDemoAnimation, 2000);
+                    }
+                }
+            });
+        }
+
+        function interpolate(path, target) {
+            const result = [];
+            const perSeg = Math.ceil(target / path.length);
+            for (let i = 0; i < path.length - 1; i++) {
+                for (let j = 0; j < perSeg; j++) {
+                    const t = j / perSeg;
+                    result.push({
+                        lat: path[i].lat + (path[i+1].lat - path[i].lat) * t,
+                        lng: path[i].lng + (path[i+1].lng - path[i].lng) * t
+                    });
+                }
+            }
+            result.push(path[path.length - 1]);
+            return result;
+        }
+
+        function updateCarPosition() {
+            if (!carMarker || !currentDriver) return;
+            carMarker.setPosition({ lat: currentDriver.current_lat, lng: currentDriver.current_lng });
+        }
+
+        // ============================================
+        // DEMO ANIMATION (10x speed)
+        // ============================================
+        const MOVE_MS = 60;
+        let demoAnimating = false;
+
+        function startDemoAnimation() {
+            if (!carMarker) createCarMarker();
+            demoAnimating = true;
+            currentRouteIndex = 0;
+            animateDemo();
+        }
+
+        function animateDemo() {
+            if (!demoAnimating || currentRouteIndex >= routePath.length - 1) {
+                if (currentRouteIndex >= routePath.length - 1) {
+                    currentOrder.status = 'delivered';
+                    updateStatusUI();
+                    setTimeout(() => location.reload(), 5000);
+                }
+                return;
+            }
+
+            const from = routePath[currentRouteIndex];
+            const to = routePath[currentRouteIndex + 1];
+            const startTime = performance.now();
+
+            // Update bearing
+            const bearing = getBearing(from, to);
+            if (Math.abs(bearing - lastBearing) > 8) {
+                lastBearing = bearing;
+                carMarker.setIcon(getCarIcon(bearing));
+            }
+
+            // Update ETA
+            const progress = currentRouteIndex / routePath.length;
+            const remainingKm = getDistanceToEnd(from);
+            const remainingMin = Math.max(1, Math.round(18 * (1 - progress)));
+            document.getElementById('etaValue').innerHTML = remainingMin + ' <span>min</span>';
+            document.getElementById('distanceValue').textContent = remainingKm.toFixed(1) + ' km';
+
+            // Zoom in last 3km
+            if (remainingKm <= 3 && map.getZoom() < 15) map.setZoom(15);
+            if (remainingKm <= 1 && map.getZoom() < 16) map.setZoom(16);
+            if (remainingKm <= 0.3 && map.getZoom() < 17) map.setZoom(17);
+
+            function step(ts) {
+                const elapsed = ts - startTime;
+                const p = Math.min(elapsed / MOVE_MS, 1);
+                const ease = p < 0.5 ? 2*p*p : 1 - Math.pow(-2*p + 2, 2) / 2;
+                const lat = from.lat + (to.lat - from.lat) * ease;
+                const lng = from.lng + (to.lng - from.lng) * ease;
+                carMarker.setPosition({ lat, lng });
+                if (currentRouteIndex % 5 === 0) map.panTo({ lat, lng });
+                if (p < 1) requestAnimationFrame(step);
+                else { currentRouteIndex++; animateDemo(); }
+            }
+            requestAnimationFrame(step);
+        }
+
+        function getBearing(from, to) {
+            const dLng = (to.lng - from.lng) * Math.PI / 180;
+            const lat1 = from.lat * Math.PI / 180, lat2 = to.lat * Math.PI / 180;
+            const y = Math.sin(dLng) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+            return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+        }
+
+        function getDistanceToEnd(pos) {
+            return google.maps.geometry.spherical.computeDistanceBetween(
+                new google.maps.LatLng(pos.lat, pos.lng),
+                new google.maps.LatLng(currentOrder.customer_lat, currentOrder.customer_lng)
+            ) / 1000;
+        }
+    </script>
+</body>
+</html>
