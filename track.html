@@ -136,7 +136,6 @@
             margin-bottom: 1rem;
             aspect-ratio: 16/10;
             position: relative;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
         #map {
@@ -144,34 +143,34 @@
             height: 100%;
         }
 
-        /* Recenter Button */
-        .recenter-btn {
+        .map-center-btn {
             position: absolute;
-            bottom: 90px;
-            right: 10px;
-            z-index: 1000;
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
+            bottom: 12px;
+            right: 12px;
             background: var(--bg-card);
-            border: 2px solid var(--accent-green);
-            color: var(--accent-green);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
-        }
-
-        .recenter-btn:hover {
-            background: var(--accent-green);
-            color: white;
-            transform: scale(1.1);
-        }
-
-        .recenter-btn.visible {
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
             display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--text-primary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            z-index: 100;
+            transition: all 0.2s;
+        }
+
+        .map-center-btn:hover {
+            background: var(--accent-green);
+            color: #000;
+        }
+
+        .map-center-btn svg {
+            width: 16px;
+            height: 16px;
         }
 
         .map-placeholder {
@@ -1112,6 +1111,17 @@
                 <div id="map">
                     
                 </div>
+                <button class="map-center-btn" id="centerOnDriver" title="Center on driver">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <circle cx="12" cy="12" r="3" fill="currentColor"/>
+                        <line x1="12" y1="2" x2="12" y2="6"/>
+                        <line x1="12" y1="18" x2="12" y2="22"/>
+                        <line x1="2" y1="12" x2="6" y2="12"/>
+                        <line x1="18" y1="12" x2="22" y2="12"/>
+                    </svg>
+                    Center
+                </button>
             </div>
 
             <!-- ETA Card -->
@@ -1377,14 +1387,104 @@
             return params.get('token');
         }
 
+        function isDemoMode() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('demo') === 'true';
+        }
+
+        // ============================================
+        // DEMO DATA
+        // ============================================
+        const demoDelivery = {
+            id: 'demo-001',
+            tracking_token: 'demo',
+            status: 'picked_up',
+            customer_name: 'Demo Customer',
+            customer_phone: '+14035551234',
+            customer_address: '123 Demo Street NE, Calgary',
+            customer_lat: 51.0747,
+            customer_lng: -114.0719,
+            restaurant_name: 'AB King Pizza',
+            order_total: 45.99,
+            created_at: new Date().toISOString()
+        };
+
+        const demoDriver = {
+            id: 'demo-driver',
+            name: 'Raj Singh',
+            phone: '+14035559999',
+            photo_url: null,
+            vehicle_type: 'car',
+            vehicle_color: 'Red',
+            vehicle_model: 'Toyota Camry',
+            current_lat: 51.0697,
+            current_lng: -114.0800,
+            is_online: true
+        };
+
+        // Demo mode: simulate driver movement
+        let demoInterval = null;
+        function startDemoMovement() {
+            let step = 0;
+            // Full route with many waypoints for smooth movement
+            const route = [
+                { lat: 51.0697, lng: -114.0800 },
+                { lat: 51.0699, lng: -114.0796 },
+                { lat: 51.0701, lng: -114.0792 },
+                { lat: 51.0703, lng: -114.0788 },
+                { lat: 51.0705, lng: -114.0784 },
+                { lat: 51.0707, lng: -114.0780 },
+                { lat: 51.0709, lng: -114.0776 },
+                { lat: 51.0711, lng: -114.0772 },
+                { lat: 51.0713, lng: -114.0768 },
+                { lat: 51.0715, lng: -114.0764 },
+                { lat: 51.0717, lng: -114.0760 },
+                { lat: 51.0719, lng: -114.0756 },
+                { lat: 51.0721, lng: -114.0752 },
+                { lat: 51.0723, lng: -114.0748 },
+                { lat: 51.0725, lng: -114.0744 },
+                { lat: 51.0727, lng: -114.0740 },
+                { lat: 51.0729, lng: -114.0736 },
+                { lat: 51.0731, lng: -114.0732 },
+                { lat: 51.0733, lng: -114.0728 },
+                { lat: 51.0735, lng: -114.0724 },
+                { lat: 51.0737, lng: -114.0722 },
+                { lat: 51.0739, lng: -114.0720 },
+                { lat: 51.0741, lng: -114.0719 },
+                { lat: 51.0743, lng: -114.0719 },
+                { lat: 51.0745, lng: -114.0719 },
+                { lat: 51.0747, lng: -114.0719 }
+            ];
+            
+            // 5x speed: 600ms instead of 3000ms
+            demoInterval = setInterval(() => {
+                if (step < route.length) {
+                    currentDriver.current_lat = route[step].lat;
+                    currentDriver.current_lng = route[step].lng;
+                    updateDriverLocation();
+                    step++;
+                } else {
+                    clearInterval(demoInterval);
+                    // Mark as delivered
+                    currentDelivery.status = 'delivered';
+                    updateUI();
+                }
+            }, 600);
+        }
+
         // ============================================
         // LOAD DELIVERY
         // ============================================
         async function loadDelivery() {
             const token = getTrackingToken();
             
-            if (!token) {
-                showError();
+            // Check for demo mode OR no token (auto-demo for preview)
+            if (isDemoMode() || !token) {
+                currentDelivery = demoDelivery;
+                currentDriver = demoDriver;
+                showContent();
+                updateUI();
+                startDemoMovement();
                 return;
             }
 
@@ -1594,7 +1694,7 @@
         }
 
         // ============================================
-        // GOOGLE MAPS WITH SMOOTH TRACKING
+        // GOOGLE MAPS WITH DIRECTIONS
         // ============================================
         let map = null;
         let driverMarker = null;
@@ -1605,33 +1705,34 @@
         let lastDriverLat = null;
         let lastDriverLng = null;
         let carRotation = 0;
-        let targetRotation = 0;
-        let routePath = [];
-        
-        // Smooth animation state
-        let animationFrameId = null;
-        let currentAnimatedPos = null;
-        let targetPos = null;
-        let animationStartTime = null;
-        let animationDuration = 2000; // 2 seconds for smooth movement
-        let startPos = null;
-        
-        // Map view state
-        let userHasInteracted = false;
-        let lastAutoZoom = 0;
-        let isFollowingDriver = true;
+        let routePath = []; // Store the route polyline points
 
-        // Honda Civic 2017 Hatchback - Blue (actual PNG image, top-down view)
-        const carImageBase64 = 'data:image/png;base64,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';
+        // Red car - top-down view
+        const carImageBase64 = 'data:image/png;base64,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';
         
         function getCivicIcon(rotation) {
+            // Car image points RIGHT (90 degrees)
+            // Bearing: 0 = North (up), 90 = East (right), 180 = South, 270 = West
+            // To make car point in direction of travel, subtract 90 degrees
+            const adjustedRotation = rotation - 90;
             return 'data:image/svg+xml,' + encodeURIComponent(`
                 <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80">
-                    <g transform="rotate(${rotation}, 40, 40)">
+                    <g transform="rotate(${adjustedRotation}, 40, 40)">
                         <image href="${carImageBase64}" x="0" y="0" width="80" height="80"/>
                     </g>
                 </svg>
             `);
+        }
+        
+        let civicImageUrl = getCivicIcon(0);
+
+        function getCarIcon(rotation) {
+            return {
+                url: civicImageUrl,
+                scaledSize: new google.maps.Size(45, 45),
+                anchor: new google.maps.Point(22, 22),
+                rotation: rotation
+            };
         }
 
         function calculateBearing(lat1, lng1, lat2, lng2) {
@@ -1641,24 +1742,6 @@
                       Math.sin(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.cos(dLng);
             const bearing = Math.atan2(y, x) * 180 / Math.PI;
             return (bearing + 360) % 360;
-        }
-
-        // Smooth rotation interpolation
-        function lerpAngle(start, end, t) {
-            let diff = end - start;
-            while (diff < -180) diff += 360;
-            while (diff > 180) diff -= 360;
-            return start + diff * t;
-        }
-
-        // Linear interpolation for position
-        function lerp(start, end, t) {
-            return start + (end - start) * t;
-        }
-
-        // Easing function for smoother animation
-        function easeInOutCubic(t) {
-            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
         }
 
         // Find closest point on route to snap the car
@@ -1678,12 +1761,12 @@
                 }
             }
             
-            // Only snap if within 150 meters of route
-            if (closestDist < 150) {
+            // Only snap if within 100 meters of route
+            if (closestDist < 100) {
                 // Calculate bearing from next point on route
                 if (closestIndex < routePath.length - 1) {
                     const nextPoint = routePath[closestIndex + 1];
-                    targetRotation = calculateBearing(
+                    carRotation = calculateBearing(
                         closestPoint.lat(), closestPoint.lng(),
                         nextPoint.lat(), nextPoint.lng()
                     );
@@ -1699,7 +1782,7 @@
             const lat2 = typeof pos2.lat === 'function' ? pos2.lat() : pos2.lat;
             const lng2 = typeof pos2.lng === 'function' ? pos2.lng() : pos2.lng;
             
-            const R = 6371000;
+            const R = 6371000; // Earth's radius in meters
             const dLat = (lat2 - lat1) * Math.PI / 180;
             const dLng = (lng2 - lng1) * Math.PI / 180;
             const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
@@ -1709,188 +1792,48 @@
             return R * c;
         }
 
-        // Calculate optimal zoom level based on distance
-        function getOptimalZoom(distanceMeters) {
-            if (distanceMeters < 500) return 17;
-            if (distanceMeters < 1000) return 16;
-            if (distanceMeters < 2000) return 15;
-            if (distanceMeters < 5000) return 14;
-            if (distanceMeters < 10000) return 13;
-            return 12;
-        }
-
-        // Animate the car marker smoothly
-        function animateMarker() {
-            if (!targetPos || !startPos || !animationStartTime) {
-                animationFrameId = null;
-                return;
-            }
-
-            const elapsed = Date.now() - animationStartTime;
-            const progress = Math.min(elapsed / animationDuration, 1);
-            const easedProgress = easeInOutCubic(progress);
-
-            // Interpolate position
-            const currentLat = lerp(startPos.lat, targetPos.lat, easedProgress);
-            const currentLng = lerp(startPos.lng, targetPos.lng, easedProgress);
-            currentAnimatedPos = { lat: currentLat, lng: currentLng };
-
-            // Interpolate rotation smoothly
-            carRotation = lerpAngle(carRotation, targetRotation, 0.1);
-
-            // Update marker
-            if (driverMarker) {
-                driverMarker.setPosition(currentAnimatedPos);
-                driverMarker.setIcon({
-                    url: getCivicIcon(carRotation),
-                    scaledSize: new google.maps.Size(60, 60),
-                    anchor: new google.maps.Point(30, 30)
-                });
-            }
-
-            // Continue animation or finish
-            if (progress < 1) {
-                animationFrameId = requestAnimationFrame(animateMarker);
-            } else {
-                animationFrameId = null;
-                startPos = targetPos;
-            }
-        }
-
-        // Start smooth animation to new position
-        function smoothMoveTo(newPos) {
-            // Cancel any existing animation
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-            }
-
-            // Set up new animation
-            startPos = currentAnimatedPos || (driverMarker ? 
-                { lat: driverMarker.getPosition().lat(), lng: driverMarker.getPosition().lng() } : 
-                newPos);
-            targetPos = newPos;
-            animationStartTime = Date.now();
-
-            // Calculate target rotation based on movement direction
-            if (startPos && targetPos) {
-                const distance = getDistance(startPos, targetPos);
-                if (distance > 5) { // Only update rotation if moved more than 5 meters
-                    targetRotation = calculateBearing(startPos.lat, startPos.lng, targetPos.lat, targetPos.lng);
-                }
-            }
-
-            // Start animation
-            animateMarker();
-        }
-
         function initMap() {
             const defaultCenter = { lat: 51.1284, lng: -113.9490 };
             
             map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 15,
+                zoom: 16,
                 center: defaultCenter,
                 disableDefaultUI: true,
                 zoomControl: true,
-                gestureHandling: 'greedy',
                 styles: [
                     { elementType: "geometry", stylers: [{ color: "#1a1a2e" }] },
                     { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a2e" }] },
                     { elementType: "labels.text.fill", stylers: [{ color: "#6b6b80" }] },
                     { featureType: "road", elementType: "geometry", stylers: [{ color: "#353550" }] },
-                    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#454560" }] },
                     { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#8a8a8a" }] },
-                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e0e1a" }] },
-                    { featureType: "poi", stylers: [{ visibility: "off" }] },
-                    { featureType: "transit", stylers: [{ visibility: "off" }] }
+                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e0e1a" }] }
                 ]
             });
-
-            // Track user interaction with map
-            map.addListener('dragstart', () => {
-                userHasInteracted = true;
-                isFollowingDriver = false;
-            });
-
-            // Add re-center button when user pans away
-            const recenterBtn = document.createElement('button');
-            recenterBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/></svg>`;
-            recenterBtn.style.cssText = `
-                position: absolute; bottom: 90px; right: 10px; z-index: 1000;
-                width: 44px; height: 44px; border-radius: 50%;
-                background: #252542; border: 2px solid #00d26a; color: #00d26a;
-                display: none; align-items: center; justify-content: center;
-                cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            `;
-            recenterBtn.onclick = () => {
-                isFollowingDriver = true;
-                userHasInteracted = false;
-                recenterBtn.style.display = 'none';
-                if (driverMarker && customerMarker) {
-                    fitMapToBounds();
-                }
-            };
-            document.getElementById('map').parentElement.style.position = 'relative';
-            document.getElementById('map').parentElement.appendChild(recenterBtn);
-
-            // Show recenter button when not following
-            setInterval(() => {
-                if (userHasInteracted && !isFollowingDriver) {
-                    recenterBtn.style.display = 'flex';
-                }
-            }, 1000);
 
             // Initialize Directions Service
             directionsService = new google.maps.DirectionsService();
             directionsRenderer = new google.maps.DirectionsRenderer({
                 map: map,
-                suppressMarkers: true,
+                suppressMarkers: true, // We'll use our own markers
                 polylineOptions: {
                     strokeColor: '#00d26a',
-                    strokeWeight: 6,
-                    strokeOpacity: 0.9
+                    strokeWeight: 5,
+                    strokeOpacity: 0.8
                 }
             });
 
+            // Update map once data is loaded
             setTimeout(() => {
                 if (currentDelivery) updateMapWithLocations();
             }, 1000);
         }
 
+        // Initialize map when page loads
         document.addEventListener('DOMContentLoaded', function() {
             if (typeof google !== 'undefined') {
                 initMap();
             }
         });
-
-        function fitMapToBounds() {
-            if (!map || !driverMarker || !customerMarker) return;
-            
-            const driverPos = driverMarker.getPosition();
-            const customerPos = customerMarker.getPosition();
-            const distance = getDistance(
-                { lat: driverPos.lat(), lng: driverPos.lng() },
-                { lat: customerPos.lat(), lng: customerPos.lng() }
-            );
-
-            const bounds = new google.maps.LatLngBounds();
-            bounds.extend(driverPos);
-            bounds.extend(customerPos);
-            
-            // Add padding based on distance
-            const padding = distance < 1000 ? 80 : 60;
-            map.fitBounds(bounds, { 
-                top: padding, 
-                bottom: padding + 50, // Extra bottom padding for UI
-                left: padding, 
-                right: padding 
-            });
-
-            // Ensure minimum zoom for close distances
-            const listener = google.maps.event.addListenerOnce(map, 'idle', () => {
-                if (map.getZoom() > 17) map.setZoom(17);
-                if (map.getZoom() < 12) map.setZoom(12);
-            });
-        }
 
         function updateMapWithLocations() {
             if (!map || !currentDelivery) return;
@@ -1906,35 +1849,55 @@
                         position: customerPos,
                         map: map,
                         icon: {
-                            url: 'data:image/svg+xml,' + encodeURIComponent(`
-                                <svg xmlns="http://www.w3.org/2000/svg" width="50" height="60" viewBox="0 0 50 60">
-                                    <defs>
-                                        <linearGradient id="pinGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" style="stop-color:#00E676"/>
-                                            <stop offset="100%" style="stop-color:#00C853"/>
-                                        </linearGradient>
-                                        <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-                                            <feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity="0.4"/>
-                                        </filter>
-                                    </defs>
-                                    <path d="M25 0 C11 0 0 11 0 25 C0 38 25 60 25 60 C25 60 50 38 50 25 C50 11 39 0 25 0 Z" 
-                                          fill="url(#pinGrad)" filter="url(#shadow)"/>
-                                    <circle cx="25" cy="22" r="14" fill="white"/>
-                                    <path d="M25 10 L15 20 L15 30 L21 30 L21 24 L29 24 L29 30 L35 30 L35 20 Z" fill="#00C853"/>
-                                    <circle cx="25" cy="22" r="2.5" fill="#00C853"/>
-                                </svg>
-                            `),
-                            scaledSize: new google.maps.Size(50, 60),
-                            anchor: new google.maps.Point(25, 60)
+                            url: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="45" height="55" viewBox="0 0 45 55"><defs><linearGradient id="pinGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style="stop-color:#00E676;stop-opacity:1" /><stop offset="100%" style="stop-color:#00C853;stop-opacity:1" /></linearGradient><filter id="shadow2" x="-20%" y="-20%" width="140%" height="140%"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.3"/></filter></defs><path d="M22.5 0 C10 0 0 10 0 22.5 C0 35 22.5 55 22.5 55 C22.5 55 45 35 45 22.5 C45 10 35 0 22.5 0 Z" fill="url(#pinGrad)" filter="url(#shadow2)"/><circle cx="22.5" cy="20" r="12" fill="white"/><path d="M22.5 12 L14 19 L14 27 L19 27 L19 22 L26 22 L26 27 L31 27 L31 19 Z" fill="#00C853"/><circle cx="22.5" cy="20" r="2" fill="#00C853"/></svg>'),
+                            scaledSize: new google.maps.Size(45, 55),
+                            anchor: new google.maps.Point(22.5, 55)
                         },
-                        title: 'Delivery Location',
-                        zIndex: 500
+                        title: 'Delivery Location'
                     });
                 }
                 map.setCenter(customerPos);
             }
 
             updateDriverMarker();
+        }
+
+        // Animation state
+        let animationFrameId = null;
+        let animationStartPos = null;
+        let animationEndPos = null;
+        let animationStartTime = null;
+        const ANIMATION_DURATION = 500; // 500ms smooth transition (matches 600ms update interval)
+
+        function animateMarker(marker, startPos, endPos, duration) {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            
+            animationStartPos = startPos;
+            animationEndPos = endPos;
+            animationStartTime = performance.now();
+            
+            function animate(currentTime) {
+                const elapsed = currentTime - animationStartTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                // Ease in-out cubic for smooth acceleration and deceleration
+                const easeProgress = progress < 0.5 
+                    ? 4 * progress * progress * progress 
+                    : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+                
+                const lat = animationStartPos.lat + (animationEndPos.lat - animationStartPos.lat) * easeProgress;
+                const lng = animationStartPos.lng + (animationEndPos.lng - animationStartPos.lng) * easeProgress;
+                
+                marker.setPosition({ lat, lng });
+                
+                if (progress < 1) {
+                    animationFrameId = requestAnimationFrame(animate);
+                }
+            }
+            
+            animationFrameId = requestAnimationFrame(animate);
         }
 
         function updateDriverMarker() {
@@ -1947,50 +1910,73 @@
 
             let driverPos = { lat: driverLat, lng: driverLng };
             
+            // Calculate rotation based on direction of travel BEFORE snapping
+            if (lastDriverLat !== null && lastDriverLng !== null) {
+                const newRotation = calculateBearing(lastDriverLat, lastDriverLng, driverLat, driverLng);
+                // Only update rotation if significant change (prevents jittering)
+                if (Math.abs(newRotation - carRotation) > 10) {
+                    carRotation = newRotation;
+                }
+            }
+            
             // Snap to route if we have one
             if (routePath.length > 0) {
                 driverPos = snapToRoute(driverPos);
-            } else if (lastDriverLat !== null && lastDriverLng !== null) {
-                const newRotation = calculateBearing(lastDriverLat, lastDriverLng, driverLat, driverLng);
-                const distance = getDistance({ lat: lastDriverLat, lng: lastDriverLng }, driverPos);
-                if (distance > 5) {
-                    targetRotation = newRotation;
+            }
+
+            // Create icon with current rotation
+            const rotatedIcon = {
+                url: getCivicIcon(carRotation),
+                scaledSize: new google.maps.Size(65, 65),
+                anchor: new google.maps.Point(32, 32)
+            };
+
+            if (driverMarker) {
+                // Smooth animation to new position
+                const currentPos = driverMarker.getPosition();
+                if (currentPos && (lastDriverLat !== null)) {
+                    // Only animate if there's actual movement
+                    const distance = getDistance(
+                        { lat: currentPos.lat(), lng: currentPos.lng() },
+                        driverPos
+                    );
+                    if (distance > 5) { // More than 5 meters
+                        animateMarker(driverMarker, 
+                            { lat: currentPos.lat(), lng: currentPos.lng() }, 
+                            driverPos, 
+                            ANIMATION_DURATION
+                        );
+                    }
+                } else {
+                    driverMarker.setPosition(driverPos);
                 }
+                driverMarker.setIcon(rotatedIcon);
+            } else {
+                driverMarker = new google.maps.Marker({
+                    position: driverPos,
+                    map: map,
+                    icon: rotatedIcon,
+                    title: currentDriver.name,
+                    zIndex: 1000
+                });
             }
             
             lastDriverLat = driverLat;
             lastDriverLng = driverLng;
 
-            if (!driverMarker) {
-                // Create marker at initial position
-                currentAnimatedPos = driverPos;
-                driverMarker = new google.maps.Marker({
-                    position: driverPos,
-                    map: map,
-                    icon: {
-                        url: getCivicIcon(carRotation),
-                        scaledSize: new google.maps.Size(60, 60),
-                        anchor: new google.maps.Point(30, 30)
-                    },
-                    title: currentDriver.name,
-                    zIndex: 1000
-                });
-            } else {
-                // Smooth animate to new position
-                smoothMoveTo(driverPos);
-            }
-
-            // Update route every 10 seconds (reduced frequency for smoother experience)
+            // Update route every 5 seconds when driver is moving
             const now = Date.now();
-            if (customerMarker && (now - lastRouteUpdate > 10000)) {
+            if (customerMarker && (now - lastRouteUpdate > 5000)) {
                 lastRouteUpdate = now;
                 calculateRoute(driverPos, customerMarker.getPosition());
             }
 
-            // Auto-fit bounds if following driver
-            if (isFollowingDriver && customerMarker && (now - lastAutoZoom > 5000)) {
-                lastAutoZoom = now;
-                fitMapToBounds();
+            // Fit bounds if both markers exist (only once, then let user control)
+            if (customerMarker && !directionsRenderer.getDirections()) {
+                const bounds = new google.maps.LatLngBounds();
+                bounds.extend(driverPos);
+                bounds.extend(customerMarker.getPosition());
+                map.fitBounds(bounds, { padding: 80 });
             }
         }
 
@@ -2008,34 +1994,33 @@
             }, (result, status) => {
                 if (status === 'OK') {
                     directionsRenderer.setDirections(result);
+                    
+                    // Store route path for car snapping
                     routePath = result.routes[0].overview_path;
                     
-                    const leg = result.routes[0].legs[0];
+                    // Get route info
+                    const route = result.routes[0];
+                    const leg = route.legs[0];
+                    
+                    // Update ETA display
                     const durationMins = Math.ceil(leg.duration.value / 60);
-                    const distanceKm = (leg.distance.value / 1000).toFixed(1);
+                    document.getElementById('etaTime').textContent = durationMins;
                     
-                    // Update ETA with smooth transition
-                    const etaEl = document.getElementById('etaTime');
-                    if (etaEl && etaEl.textContent !== String(durationMins)) {
-                        etaEl.style.transition = 'opacity 0.3s';
-                        etaEl.style.opacity = '0.5';
-                        setTimeout(() => {
-                            etaEl.textContent = durationMins;
-                            etaEl.style.opacity = '1';
-                        }, 150);
-                    }
-                    
-                    // Update distance
+                    // Update distance info if element exists
                     const distanceEl = document.getElementById('distanceText');
                     if (distanceEl) {
                         distanceEl.textContent = leg.distance.text;
                     }
                     
-                    // Update subtitle with live info
+                    // Update header subtitle with live info
                     const subtitle = document.getElementById('headerSubtitle');
-                    if (subtitle && currentDelivery && 
-                        (currentDelivery.status === 'picked_up' || currentDelivery.status === 'delivering')) {
-                        subtitle.textContent = `${distanceKm} km away • ${durationMins} min`;
+                    if (subtitle && currentDelivery.status === 'picked_up') {
+                        subtitle.textContent = `${leg.distance.text} away • ${durationMins} min`;
+                    }
+                    
+                    // Re-snap driver marker now that we have route
+                    if (driverMarker && currentDriver) {
+                        updateDriverMarker();
                     }
                 }
             });
@@ -2249,6 +2234,25 @@
                     item.classList.add('open');
                 }
             });
+        });
+
+        // ============================================
+        // CENTER ON DRIVER BUTTON
+        // ============================================
+        document.getElementById('centerOnDriver')?.addEventListener('click', function() {
+            if (driverMarker && map) {
+                const pos = driverMarker.getPosition();
+                if (pos) {
+                    map.setCenter(pos);
+                    map.setZoom(17);
+                }
+            } else if (customerMarker && map) {
+                const pos = customerMarker.getPosition();
+                if (pos) {
+                    map.setCenter(pos);
+                    map.setZoom(16);
+                }
+            }
         });
 
         // ============================================
