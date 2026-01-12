@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YYC LocalFirst - Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12131a;
+            --bg-card-hover: #1a1b24;
+            --border: #2a2b35;
+            --text-primary: #ffffff;
+            --text-secondary: #8b8d9a;
+            --text-muted: #5a5c6a;
+            --accent-green: #00d26a;
+            --accent-green-dim: rgba(0, 210, 106, 0.15);
+            --accent-orange: #ff9f43;
+            --accent-orange-dim: rgba(255, 159, 67, 0.15);
+            --accent-red: #ff6b6b;
+            --accent-blue: #4da6ff;
+            --accent-blue-dim: rgba(77, 166, 255, 0.15);
+            --accent-purple: #a78bfa;
+            --accent-purple-dim: rgba(167, 139, 250, 0.15);
+        }
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(180deg, var(--bg-card) 0%, transparent 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-green) 0%, #00a854 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+        .logo-text {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+        .logo-badge {
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--accent-green);
+        }
+        .date-filters {
+            display: flex;
+            gap: 0.35rem;
+            background: var(--bg-dark);
+            padding: 0.35rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+        .date-btn {
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        .date-btn:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+        .date-btn.active {
+            background: var(--accent-green);
+            color: #000;
+        }
+        .date-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            z-index: 1000;
+            min-width: 320px;
+        }
+        .date-modal.active { display: block; }
+        .date-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 999;
+        }
+        .date-modal-overlay.active { display: block; }
+        .date-modal h3 {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        .date-input-group {
+            margin-bottom: 1rem;
+        }
+        .date-input-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.35rem;
+        }
+        .date-input-group input {
+            width: 100%;
+            padding: 0.6rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+        .date-modal-btns {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .date-modal-btns button {
+            flex: 1;
+            padding: 0.6rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .date-modal-btns .apply-btn {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+            color: #000;
+        }
+        .date-modal-btns .cancel-btn {
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+        }
+        .quick-ranges {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .quick-range-btn {
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .quick-range-btn:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+        .settings-btn {
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .settings-btn:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+        .commission-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            z-index: 1001;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .commission-modal.active { display: block; }
+        .commission-modal h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+        .commission-modal-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+        }
+        .default-commission {
+            background: var(--bg-dark);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .default-commission-label {
+            font-weight: 600;
+        }
+        .default-commission-input {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .default-commission-input input {
+            width: 70px;
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .store-commission-list {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .store-commission-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .store-commission-item:last-child { border-bottom: none; }
+        .store-commission-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--accent-orange-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        .store-commission-info { flex: 1; }
+        .store-commission-name { font-weight: 600; }
+        .store-commission-status {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .store-commission-status.promo { color: var(--accent-orange); }
+        .store-commission-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .commission-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .commission-input-wrapper input {
+            width: 55px;
+            padding: 0.4rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .promo-toggle {
+            padding: 0.35rem 0.6rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .promo-toggle.active {
+            background: var(--accent-orange-dim);
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+        .commission-earnings {
+            text-align: right;
+            min-width: 80px;
+        }
+        .commission-earnings-value {
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+        .commission-earnings-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+        .commission-summary {
+            background: linear-gradient(135deg, var(--accent-green-dim), var(--accent-blue-dim));
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            text-align: center;
+        }
+        .commission-summary-item h4 {
+            font-size: 1.25rem;
+            color: var(--accent-green);
+        }
+        .commission-summary-item p {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+        .store-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .store-tab {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .store-tab:hover {
+            border-color: var(--accent-green);
+        }
+        .store-tab.active {
+            background: var(--accent-green-dim);
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+        .store-tab-icon {
+            font-size: 1rem;
+        }
+        .commission-periods-container {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .commission-periods-header {
+            padding: 0.75rem 1rem;
+            background: var(--bg-dark);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .commission-periods-header span {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .add-period-btn {
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--accent-green);
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .commission-periods-list {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .commission-period-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: 1fr 1fr 80px 60px 40px;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        .commission-period-item:last-child {
+            border-bottom: none;
+        }
+        .commission-period-item.current {
+            background: var(--accent-green-dim);
+        }
+        .period-input-group label {
+            display: block;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+        .period-input-group input[type="date"] {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .period-input-group input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+        .period-rate {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .period-rate input {
+            width: 50px;
+            padding: 0.4rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .period-earnings {
+            text-align: right;
+            font-size: 0.8rem;
+        }
+        .period-earnings-value {
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+        .period-delete {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .period-delete:hover {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            background: rgba(255,107,107,0.1);
+        }
+        .no-periods {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .period-current-badge {
+            background: var(--accent-green);
+            color: #000;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.6rem;
+            font-weight: 600;
+        }
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .main {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 1.5rem;
+        }
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.25rem;
+            border-top: 3px solid var(--accent-green);
+        }
+        .stat-card.orange { border-top-color: var(--accent-orange); }
+        .stat-card.blue { border-top-color: var(--accent-blue); }
+        .stat-card.purple { border-top-color: var(--accent-purple); }
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .stat-sub {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        .section-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .order-tabs {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .order-tab {
+            padding: 0.4rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+        }
+        .order-tab:hover { background: var(--bg-card-hover); }
+        .order-tab.active {
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+        .order-tab .count {
+            background: var(--bg-dark);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            margin-left: 0.35rem;
+            font-size: 0.7rem;
+        }
+        .order-tab.active .count {
+            background: var(--accent-green);
+            color: #000;
+        }
+        .orders-list {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        .order-item {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+        }
+        .order-item:hover { background: var(--bg-card-hover); }
+        .order-status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .order-status-dot.pending { background: var(--accent-orange); }
+        .order-status-dot.confirmed { background: var(--accent-blue); }
+        .order-status-dot.preparing { background: var(--accent-blue); }
+        .order-status-dot.ready { background: var(--accent-purple); }
+        .order-status-dot.delivering { background: var(--accent-green); }
+        .order-info { flex: 1; }
+        .order-top {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+        .order-number { font-weight: 600; }
+        .order-restaurant {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            background: var(--bg-dark);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+        }
+        .order-customer {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        .order-meta { text-align: right; }
+        .order-total {
+            font-weight: 600;
+            color: var(--accent-green);
+        }
+        .order-time {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+        .empty-state {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        
+        /* Store Performance */
+        .store-item {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .store-item:last-child { border-bottom: none; }
+        .store-rank {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        .store-rank.gold { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; }
+        .store-rank.silver { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); color: #000; }
+        .store-rank.bronze { background: linear-gradient(135deg, #cd7f32, #b87333); color: #000; }
+        .store-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--accent-orange-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        .store-info { flex: 1; }
+        .store-name { font-weight: 600; font-size: 0.95rem; }
+        .store-stats {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.25rem;
+            flex-wrap: wrap;
+        }
+        .store-stat {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+        .store-stat span { color: var(--text-primary); font-weight: 600; }
+        .store-revenue {
+            text-align: right;
+        }
+        .store-revenue-value {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--accent-green);
+        }
+        .store-revenue-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+        .progress-bar {
+            height: 4px;
+            background: var(--bg-dark);
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-green);
+            border-radius: 2px;
+        }
+
+        /* Driver section */
+        .driver-item {
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .driver-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+        .driver-info { flex: 1; }
+        .driver-name { font-weight: 500; font-size: 0.9rem; }
+        .driver-status {
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .driver-status.online { color: var(--accent-green); }
+        .driver-status.offline { color: var(--text-muted); }
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            padding: 1rem;
+        }
+        .quick-action-btn {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+        }
+        .quick-action-btn:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+        #map {
+            width: 100%;
+            height: 180px;
+        }
+        .map-overlay {
+            position: absolute;
+            top: 0.75rem;
+            left: 0.75rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+        .map-stat {
+            background: rgba(10, 10, 15, 0.9);
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            border: 1px solid var(--border);
+        }
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        /* Summary cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .summary-item {
+            text-align: center;
+            padding: 0.5rem;
+            background: var(--bg-dark);
+            border-radius: 8px;
+        }
+        .summary-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+        .summary-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+        
+        @media (max-width: 1100px) {
+            .main { grid-template-columns: 1fr; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">🚀</div>
+                <span class="logo-text">YYC LocalFirst</span>
+                <span class="logo-badge">ADMIN</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <div class="date-filters">
+                    <button class="date-btn active" data-range="today">Today</button>
+                    <button class="date-btn" data-range="yesterday">Yesterday</button>
+                    <button class="date-btn" data-range="week">7 Days</button>
+                    <button class="date-btn" data-range="biweek">14 Days</button>
+                    <button class="date-btn" data-range="month">30 Days</button>
+                    <button class="date-btn" data-range="quarter">90 Days</button>
+                    <button class="date-btn" data-range="half">6 Months</button>
+                    <button class="date-btn" data-range="year">1 Year</button>
+                    <button class="date-btn" data-range="all">All</button>
+                    <button class="date-btn" data-range="custom">📅 Custom</button>
+                </div>
+                <div class="live-indicator">
+                    <div class="live-dot"></div>
+                    <span>Live</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="date-modal-overlay" id="dateModalOverlay"></div>
+    <div class="date-modal" id="dateModal">
+        <h3>📅 Custom Date Range</h3>
+        <div class="quick-ranges">
+            <button class="quick-range-btn" onclick="setQuickRange(7)">Last 7 Days</button>
+            <button class="quick-range-btn" onclick="setQuickRange(14)">Last 14 Days</button>
+            <button class="quick-range-btn" onclick="setQuickRange(30)">Last 30 Days</button>
+            <button class="quick-range-btn" onclick="setQuickRange(60)">Last 60 Days</button>
+            <button class="quick-range-btn" onclick="setQuickRange(90)">Last 90 Days</button>
+            <button class="quick-range-btn" onclick="setQuickRange(180)">Last 6 Months</button>
+            <button class="quick-range-btn" onclick="setQuickRange(365)">Last 1 Year</button>
+            <button class="quick-range-btn" onclick="setQuickRange('ytd')">Year to Date</button>
+        </div>
+        <div class="date-input-group">
+            <label>Start Date</label>
+            <input type="date" id="startDate">
+        </div>
+        <div class="date-input-group">
+            <label>End Date</label>
+            <input type="date" id="endDate">
+        </div>
+        <div class="date-modal-btns">
+            <button class="cancel-btn" onclick="closeDateModal()">Cancel</button>
+            <button class="apply-btn" onclick="applyCustomRange()">Apply</button>
+        </div>
+    </div>
+
+    <!-- Commission Settings Modal -->
+    <div class="date-modal-overlay" id="commissionModalOverlay"></div>
+    <div class="commission-modal" id="commissionModal">
+        <h3>⚙️ Commission Settings</h3>
+        <p class="commission-modal-subtitle">Set commission rates with effective dates. Historical rates are preserved for accurate calculations.</p>
+        
+        <div class="default-commission">
+            <div>
+                <div class="default-commission-label">Default Rate for New Stores</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">Applied when no period is set</div>
+            </div>
+            <div class="default-commission-input">
+                <input type="number" id="defaultCommission" value="15" min="0" max="50" onchange="saveDefaultCommission()">
+                <span>%</span>
+            </div>
+        </div>
+
+        <div class="store-tabs" id="storeTabs">
+            <!-- Store tabs populated by JS -->
+        </div>
+        
+        <div class="commission-periods-container">
+            <div class="commission-periods-header">
+                <span>Commission Periods for: <strong id="selectedStoreName">Select a store</strong></span>
+                <button class="add-period-btn" onclick="addCommissionPeriod()">+ Add Period</button>
+            </div>
+            <div class="commission-periods-list" id="commissionPeriodsList">
+                <!-- Periods populated by JS -->
+            </div>
+        </div>
+        
+        <div class="commission-summary">
+            <div class="commission-summary-item">
+                <h4 id="summaryTotalRevenue">$0</h4>
+                <p>Total Revenue</p>
+            </div>
+            <div class="commission-summary-item">
+                <h4 id="summaryYourEarnings">$0</h4>
+                <p>Your Earnings</p>
+            </div>
+            <div class="commission-summary-item">
+                <h4 id="summaryEffectiveRate">0%</h4>
+                <p>Effective Rate</p>
+            </div>
+        </div>
+        
+        <div class="date-modal-btns" style="margin-top: 1.5rem;">
+            <button class="cancel-btn" onclick="closeCommissionModal()">Close</button>
+            <button class="apply-btn" onclick="saveAllCommissions()">💾 Save All</button>
+        </div>
+    </div>
+
+    <main class="main">
+        <div class="left-column">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">Orders <span id="dateRangeLabel" style="text-transform: capitalize; color: var(--accent-green);">(Today)</span></div>
+                    <div class="stat-value" id="statOrders">0</div>
+                    <div class="stat-sub" id="statOrdersSub">Loading...</div>
+                </div>
+                <div class="stat-card orange">
+                    <div class="stat-label">Revenue</div>
+                    <div class="stat-value" id="statRevenue">$0</div>
+                    <div class="stat-sub" id="statRevenueSub">Today's total</div>
+                </div>
+                <div class="stat-card blue">
+                    <div class="stat-label">Active Drivers</div>
+                    <div class="stat-value" id="statDrivers">0</div>
+                    <div class="stat-sub" id="statDriversSub">Online now</div>
+                </div>
+                <div class="stat-card purple">
+                    <div class="stat-label">Top Store</div>
+                    <div class="stat-value" id="statTopStore">--</div>
+                    <div class="stat-sub" id="statTopStoreSub">Best performer</div>
+                </div>
+            </div>
+
+            <!-- Store Performance Leaderboard -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">🏆 Store Performance</div>
+                    <button class="settings-btn" onclick="openCommissionModal()">⚙️ Commission Settings</button>
+                </div>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-value" id="totalStores">0</div>
+                        <div class="summary-label">Active Stores</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="avgOrderValue">$0</div>
+                        <div class="summary-label">Avg Order</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="platformFees">$0</div>
+                        <div class="summary-label">Your Fees (15%)</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="deliveryCount">0</div>
+                        <div class="summary-label">🚗 Delivery</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="pickupCount">0</div>
+                        <div class="summary-label">🏃 Pickup</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="deliveryPct">0%</div>
+                        <div class="summary-label">Delivery Rate</div>
+                    </div>
+                </div>
+                <div id="storeLeaderboard"></div>
+            </div>
+
+            <!-- Orders Section -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">📋 Orders</div>
+                    <div class="order-tabs">
+                        <div class="order-tab active" data-status="all">All<span class="count" id="countAll">0</span></div>
+                        <div class="order-tab" data-status="pending">New<span class="count" id="countPending">0</span></div>
+                        <div class="order-tab" data-status="preparing">Cooking<span class="count" id="countPreparing">0</span></div>
+                        <div class="order-tab" data-status="ready">Ready<span class="count" id="countReady">0</span></div>
+                        <div class="order-tab" data-status="delivering">Delivering<span class="count" id="countDelivering">0</span></div>
+                    </div>
+                </div>
+                <div class="orders-list" id="ordersList">
+                    <div class="empty-state">📭 No orders yet today</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-column">
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">🗺️ Live Map</div>
+                </div>
+                <div style="position: relative;">
+                    <div class="map-overlay">
+                        <div class="map-stat"><span class="status-dot" style="background: var(--accent-green);"></span> <span id="mapOnline">0</span> Online</div>
+                        <div class="map-stat"><span class="status-dot" style="background: var(--accent-orange);"></span> <span id="mapBusy">0</span> Busy</div>
+                    </div>
+                    <div id="map"></div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">🚗 Drivers (<span id="driverCount">0</span>)</div>
+                </div>
+                <div id="driversList" style="max-height: 200px; overflow-y: auto;">
+                    <div class="empty-state" style="padding: 1rem;">No drivers</div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">⚡ Quick Actions</div>
+                </div>
+                <div class="quick-actions">
+                    <button class="quick-action-btn" onclick="createTestOrder()">➕ Test Order</button>
+                    <button class="quick-action-btn" onclick="refreshData()">🔄 Refresh</button>
+                    <button class="quick-action-btn" onclick="window.open('https://neighborfleet-driver.vercel.app', '_blank')">📱 Driver App</button>
+                    <button class="quick-action-btn" onclick="window.open('https://supabase.com/dashboard/project/htzozoordnftgkjyadsf', '_blank')">🗄️ Database</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MzM3MDUsImV4cCI6MjA4MzQwOTcwNX0.zWDiVBwgeRDlnvb2FQxAnU-VDX6Yee4EiLmyWHRYYjM';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let orders = [];
+        let drivers = [];
+        let restaurants = [];
+        let currentFilter = 'all';
+        let currentDateRange = 'today';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+            setupTabs();
+            setupDateFilters();
+            setupRealtime();
+        });
+
+        function setupDateFilters() {
+            document.querySelectorAll('.date-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (btn.dataset.range === 'custom') {
+                        openDateModal();
+                        return;
+                    }
+                    document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentDateRange = btn.dataset.range;
+                    loadOrders().then(() => { updateStats(); renderStoreLeaderboard(); });
+                });
+            });
+            
+            // Close modal on overlay click
+            document.getElementById('dateModalOverlay').addEventListener('click', closeDateModal);
+            document.getElementById('commissionModalOverlay').addEventListener('click', closeCommissionModal);
+        }
+
+        function getDateRange() {
+            const now = new Date();
+            let start = new Date();
+            
+            switch(currentDateRange) {
+                case 'today':
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'yesterday':
+                    start.setDate(start.getDate() - 1);
+                    start.setHours(0, 0, 0, 0);
+                    const endYesterday = new Date(start);
+                    endYesterday.setHours(23, 59, 59, 999);
+                    return { start, end: endYesterday };
+                case 'week':
+                    start.setDate(start.getDate() - 7);
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'biweek':
+                    start.setDate(start.getDate() - 14);
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'month':
+                    start.setDate(start.getDate() - 30);
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'quarter':
+                    start.setDate(start.getDate() - 90);
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'half':
+                    start.setMonth(start.getMonth() - 6);
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'year':
+                    start.setFullYear(start.getFullYear() - 1);
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'all':
+                    start = new Date('2020-01-01');
+                    break;
+                case 'custom':
+                    return { start: customStartDate, end: customEndDate };
+            }
+            return { start, end: now };
+        }
+        
+        let customStartDate = null;
+        let customEndDate = null;
+        
+        function openDateModal() {
+            document.getElementById('dateModalOverlay').classList.add('active');
+            document.getElementById('dateModal').classList.add('active');
+            // Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            document.getElementById('endDate').value = today;
+            document.getElementById('startDate').value = weekAgo;
+        }
+        
+        function closeDateModal() {
+            document.getElementById('dateModalOverlay').classList.remove('active');
+            document.getElementById('dateModal').classList.remove('active');
+        }
+        
+        function setQuickRange(days) {
+            const end = new Date();
+            let start = new Date();
+            
+            if (days === 'ytd') {
+                start = new Date(end.getFullYear(), 0, 1); // Jan 1 of current year
+            } else {
+                start.setDate(start.getDate() - days);
+            }
+            
+            document.getElementById('startDate').value = start.toISOString().split('T')[0];
+            document.getElementById('endDate').value = end.toISOString().split('T')[0];
+        }
+        
+        function applyCustomRange() {
+            const startVal = document.getElementById('startDate').value;
+            const endVal = document.getElementById('endDate').value;
+            
+            if (!startVal || !endVal) {
+                alert('Please select both start and end dates');
+                return;
+            }
+            
+            customStartDate = new Date(startVal);
+            customEndDate = new Date(endVal);
+            customEndDate.setHours(23, 59, 59, 999);
+            
+            currentDateRange = 'custom';
+            
+            // Update button states
+            document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('[data-range="custom"]').classList.add('active');
+            
+            closeDateModal();
+            loadOrders().then(() => { updateStats(); renderStoreLeaderboard(); });
+        }
+        
+        // ============================================
+        // DATE-BASED COMMISSION MANAGEMENT
+        // ============================================
+        // Structure: { storeId: { periods: [{ startDate, endDate, rate }] } }
+        let storeCommissions = {};
+        let defaultCommissionRate = 15;
+        let selectedStoreId = null;
+        
+        function loadCommissionSettings() {
+            const saved = localStorage.getItem('yycLocalFirst_commissions_v2');
+            if (saved) {
+                const data = JSON.parse(saved);
+                storeCommissions = data.stores || {};
+                defaultCommissionRate = data.defaultRate || 15;
+            }
+            document.getElementById('defaultCommission').value = defaultCommissionRate;
+        }
+        
+        function saveCommissionSettings() {
+            localStorage.setItem('yycLocalFirst_commissions_v2', JSON.stringify({
+                defaultRate: defaultCommissionRate,
+                stores: storeCommissions
+            }));
+        }
+        
+        // Get commission rate for a specific order based on its date
+        function getCommissionForOrder(storeId, orderDate) {
+            const orderTime = new Date(orderDate).getTime();
+            
+            if (storeCommissions[storeId] && storeCommissions[storeId].periods) {
+                const periods = storeCommissions[storeId].periods;
+                
+                // Find the period that contains this order date
+                for (const period of periods) {
+                    const startTime = new Date(period.startDate).getTime();
+                    const endTime = period.endDate ? new Date(period.endDate).setHours(23,59,59,999) : Infinity;
+                    
+                    if (orderTime >= startTime && orderTime <= endTime) {
+                        return period.rate;
+                    }
+                }
+            }
+            
+            return defaultCommissionRate;
+        }
+        
+        // Calculate total commission for a store based on order dates
+        function calculateStoreCommission(storeId, storeOrders) {
+            let totalCommission = 0;
+            
+            storeOrders.forEach(order => {
+                const rate = getCommissionForOrder(storeId, order.created_at);
+                totalCommission += (order.total || 0) * (rate / 100);
+            });
+            
+            return totalCommission;
+        }
+        
+        function openCommissionModal() {
+            document.getElementById('commissionModalOverlay').classList.add('active');
+            document.getElementById('commissionModal').classList.add('active');
+            renderStoreTabs();
+            if (restaurants.length > 0) {
+                selectStore(restaurants[0].id);
+            }
+            updateCommissionSummary();
+        }
+        
+        function closeCommissionModal() {
+            document.getElementById('commissionModalOverlay').classList.remove('active');
+            document.getElementById('commissionModal').classList.remove('active');
+        }
+        
+        function renderStoreTabs() {
+            const container = document.getElementById('storeTabs');
+            const icons = ['🍕', '🍔', '🌮', '🍣', '🍗'];
+            
+            container.innerHTML = restaurants.map((store, i) => {
+                const storeOrders = orders.filter(o => o.restaurant_id === store.id);
+                const revenue = storeOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+                
+                return `
+                    <div class="store-tab ${selectedStoreId === store.id ? 'active' : ''}" onclick="selectStore('${store.id}')">
+                        <span class="store-tab-icon">${icons[i] || '🏪'}</span>
+                        <span>${store.name}</span>
+                        <span style="color: var(--accent-green); font-size: 0.7rem;">$${revenue.toFixed(0)}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function selectStore(storeId) {
+            selectedStoreId = storeId;
+            const store = restaurants.find(r => r.id === storeId);
+            document.getElementById('selectedStoreName').textContent = store ? store.name : 'Unknown';
+            
+            // Update tab states
+            document.querySelectorAll('.store-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.onclick.toString().includes(storeId)) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            renderCommissionPeriods();
+            renderStoreTabs();
+        }
+        
+        function renderCommissionPeriods() {
+            const container = document.getElementById('commissionPeriodsList');
+            
+            if (!selectedStoreId) {
+                container.innerHTML = '<div class="no-periods">Select a store to manage commission periods</div>';
+                return;
+            }
+            
+            const periods = (storeCommissions[selectedStoreId] && storeCommissions[selectedStoreId].periods) || [];
+            
+            if (periods.length === 0) {
+                container.innerHTML = `
+                    <div class="no-periods">
+                        No commission periods set.<br>
+                        Using default rate: <strong>${defaultCommissionRate}%</strong><br><br>
+                        Click "+ Add Period" to set custom rates for date ranges.
+                    </div>
+                `;
+                return;
+            }
+            
+            // Create array with original indices, then sort by start date (newest first)
+            const periodsWithIndex = periods.map((p, i) => ({ ...p, originalIndex: i }));
+            periodsWithIndex.sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+            
+            const now = new Date();
+            
+            container.innerHTML = periodsWithIndex.map((period) => {
+                const index = period.originalIndex; // Use original index for updates
+                const startDate = new Date(period.startDate);
+                const endDate = period.endDate ? new Date(period.endDate) : null;
+                const isCurrent = now >= startDate && (!endDate || now <= endDate);
+                
+                // Calculate earnings for this period
+                const storeOrders = orders.filter(o => {
+                    if (o.restaurant_id !== selectedStoreId) return false;
+                    const orderDate = new Date(o.created_at);
+                    return orderDate >= startDate && (!endDate || orderDate <= endDate);
+                });
+                const periodRevenue = storeOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+                const periodEarnings = periodRevenue * (period.rate / 100);
+                
+                return `
+                    <div class="commission-period-item ${isCurrent ? 'current' : ''}">
+                        <div class="period-input-group">
+                            <label>Start Date ${isCurrent ? '<span class="period-current-badge">CURRENT</span>' : ''}</label>
+                            <input type="date" 
+                                   value="${period.startDate}" 
+                                   id="period_start_${index}"
+                                   min="2025-09-01"
+                                   max="2030-12-31"
+                                   onchange="updatePeriod(${index}, 'startDate', this.value)">
+                        </div>
+                        <div class="period-input-group">
+                            <label>End Date (blank = ongoing)</label>
+                            <input type="date" 
+                                   value="${period.endDate || ''}" 
+                                   id="period_end_${index}"
+                                   min="2025-09-01"
+                                   max="2030-12-31"
+                                   onchange="updatePeriod(${index}, 'endDate', this.value)"
+                                   placeholder="Ongoing">
+                        </div>
+                        <div class="period-rate">
+                            <input type="number" 
+                                   value="${period.rate}" 
+                                   min="0" 
+                                   max="50" 
+                                   id="period_rate_${index}"
+                                   onchange="updatePeriod(${index}, 'rate', this.value)">
+                            <span>%</span>
+                        </div>
+                        <div class="period-earnings">
+                            <div class="period-earnings-value">$${periodEarnings.toFixed(0)}</div>
+                            <div style="font-size: 0.6rem; color: var(--text-muted);">${storeOrders.length} orders</div>
+                        </div>
+                        <button class="period-delete" onclick="deletePeriod(${index})" title="Delete period">×</button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function addCommissionPeriod() {
+            if (!selectedStoreId) {
+                alert('Please select a store first');
+                return;
+            }
+            
+            if (!storeCommissions[selectedStoreId]) {
+                storeCommissions[selectedStoreId] = { periods: [] };
+            }
+            
+            // Add new period starting Sept 1, 2025 (platform launch date)
+            storeCommissions[selectedStoreId].periods.push({
+                startDate: '2025-09-01',
+                endDate: '',
+                rate: defaultCommissionRate
+            });
+            
+            renderCommissionPeriods();
+        }
+        
+        function updatePeriod(index, field, value) {
+            if (!selectedStoreId || !storeCommissions[selectedStoreId]) return;
+            
+            const periods = storeCommissions[selectedStoreId].periods;
+            if (periods[index]) {
+                if (field === 'rate') {
+                    periods[index][field] = parseFloat(value) || 0;
+                } else {
+                    periods[index][field] = value;
+                }
+            }
+            
+            renderCommissionPeriods();
+            updateCommissionSummary();
+        }
+        
+        function deletePeriod(index) {
+            if (!selectedStoreId || !storeCommissions[selectedStoreId]) return;
+            
+            if (confirm('Delete this commission period?')) {
+                storeCommissions[selectedStoreId].periods.splice(index, 1);
+                renderCommissionPeriods();
+                updateCommissionSummary();
+            }
+        }
+        
+        function updateCommissionSummary() {
+            let totalRevenue = 0;
+            let totalEarnings = 0;
+            
+            restaurants.forEach(store => {
+                const storeOrders = orders.filter(o => o.restaurant_id === store.id);
+                const revenue = storeOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+                const earnings = calculateStoreCommission(store.id, storeOrders);
+                
+                totalRevenue += revenue;
+                totalEarnings += earnings;
+            });
+            
+            document.getElementById('summaryTotalRevenue').textContent = '$' + totalRevenue.toFixed(0);
+            document.getElementById('summaryYourEarnings').textContent = '$' + totalEarnings.toFixed(0);
+            const effectiveRate = totalRevenue > 0 ? (totalEarnings / totalRevenue * 100) : 0;
+            document.getElementById('summaryEffectiveRate').textContent = effectiveRate.toFixed(1) + '%';
+        }
+        
+        function saveDefaultCommission() {
+            defaultCommissionRate = parseFloat(document.getElementById('defaultCommission').value) || 15;
+            saveCommissionSettings();
+        }
+        
+        function saveAllCommissions() {
+            saveCommissionSettings();
+            closeCommissionModal();
+            updateStats();
+            renderStoreLeaderboard();
+            alert('Commission settings saved!');
+        }
+        
+        // Legacy function for backward compatibility
+        function getStoreCommission(storeId) {
+            // For current display, get the currently active rate
+            const now = new Date();
+            return getCommissionForOrder(storeId, now);
+        }
+
+        async function loadData() {
+            loadCommissionSettings();
+            await Promise.all([loadOrders(), loadDrivers(), loadRestaurants()]);
+            updateStats();
+            renderStoreLeaderboard();
+        }
+
+        async function loadOrders() {
+            const { start, end } = getDateRange();
+            
+            let query = supabaseClient
+                .from('orders')
+                .select('*')
+                .gte('created_at', start.toISOString())
+                .order('created_at', { ascending: false });
+            
+            if (end) {
+                query = query.lte('created_at', end.toISOString());
+            }
+
+            const { data, error } = await query;
+
+            if (!error) {
+                orders = data || [];
+                renderOrders();
+                updateOrderCounts();
+            }
+        }
+
+        async function loadDrivers() {
+            const { data, error } = await supabaseClient
+                .from('drivers')
+                .select('*')
+                .order('is_online', { ascending: false });
+
+            if (!error) {
+                drivers = data || [];
+                renderDrivers();
+            }
+        }
+
+        async function loadRestaurants() {
+            const { data, error } = await supabaseClient
+                .from('restaurants')
+                .select('*')
+                .eq('is_active', true);
+
+            if (!error) {
+                restaurants = data || [];
+            }
+        }
+
+        function renderOrders() {
+            const container = document.getElementById('ordersList');
+            const filtered = currentFilter === 'all' ? orders : orders.filter(o => o.status === currentFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-state">📭 No orders</div>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(order => `
+                <div class="order-item">
+                    <div class="order-status-dot ${order.status}"></div>
+                    <div class="order-info">
+                        <div class="order-top">
+                            <span class="order-number">#${order.order_number || order.id.slice(0,6)}</span>
+                            <span class="order-restaurant">${getRestaurantName(order.restaurant_id)}</span>
+                        </div>
+                        <div class="order-customer">${order.customer_name || 'Customer'} • ${order.customer_address || ''}</div>
+                    </div>
+                    <div class="order-meta">
+                        <div class="order-total">$${(order.total || 0).toFixed(2)}</div>
+                        <div class="order-time">${formatTime(order.created_at)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderDrivers() {
+            const container = document.getElementById('driversList');
+            document.getElementById('driverCount').textContent = drivers.length;
+            
+            if (drivers.length === 0) {
+                container.innerHTML = '<div class="empty-state" style="padding: 1rem;">No drivers</div>';
+                return;
+            }
+
+            container.innerHTML = drivers.map(driver => {
+                const statusClass = driver.is_online ? 'online' : 'offline';
+                const statusText = driver.is_online ? 'Online' : 'Offline';
+                const initials = (driver.name || 'D').split(' ').map(n => n[0]).join('').toUpperCase();
+                
+                return `
+                    <div class="driver-item">
+                        <div class="driver-avatar">${initials}</div>
+                        <div class="driver-info">
+                            <div class="driver-name">${driver.name}</div>
+                            <div class="driver-status ${statusClass}">
+                                <span class="status-dot"></span>
+                                ${statusText}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('mapOnline').textContent = drivers.filter(d => d.is_online).length;
+            document.getElementById('mapBusy').textContent = drivers.filter(d => d.is_online && d.current_delivery_id).length;
+        }
+
+        function renderStoreLeaderboard() {
+            const container = document.getElementById('storeLeaderboard');
+            
+            const storeStats = restaurants.map(r => {
+                const storeOrders = orders.filter(o => o.restaurant_id === r.id);
+                const revenue = storeOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+                const deliveryOrders = storeOrders.filter(o => o.order_type === 'delivery' || !o.order_type).length;
+                const pickupOrders = storeOrders.filter(o => o.order_type === 'pickup').length;
+                
+                // Calculate commission using date-based rates
+                const commissionEarnings = calculateStoreCommission(r.id, storeOrders);
+                const effectiveRate = revenue > 0 ? (commissionEarnings / revenue * 100) : 0;
+                const currentRate = getStoreCommission(r.id);
+                
+                return {
+                    ...r,
+                    orderCount: storeOrders.length,
+                    revenue: revenue,
+                    delivery: deliveryOrders,
+                    pickup: pickupOrders,
+                    commissionRate: currentRate,
+                    effectiveRate: effectiveRate,
+                    commissionEarnings: commissionEarnings,
+                    pending: storeOrders.filter(o => o.status === 'pending').length,
+                    preparing: storeOrders.filter(o => o.status === 'preparing' || o.status === 'confirmed').length,
+                    ready: storeOrders.filter(o => o.status === 'ready').length,
+                    delivering: storeOrders.filter(o => o.status === 'delivering').length
+                };
+            }).sort((a, b) => b.revenue - a.revenue);
+
+            const maxRevenue = Math.max(...storeStats.map(s => s.revenue), 1);
+            const icons = ['🍕', '🍔', '🌮', '🍣', '🍗'];
+
+            container.innerHTML = storeStats.map((store, i) => {
+                const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+                const pct = (store.revenue / maxRevenue * 100).toFixed(0);
+                const rateDisplay = store.effectiveRate !== store.commissionRate 
+                    ? `<span title="Effective rate for period">${store.effectiveRate.toFixed(1)}%</span>` 
+                    : `${store.commissionRate}%`;
+                
+                return `
+                    <div class="store-item">
+                        <div class="store-rank ${rankClass}">${i + 1}</div>
+                        <div class="store-icon">${icons[i] || '🏪'}</div>
+                        <div class="store-info">
+                            <div class="store-name">${store.name}</div>
+                            <div class="store-stats">
+                                <div class="store-stat">📦 <span>${store.orderCount}</span></div>
+                                <div class="store-stat">🚗 <span>${store.delivery}</span></div>
+                                <div class="store-stat">🏃 <span>${store.pickup}</span></div>
+                                <div class="store-stat" style="color: var(--accent-green);">💰 ${rateDisplay}</div>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%"></div></div>
+                        </div>
+                        <div class="store-revenue">
+                            <div class="store-revenue-value">$${store.revenue.toFixed(0)}</div>
+                            <div class="store-revenue-label">revenue</div>
+                            <div style="font-size: 0.7rem; color: var(--accent-green); margin-top: 0.25rem;">+$${store.commissionEarnings.toFixed(0)} yours</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Calculate totals with date-based commissions
+            const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+            const totalCommission = storeStats.reduce((sum, s) => sum + s.commissionEarnings, 0);
+            const avgOrder = orders.length > 0 ? totalRevenue / orders.length : 0;
+            
+            document.getElementById('totalStores').textContent = restaurants.length;
+            document.getElementById('avgOrderValue').textContent = '$' + avgOrder.toFixed(0);
+            document.getElementById('platformFees').textContent = '$' + totalCommission.toFixed(0);
+            
+            // Delivery vs Pickup stats
+            const deliveryTotal = orders.filter(o => o.order_type === 'delivery' || !o.order_type).length;
+            const pickupTotal = orders.filter(o => o.order_type === 'pickup').length;
+            document.getElementById('deliveryCount').textContent = deliveryTotal;
+            document.getElementById('pickupCount').textContent = pickupTotal;
+            const deliveryPct = orders.length > 0 ? (deliveryTotal / orders.length * 100).toFixed(0) : 0;
+            document.getElementById('deliveryPct').textContent = deliveryPct + '%';
+        }
+
+        function updateStats() {
+            // Update date range label
+            const rangeLabels = {
+                'today': 'Today',
+                'yesterday': 'Yesterday', 
+                'week': '7 Days',
+                'biweek': '14 Days',
+                'month': '30 Days',
+                'quarter': '90 Days',
+                'half': '6 Months',
+                'year': '1 Year',
+                'all': 'All Time',
+                'custom': customStartDate ? 
+                    customStartDate.toLocaleDateString() + ' - ' + customEndDate.toLocaleDateString() : 
+                    'Custom'
+            };
+            document.getElementById('dateRangeLabel').textContent = '(' + rangeLabels[currentDateRange] + ')';
+            
+            document.getElementById('statOrders').textContent = orders.length;
+            document.getElementById('statOrdersSub').textContent = orders.filter(o => o.status === 'pending').length + ' pending';
+            
+            const revenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+            document.getElementById('statRevenue').textContent = '$' + revenue.toFixed(0);
+            
+            // Calculate total commission with date-based rates
+            let totalCommission = 0;
+            restaurants.forEach(r => {
+                const storeOrders = orders.filter(o => o.restaurant_id === r.id);
+                totalCommission += calculateStoreCommission(r.id, storeOrders);
+            });
+            document.getElementById('statRevenueSub').textContent = 'You earn: $' + totalCommission.toFixed(0);
+            
+            document.getElementById('statDrivers').textContent = drivers.filter(d => d.is_online).length;
+            document.getElementById('statDriversSub').textContent = drivers.length + ' total';
+
+            const storeRevenues = restaurants.map(r => ({
+                name: r.name,
+                revenue: orders.filter(o => o.restaurant_id === r.id).reduce((sum, o) => sum + (o.total || 0), 0)
+            })).sort((a, b) => b.revenue - a.revenue);
+
+            if (storeRevenues.length > 0 && storeRevenues[0].revenue > 0) {
+                document.getElementById('statTopStore').textContent = storeRevenues[0].name.split(' ')[0];
+                document.getElementById('statTopStoreSub').textContent = '$' + storeRevenues[0].revenue.toFixed(0);
+            }
+        }
+
+        function updateOrderCounts() {
+            document.getElementById('countAll').textContent = orders.length;
+            document.getElementById('countPending').textContent = orders.filter(o => o.status === 'pending').length;
+            document.getElementById('countPreparing').textContent = orders.filter(o => o.status === 'preparing' || o.status === 'confirmed').length;
+            document.getElementById('countReady').textContent = orders.filter(o => o.status === 'ready').length;
+            document.getElementById('countDelivering').textContent = orders.filter(o => o.status === 'delivering').length;
+        }
+
+        function getRestaurantName(id) {
+            const r = restaurants.find(r => r.id === id);
+            return r ? r.name : 'Unknown';
+        }
+
+        function formatTime(dateString) {
+            if (!dateString) return '';
+            return new Date(dateString).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function setupTabs() {
+            document.querySelectorAll('.order-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.order-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentFilter = tab.dataset.status;
+                    renderOrders();
+                });
+            });
+        }
+
+        function setupRealtime() {
+            supabaseClient
+                .channel('admin-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+                    loadOrders().then(() => { updateStats(); renderStoreLeaderboard(); });
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => loadDrivers())
+                .subscribe();
+        }
+
+        async function createTestOrder() {
+            if (restaurants.length === 0) return alert('No restaurants');
+            const r = restaurants[Math.floor(Math.random() * restaurants.length)];
+            await supabaseClient.from('orders').insert([{
+                restaurant_id: r.id,
+                customer_name: 'Test Customer',
+                customer_phone: '+14035551234',
+                customer_address: '123 Test St, Calgary',
+                total: parseFloat((Math.random() * 50 + 20).toFixed(2)),
+                status: 'pending'
+            }]);
+            loadOrders().then(() => { updateStats(); renderStoreLeaderboard(); });
+        }
+
+        function refreshData() { loadData(); }
+
+        setTimeout(() => {
+            const map = document.getElementById('map');
+            map.style.background = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)';
+            map.style.display = 'flex';
+            map.style.alignItems = 'center';
+            map.style.justifyContent = 'center';
+            map.style.color = '#5a5c6a';
+            map.innerHTML = '🗺️ Calgary - ' + drivers.filter(d => d.is_online).length + ' drivers online';
+        }, 1000);
+    </script>
+</body>
+</html>
