@@ -595,7 +595,7 @@
         // ============================================
         const SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcyNzk0NTMsImV4cCI6MjA2Mjg1NTQ1M30.tpST3XqeBWsjLmn-HQdSfYVThn_7mR5LzNxxVKOVvic';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         // Security settings
         const MAX_LOGIN_ATTEMPTS = 5;
