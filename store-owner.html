@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Owner Dashboard - YYC LocalFirst</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth-guard.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-card: #141414;
+            --bg-input: #1a1a1a;
+            --border: #2a2a2a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #606060;
+            --accent-green: #22c55e;
+            --accent-green-dim: rgba(34, 197, 94, 0.1);
+            --accent-orange: #f97316;
+            --accent-orange-dim: rgba(249, 115, 22, 0.1);
+            --accent-red: #ef4444;
+            --accent-red-dim: rgba(239, 68, 68, 0.1);
+            --accent-blue: #3b82f6;
+            --accent-blue-dim: rgba(59, 130, 246, 0.1);
+            --accent-purple: #a855f7;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        
+        /* Header */
+        .header {
+            background: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+        .store-selector {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .store-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .store-status.closed {
+            background: var(--accent-red-dim);
+            color: var(--accent-red);
+        }
+        
+        /* Main Layout */
+        .main {
+            display: flex;
+            min-height: calc(100vh - 60px);
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 220px;
+            background: var(--bg-card);
+            border-right: 1px solid var(--border);
+            padding: 1rem 0;
+            position: sticky;
+            top: 60px;
+            height: calc(100vh - 60px);
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem 1.5rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .nav-item:hover {
+            background: var(--bg-input);
+            color: var(--text-primary);
+        }
+        .nav-item.active {
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+            border-left-color: var(--accent-green);
+        }
+        .nav-icon { font-size: 1.1rem; }
+        .nav-label { font-size: 0.9rem; }
+        .nav-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 1rem 0;
+        }
+        
+        /* Content Area */
+        .content {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1.25rem;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .stat-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+        }
+        .stat-sub {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+        
+        /* Section Card */
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+        .section-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .section-body {
+            padding: 1.25rem;
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 0.6rem 1.25rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .btn-primary {
+            background: var(--accent-green);
+            color: #000;
+        }
+        .btn-primary:hover {
+            background: #1ea550;
+        }
+        .btn-secondary {
+            background: var(--bg-input);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover {
+            border-color: var(--accent-green);
+        }
+        .btn-danger {
+            background: var(--accent-red-dim);
+            color: var(--accent-red);
+            border: 1px solid var(--accent-red);
+        }
+        .btn-sm {
+            padding: 0.4rem 0.75rem;
+            font-size: 0.75rem;
+        }
+        
+        /* Category Tabs */
+        .category-tabs {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            overflow-x: auto;
+            flex-wrap: wrap;
+        }
+        .category-tab {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        .category-tab:hover {
+            border-color: var(--accent-green);
+            color: var(--text-primary);
+        }
+        .category-tab.active {
+            background: var(--accent-green);
+            color: #000;
+            border-color: var(--accent-green);
+        }
+        .category-tab .count {
+            background: rgba(0,0,0,0.2);
+            padding: 0.1rem 0.4rem;
+            border-radius: 10px;
+            font-size: 0.7rem;
+            margin-left: 0.3rem;
+        }
+        
+        /* Menu Items Grid */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+            padding: 1.25rem;
+        }
+        .menu-item {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+        .menu-item:hover {
+            border-color: var(--accent-green);
+        }
+        .menu-item-image {
+            width: 100%;
+            height: 140px;
+            object-fit: cover;
+            background: var(--bg-dark);
+        }
+        .menu-item-body {
+            padding: 1rem;
+        }
+        .menu-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+        .menu-item-name {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .menu-item-price {
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+        .menu-item-desc {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+            line-height: 1.4;
+        }
+        .menu-item-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .menu-item-tags {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .tag {
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+        .tag-popular {
+            background: var(--accent-orange-dim);
+            color: var(--accent-orange);
+        }
+        .tag-deal {
+            background: var(--accent-blue-dim);
+            color: var(--accent-blue);
+        }
+        .tag-unavailable {
+            background: var(--accent-red-dim);
+            color: var(--accent-red);
+        }
+        .menu-item-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .action-btn {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+        }
+        .action-btn:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+        .action-btn.delete:hover {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+        }
+        
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+        }
+        .modal-overlay.active { display: block; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 90vh;
+            overflow-y: auto;
+            z-index: 1001;
+        }
+        .modal.active { display: block; }
+        .modal-header {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .modal-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            border: none;
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        .modal-body {
+            padding: 1.25rem;
+        }
+        .modal-footer {
+            padding: 1.25rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+        }
+        
+        /* Form Elements */
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-green);
+        }
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+        textarea.form-input {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        .form-hint {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            cursor: pointer;
+        }
+        .form-checkbox input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent-green);
+        }
+        
+        /* Image Upload */
+        .image-upload {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .image-upload:hover {
+            border-color: var(--accent-green);
+        }
+        .image-upload.has-image {
+            padding: 0;
+            border-style: solid;
+        }
+        .image-upload img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+        }
+        .image-upload-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        .image-upload-text span {
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+        
+        /* Type Selector */
+        .type-selector {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+        }
+        .type-option {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 12px;
+            border: 2px solid var(--border);
+            background: var(--bg-input);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .type-option:hover {
+            border-color: var(--accent-green);
+        }
+        .type-option.active {
+            border-color: var(--accent-green);
+            background: var(--accent-green-dim);
+        }
+        .type-option-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        .type-option-label {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .type-option-desc {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 0.25rem;
+        }
+        
+        /* Deal Items */
+        .deal-items {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .deal-items-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .deal-items-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .deal-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-input);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+        .deal-item-qty {
+            width: 50px;
+            padding: 0.4rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            text-align: center;
+        }
+        .deal-item-name {
+            flex: 1;
+        }
+        .deal-item-name select {
+            width: 100%;
+            padding: 0.4rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-primary);
+        }
+        .deal-item-remove {
+            color: var(--accent-red);
+            cursor: pointer;
+            font-size: 1.2rem;
+        }
+        
+        /* Toggle Switch */
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .toggle {
+            position: relative;
+            width: 50px;
+            height: 26px;
+            background: var(--border);
+            border-radius: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .toggle.active {
+            background: var(--accent-green);
+        }
+        .toggle::after {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+        .toggle.active::after {
+            left: 27px;
+        }
+        
+        /* Orders Section */
+        .order-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 1rem;
+            align-items: flex-start;
+        }
+        .order-item:last-child { border-bottom: none; }
+        .order-status-badge {
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+        .order-status-badge.pending {
+            background: var(--accent-orange-dim);
+            color: var(--accent-orange);
+        }
+        .order-status-badge.preparing {
+            background: var(--accent-blue-dim);
+            color: var(--accent-blue);
+        }
+        .order-status-badge.ready {
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+        }
+        .order-info { flex: 1; }
+        .order-id { font-weight: 700; font-size: 1rem; }
+        .order-time { font-size: 0.75rem; color: var(--text-muted); }
+        .order-items-preview { font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.25rem; }
+        .order-total { font-weight: 700; color: var(--accent-green); }
+        .order-actions { display: flex; gap: 0.5rem; }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: var(--text-secondary);
+        }
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        .empty-state-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .form-row { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="logo">🍁 YYC LocalFirst</div>
+            <select class="store-selector" id="storeSelector" onchange="selectStore(this.value)">
+                <option value="">Select Your Store...</option>
+            </select>
+        </div>
+        <div class="header-right">
+            <div class="store-status" id="storeStatus">
+                <span>🟢</span> Open for Orders
+            </div>
+        </div>
+    </header>
+
+    <div class="main">
+        <!-- Sidebar -->
+        <nav class="sidebar">
+            <div class="nav-item active" onclick="showPage('dashboard')">
+                <span class="nav-icon">📊</span>
+                <span class="nav-label">Dashboard</span>
+            </div>
+            <div class="nav-item" onclick="showPage('menu')">
+                <span class="nav-icon">📋</span>
+                <span class="nav-label">Menu Items</span>
+            </div>
+            <div class="nav-item" onclick="showPage('deals')">
+                <span class="nav-icon">🎁</span>
+                <span class="nav-label">Deals & Combos</span>
+            </div>
+            <div class="nav-item" onclick="showPage('orders')">
+                <span class="nav-icon">📦</span>
+                <span class="nav-label">Orders</span>
+            </div>
+            <div class="nav-divider"></div>
+            <div class="nav-item" onclick="showPage('categories')">
+                <span class="nav-icon">🏷️</span>
+                <span class="nav-label">Categories</span>
+            </div>
+            <div class="nav-item" onclick="showPage('settings')">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Settings</span>
+            </div>
+        </nav>
+
+        <!-- Content -->
+        <main class="content">
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page">
+                <h1 class="page-title">📊 Dashboard</h1>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Today's Orders</div>
+                        <div class="stat-value" id="statTodayOrders">0</div>
+                        <div class="stat-sub">vs yesterday</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Today's Revenue</div>
+                        <div class="stat-value" id="statTodayRevenue">$0</div>
+                        <div class="stat-sub">You receive 85%</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Menu Items</div>
+                        <div class="stat-value" id="statMenuItems">0</div>
+                        <div class="stat-sub">active items</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Pending Orders</div>
+                        <div class="stat-value" id="statPendingOrders">0</div>
+                        <div class="stat-sub">need attention</div>
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">📦 Recent Orders</span>
+                        <button class="btn btn-secondary btn-sm" onclick="showPage('orders')">View All</button>
+                    </div>
+                    <div id="recentOrders">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📦</div>
+                            <div class="empty-state-title">No recent orders</div>
+                            <div>Orders will appear here when customers place them</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">⭐ Popular Items</span>
+                    </div>
+                    <div id="popularItems" class="menu-grid" style="padding: 1rem;">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu Page -->
+            <div id="page-menu" class="page" style="display: none;">
+                <h1 class="page-title">
+                    📋 Menu Items
+                    <button class="btn btn-primary" onclick="openAddItemModal('single')">+ Add Item</button>
+                </h1>
+
+                <div class="section-card">
+                    <div class="category-tabs" id="categoryTabs">
+                        <div class="category-tab active" data-category="all" onclick="filterByCategory('all')">All Items</div>
+                        <!-- Categories populated by JS -->
+                    </div>
+                    <div class="menu-grid" id="menuGrid">
+                        <!-- Menu items populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Deals Page -->
+            <div id="page-deals" class="page" style="display: none;">
+                <h1 class="page-title">
+                    🎁 Deals & Combos
+                    <button class="btn btn-primary" onclick="openAddItemModal('deal')">+ Create Deal</button>
+                </h1>
+
+                <div class="section-card">
+                    <div class="section-body">
+                        <p style="color: var(--text-secondary); margin-bottom: 1rem;">
+                            Create combo deals, bundle offers, and special promotions to increase sales.
+                        </p>
+                    </div>
+                    <div class="menu-grid" id="dealsGrid">
+                        <!-- Deals populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Orders Page -->
+            <div id="page-orders" class="page" style="display: none;">
+                <h1 class="page-title">📦 Orders</h1>
+
+                <div class="section-card">
+                    <div class="category-tabs">
+                        <div class="category-tab active" onclick="filterOrders('all')">All</div>
+                        <div class="category-tab" onclick="filterOrders('pending')">🟠 Pending</div>
+                        <div class="category-tab" onclick="filterOrders('preparing')">🔵 Preparing</div>
+                        <div class="category-tab" onclick="filterOrders('ready')">🟢 Ready</div>
+                    </div>
+                    <div id="ordersContainer">
+                        <!-- Orders populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Categories Page -->
+            <div id="page-categories" class="page" style="display: none;">
+                <h1 class="page-title">
+                    🏷️ Categories
+                    <button class="btn btn-primary" onclick="openCategoryModal()">+ Add Category</button>
+                </h1>
+
+                <div class="section-card">
+                    <div class="section-body" id="categoriesList">
+                        <!-- Categories populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Page -->
+            <div id="page-settings" class="page" style="display: none;">
+                <h1 class="page-title">⚙️ Store Settings</h1>
+
+                <div class="section-card">
+                    <div class="section-header">
+                        <span class="section-title">Store Information</span>
+                    </div>
+                    <div class="section-body">
+                        <div class="form-group">
+                            <label class="form-label">Store Name</label>
+                            <input type="text" class="form-input" id="settingsStoreName" placeholder="Your Store Name">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Address</label>
+                            <input type="text" class="form-input" id="settingsAddress" placeholder="123 Main St, Calgary, AB">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Phone</label>
+                            <input type="tel" class="form-input" id="settingsPhone" placeholder="+1 403-XXX-XXXX">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Store Hours</label>
+                            <div class="form-row">
+                                <input type="time" class="form-input" id="settingsOpenTime" value="11:00">
+                                <input type="time" class="form-input" id="settingsCloseTime" value="22:00">
+                            </div>
+                        </div>
+                        <button class="btn btn-primary">Save Changes</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Add/Edit Item Modal -->
+    <div class="modal-overlay" id="itemModalOverlay"></div>
+    <div class="modal" id="itemModal">
+        <div class="modal-header">
+            <h2 class="modal-title" id="itemModalTitle">Add New Item</h2>
+            <button class="modal-close" onclick="closeItemModal()">×</button>
+        </div>
+        <div class="modal-body">
+            <!-- Item Type Selector -->
+            <div class="type-selector" id="typeSelector">
+                <div class="type-option active" data-type="single" onclick="selectItemType('single')">
+                    <div class="type-option-icon">🍕</div>
+                    <div class="type-option-label">Single Item</div>
+                    <div class="type-option-desc">Pizza, Burger, Salad, etc.</div>
+                </div>
+                <div class="type-option" data-type="deal" onclick="selectItemType('deal')">
+                    <div class="type-option-icon">🎁</div>
+                    <div class="type-option-label">Deal / Combo</div>
+                    <div class="type-option-desc">Bundle multiple items</div>
+                </div>
+            </div>
+
+            <form id="itemForm">
+                <input type="hidden" id="itemId">
+                <input type="hidden" id="itemType" value="single">
+
+                <!-- Image Upload -->
+                <div class="form-group">
+                    <label class="form-label">Item Image</label>
+                    <div class="image-upload" id="imageUpload" onclick="document.getElementById('imageInput').click()">
+                        <div class="image-upload-text">
+                            📷 <span>Click to upload</span> or drag and drop<br>
+                            <small>PNG, JPG up to 5MB</small>
+                        </div>
+                    </div>
+                    <input type="file" id="imageInput" accept="image/*" style="display: none" onchange="handleImageUpload(this)">
+                    <input type="hidden" id="itemImageUrl">
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Item Name *</label>
+                        <input type="text" class="form-input" id="itemName" placeholder="e.g., Pepperoni Pizza" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Category *</label>
+                        <select class="form-input" id="itemCategory" required>
+                            <option value="">Select Category</option>
+                            <option value="Pizzas">Pizzas</option>
+                            <option value="Burgers">Burgers</option>
+                            <option value="Chicken">Chicken</option>
+                            <option value="Tacos">Tacos</option>
+                            <option value="Salads">Salads</option>
+                            <option value="Appetizers">Appetizers</option>
+                            <option value="Sides">Sides</option>
+                            <option value="Drinks">Drinks</option>
+                            <option value="Desserts">Desserts</option>
+                            <option value="Combos">Combos / Deals</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-input" id="itemDescription" placeholder="Describe the item, ingredients, etc."></textarea>
+                </div>
+
+                <!-- Deal Items Section (hidden for single items) -->
+                <div id="dealItemsSection" style="display: none;">
+                    <div class="deal-items">
+                        <div class="deal-items-header">
+                            <span class="deal-items-title">🎁 Items Included in Deal</span>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="addDealItem()">+ Add Item</button>
+                        </div>
+                        <div id="dealItemsList">
+                            <!-- Deal items added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Price *</label>
+                        <input type="number" class="form-input" id="itemPrice" placeholder="0.00" step="0.01" min="0" required>
+                        <div class="form-hint" id="originalPriceHint" style="display: none;">Original value: $<span id="originalPriceValue">0</span></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Compare Price (Optional)</label>
+                        <input type="number" class="form-input" id="itemComparePrice" placeholder="0.00" step="0.01" min="0">
+                        <div class="form-hint">Show as "was $X" for deals</div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Ingredients / What's Included</label>
+                    <textarea class="form-input" id="itemIngredients" placeholder="List ingredients or items included (one per line)"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="itemPopular">
+                            <span>⭐ Mark as Popular</span>
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-checkbox">
+                            <input type="checkbox" id="itemAvailable" checked>
+                            <span>✅ Available for Order</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group" id="specialOfferSection">
+                    <label class="form-label">Special Offer Tag (Optional)</label>
+                    <input type="text" class="form-input" id="itemSpecialOffer" placeholder="e.g., 2 for 1, Limited Time, New!">
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeItemModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveItem()">💾 Save Item</button>
+        </div>
+    </div>
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcyNzk0NTMsImV4cCI6MjA2Mjg1NTQ1M30.tpST3XqeBWsjLmn-HQdSfYVThn_7mR5LzNxxVKOVvic';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // State
+        let currentStore = null;
+        let menuItems = [];
+        let categories = [];
+        let orders = [];
+        let currentCategory = 'all';
+        let currentItemType = 'single';
+        let dealItems = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStores();
+            setupEventListeners();
+        });
+
+        async function loadStores() {
+            const { data, error } = await supabase
+                .from('restaurants')
+                .select('*')
+                .order('name');
+            
+            if (data) {
+                const selector = document.getElementById('storeSelector');
+                selector.innerHTML = '<option value="">Select Your Store...</option>' +
+                    data.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+                
+                // Auto-select first store for demo
+                if (data.length > 0) {
+                    selector.value = data[0].id;
+                    selectStore(data[0].id);
+                }
+            }
+        }
+
+        async function selectStore(storeId) {
+            if (!storeId) return;
+            
+            const { data } = await supabase
+                .from('restaurants')
+                .select('*')
+                .eq('id', storeId)
+                .single();
+            
+            currentStore = data;
+            await loadMenuItems();
+            await loadOrders();
+            updateDashboard();
+        }
+
+        async function loadMenuItems() {
+            if (!currentStore) return;
+            
+            const { data, error } = await supabase
+                .from('menu_items')
+                .select('*')
+                .eq('restaurant_id', currentStore.id)
+                .order('category', { ascending: true });
+            
+            menuItems = data || [];
+            
+            // Extract unique categories
+            categories = [...new Set(menuItems.map(i => i.category).filter(Boolean))];
+            
+            renderCategoryTabs();
+            renderMenuGrid();
+            updateDashboard();
+        }
+
+        async function loadOrders() {
+            if (!currentStore) return;
+            
+            const { data, error } = await supabase
+                .from('orders')
+                .select('*')
+                .eq('restaurant_id', currentStore.id)
+                .order('created_at', { ascending: false })
+                .limit(50);
+            
+            orders = data || [];
+            renderOrders();
+            updateDashboard();
+        }
+
+        function updateDashboard() {
+            // Today's stats
+            const today = new Date().toISOString().split('T')[0];
+            const todayOrders = orders.filter(o => o.created_at && o.created_at.startsWith(today));
+            
+            document.getElementById('statTodayOrders').textContent = todayOrders.length;
+            document.getElementById('statTodayRevenue').textContent = '$' + todayOrders.reduce((sum, o) => sum + (o.total || 0), 0).toFixed(0);
+            document.getElementById('statMenuItems').textContent = menuItems.filter(i => i.is_available !== false).length;
+            document.getElementById('statPendingOrders').textContent = orders.filter(o => o.status === 'pending').length;
+            
+            // Popular items
+            const popularItems = menuItems.filter(i => i.is_popular).slice(0, 4);
+            const popularContainer = document.getElementById('popularItems');
+            if (popularItems.length > 0) {
+                popularContainer.innerHTML = popularItems.map(item => renderMenuItemCard(item)).join('');
+            } else {
+                popularContainer.innerHTML = '<div class="empty-state"><div>No popular items marked yet</div></div>';
+            }
+            
+            // Recent orders
+            renderRecentOrders();
+        }
+
+        function renderCategoryTabs() {
+            const container = document.getElementById('categoryTabs');
+            const allCount = menuItems.length;
+            
+            container.innerHTML = `
+                <div class="category-tab ${currentCategory === 'all' ? 'active' : ''}" data-category="all" onclick="filterByCategory('all')">
+                    All Items <span class="count">${allCount}</span>
+                </div>
+                ${categories.map(cat => {
+                    const count = menuItems.filter(i => i.category === cat).length;
+                    return `
+                        <div class="category-tab ${currentCategory === cat ? 'active' : ''}" data-category="${cat}" onclick="filterByCategory('${cat}')">
+                            ${cat} <span class="count">${count}</span>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+        }
+
+        function filterByCategory(category) {
+            currentCategory = category;
+            
+            // Update active tab
+            document.querySelectorAll('.category-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.category === category);
+            });
+            
+            renderMenuGrid();
+        }
+
+        function renderMenuGrid() {
+            const container = document.getElementById('menuGrid');
+            let filteredItems = currentCategory === 'all' 
+                ? menuItems 
+                : menuItems.filter(i => i.category === currentCategory);
+            
+            // Exclude combo/deal items from main menu
+            filteredItems = filteredItems.filter(i => i.category !== 'Combos');
+            
+            if (filteredItems.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1/-1;">
+                        <div class="empty-state-icon">📋</div>
+                        <div class="empty-state-title">No items yet</div>
+                        <div>Add your first menu item to get started</div>
+                        <button class="btn btn-primary" style="margin-top: 1rem;" onclick="openAddItemModal('single')">+ Add Item</button>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = filteredItems.map(item => renderMenuItemCard(item)).join('');
+            
+            // Render deals separately
+            const deals = menuItems.filter(i => i.category === 'Combos');
+            const dealsContainer = document.getElementById('dealsGrid');
+            if (dealsContainer) {
+                if (deals.length === 0) {
+                    dealsContainer.innerHTML = `
+                        <div class="empty-state" style="grid-column: 1/-1;">
+                            <div class="empty-state-icon">🎁</div>
+                            <div class="empty-state-title">No deals yet</div>
+                            <div>Create combo deals to boost sales</div>
+                        </div>
+                    `;
+                } else {
+                    dealsContainer.innerHTML = deals.map(item => renderMenuItemCard(item, true)).join('');
+                }
+            }
+        }
+
+        function renderMenuItemCard(item, isDeal = false) {
+            const tags = [];
+            if (item.is_popular) tags.push('<span class="tag tag-popular">⭐ Popular</span>');
+            if (isDeal || item.category === 'Combos') tags.push('<span class="tag tag-deal">🎁 Deal</span>');
+            if (item.is_available === false) tags.push('<span class="tag tag-unavailable">Unavailable</span>');
+            
+            return `
+                <div class="menu-item">
+                    <img class="menu-item-image" src="${item.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'}" alt="${item.name}" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400'">
+                    <div class="menu-item-body">
+                        <div class="menu-item-header">
+                            <span class="menu-item-name">${item.name}</span>
+                            <span class="menu-item-price">$${(item.base_price || 0).toFixed(2)}</span>
+                        </div>
+                        <div class="menu-item-desc">${item.description || 'No description'}</div>
+                        <div class="menu-item-meta">
+                            <div class="menu-item-tags">${tags.join('')}</div>
+                            <div class="menu-item-actions">
+                                <button class="action-btn" onclick="editItem('${item.id}')" title="Edit">✏️</button>
+                                <button class="action-btn" onclick="toggleAvailability('${item.id}')" title="Toggle Availability">${item.is_available !== false ? '✅' : '❌'}</button>
+                                <button class="action-btn delete" onclick="deleteItem('${item.id}')" title="Delete">🗑️</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderOrders() {
+            const container = document.getElementById('ordersContainer');
+            
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📦</div>
+                        <div class="empty-state-title">No orders yet</div>
+                        <div>Orders will appear here when customers place them</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = orders.slice(0, 20).map(order => {
+                const statusClass = order.status || 'pending';
+                const statusText = {
+                    pending: '🟠 Pending',
+                    confirmed: '🔵 Confirmed',
+                    preparing: '🔵 Preparing',
+                    ready: '🟢 Ready',
+                    delivering: '🚗 Delivering',
+                    delivered: '✅ Delivered'
+                }[statusClass] || statusClass;
+                
+                return `
+                    <div class="order-item">
+                        <span class="order-status-badge ${statusClass}">${statusText}</span>
+                        <div class="order-info">
+                            <div class="order-id">#${order.id.slice(0, 8).toUpperCase()}</div>
+                            <div class="order-time">${new Date(order.created_at).toLocaleString()}</div>
+                            <div class="order-items-preview">${order.customer_name || 'Customer'}</div>
+                        </div>
+                        <div class="order-total">$${(order.total || 0).toFixed(2)}</div>
+                        <div class="order-actions">
+                            ${order.status === 'pending' ? '<button class="btn btn-primary btn-sm" onclick="updateOrderStatus(\'' + order.id + '\', \'preparing\')">Accept</button>' : ''}
+                            ${order.status === 'preparing' ? '<button class="btn btn-primary btn-sm" onclick="updateOrderStatus(\'' + order.id + '\', \'ready\')">Ready</button>' : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderRecentOrders() {
+            const container = document.getElementById('recentOrders');
+            const recentOrders = orders.slice(0, 5);
+            
+            if (recentOrders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📦</div>
+                        <div class="empty-state-title">No recent orders</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = recentOrders.map(order => {
+                const statusClass = order.status || 'pending';
+                return `
+                    <div class="order-item">
+                        <span class="order-status-badge ${statusClass}">${order.status || 'pending'}</span>
+                        <div class="order-info">
+                            <div class="order-id">#${order.id.slice(0, 8).toUpperCase()}</div>
+                            <div class="order-time">${new Date(order.created_at).toLocaleString()}</div>
+                        </div>
+                        <div class="order-total">$${(order.total || 0).toFixed(2)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Page Navigation
+        function showPage(pageName) {
+            document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+            document.getElementById('page-' + pageName).style.display = 'block';
+            
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+        }
+
+        // Modal Functions
+        function openAddItemModal(type = 'single') {
+            document.getElementById('itemModalOverlay').classList.add('active');
+            document.getElementById('itemModal').classList.add('active');
+            document.getElementById('itemModalTitle').textContent = type === 'deal' ? 'Create New Deal' : 'Add New Item';
+            document.getElementById('itemForm').reset();
+            document.getElementById('itemId').value = '';
+            document.getElementById('itemAvailable').checked = true;
+            
+            // Reset image
+            document.getElementById('imageUpload').innerHTML = `
+                <div class="image-upload-text">
+                    📷 <span>Click to upload</span> or drag and drop<br>
+                    <small>PNG, JPG up to 5MB</small>
+                </div>
+            `;
+            document.getElementById('imageUpload').classList.remove('has-image');
+            
+            selectItemType(type);
+            dealItems = [];
+            renderDealItems();
+        }
+
+        function closeItemModal() {
+            document.getElementById('itemModalOverlay').classList.remove('active');
+            document.getElementById('itemModal').classList.remove('active');
+        }
+
+        function selectItemType(type) {
+            currentItemType = type;
+            document.getElementById('itemType').value = type;
+            
+            document.querySelectorAll('.type-option').forEach(opt => {
+                opt.classList.toggle('active', opt.dataset.type === type);
+            });
+            
+            document.getElementById('dealItemsSection').style.display = type === 'deal' ? 'block' : 'none';
+            document.getElementById('originalPriceHint').style.display = type === 'deal' ? 'block' : 'none';
+            
+            if (type === 'deal') {
+                document.getElementById('itemCategory').value = 'Combos';
+            }
+        }
+
+        function addDealItem() {
+            dealItems.push({ qty: 1, itemId: '' });
+            renderDealItems();
+        }
+
+        function renderDealItems() {
+            const container = document.getElementById('dealItemsList');
+            
+            if (dealItems.length === 0) {
+                container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.85rem;">No items added yet. Click "+ Add Item" to include items in this deal.</div>';
+                return;
+            }
+            
+            const availableItems = menuItems.filter(i => i.category !== 'Combos');
+            
+            container.innerHTML = dealItems.map((item, index) => `
+                <div class="deal-item">
+                    <input type="number" class="deal-item-qty" value="${item.qty}" min="1" max="10" onchange="updateDealItem(${index}, 'qty', this.value)">
+                    <div class="deal-item-name">
+                        <select onchange="updateDealItem(${index}, 'itemId', this.value)">
+                            <option value="">Select item...</option>
+                            ${availableItems.map(i => `<option value="${i.id}" ${item.itemId === i.id ? 'selected' : ''}>${i.name} - $${i.base_price}</option>`).join('')}
+                        </select>
+                    </div>
+                    <span class="deal-item-remove" onclick="removeDealItem(${index})">×</span>
+                </div>
+            `).join('');
+            
+            updateDealPrice();
+        }
+
+        function updateDealItem(index, field, value) {
+            if (field === 'qty') {
+                dealItems[index].qty = parseInt(value) || 1;
+            } else {
+                dealItems[index].itemId = value;
+            }
+            updateDealPrice();
+        }
+
+        function removeDealItem(index) {
+            dealItems.splice(index, 1);
+            renderDealItems();
+        }
+
+        function updateDealPrice() {
+            let total = 0;
+            dealItems.forEach(item => {
+                const menuItem = menuItems.find(m => m.id === item.itemId);
+                if (menuItem) {
+                    total += (menuItem.base_price || 0) * item.qty;
+                }
+            });
+            document.getElementById('originalPriceValue').textContent = total.toFixed(2);
+        }
+
+        function handleImageUpload(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const uploadDiv = document.getElementById('imageUpload');
+                uploadDiv.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
+                uploadDiv.classList.add('has-image');
+                document.getElementById('itemImageUrl').value = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function saveItem() {
+            if (!currentStore) {
+                alert('Please select a store first');
+                return;
+            }
+            
+            const itemData = {
+                restaurant_id: currentStore.id,
+                name: document.getElementById('itemName').value,
+                description: document.getElementById('itemDescription').value,
+                base_price: parseFloat(document.getElementById('itemPrice').value) || 0,
+                category: document.getElementById('itemCategory').value,
+                image_url: document.getElementById('itemImageUrl').value || null,
+                is_popular: document.getElementById('itemPopular').checked,
+                is_available: document.getElementById('itemAvailable').checked
+            };
+            
+            if (!itemData.name || !itemData.category) {
+                alert('Please fill in required fields (Name and Category)');
+                return;
+            }
+            
+            const itemId = document.getElementById('itemId').value;
+            
+            try {
+                if (itemId) {
+                    // Update existing
+                    const { error } = await supabase
+                        .from('menu_items')
+                        .update(itemData)
+                        .eq('id', itemId);
+                    
+                    if (error) throw error;
+                } else {
+                    // Insert new
+                    const { error } = await supabase
+                        .from('menu_items')
+                        .insert([itemData]);
+                    
+                    if (error) throw error;
+                }
+                
+                closeItemModal();
+                await loadMenuItems();
+                alert('Item saved successfully!');
+            } catch (error) {
+                console.error('Error saving item:', error);
+                alert('Error saving item: ' + error.message);
+            }
+        }
+
+        async function editItem(itemId) {
+            const item = menuItems.find(i => i.id === itemId);
+            if (!item) return;
+            
+            document.getElementById('itemModalOverlay').classList.add('active');
+            document.getElementById('itemModal').classList.add('active');
+            document.getElementById('itemModalTitle').textContent = 'Edit Item';
+            
+            document.getElementById('itemId').value = item.id;
+            document.getElementById('itemName').value = item.name || '';
+            document.getElementById('itemDescription').value = item.description || '';
+            document.getElementById('itemPrice').value = item.base_price || '';
+            document.getElementById('itemCategory').value = item.category || '';
+            document.getElementById('itemPopular').checked = item.is_popular || false;
+            document.getElementById('itemAvailable').checked = item.is_available !== false;
+            document.getElementById('itemImageUrl').value = item.image_url || '';
+            
+            if (item.image_url) {
+                const uploadDiv = document.getElementById('imageUpload');
+                uploadDiv.innerHTML = `<img src="${item.image_url}" alt="Preview">`;
+                uploadDiv.classList.add('has-image');
+            }
+            
+            selectItemType(item.category === 'Combos' ? 'deal' : 'single');
+        }
+
+        async function deleteItem(itemId) {
+            if (!confirm('Are you sure you want to delete this item?')) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('menu_items')
+                    .delete()
+                    .eq('id', itemId);
+                
+                if (error) throw error;
+                
+                await loadMenuItems();
+            } catch (error) {
+                console.error('Error deleting item:', error);
+                alert('Error deleting item: ' + error.message);
+            }
+        }
+
+        async function toggleAvailability(itemId) {
+            const item = menuItems.find(i => i.id === itemId);
+            if (!item) return;
+            
+            try {
+                const { error } = await supabase
+                    .from('menu_items')
+                    .update({ is_available: item.is_available === false })
+                    .eq('id', itemId);
+                
+                if (error) throw error;
+                
+                await loadMenuItems();
+            } catch (error) {
+                console.error('Error updating availability:', error);
+            }
+        }
+
+        async function updateOrderStatus(orderId, status) {
+            try {
+                const { error } = await supabase
+                    .from('orders')
+                    .update({ status })
+                    .eq('id', orderId);
+                
+                if (error) throw error;
+                
+                await loadOrders();
+            } catch (error) {
+                console.error('Error updating order:', error);
+            }
+        }
+
+        function setupEventListeners() {
+            // Close modal on overlay click
+            document.getElementById('itemModalOverlay').addEventListener('click', closeItemModal);
+        }
+    </script>
+</body>
+</html>
