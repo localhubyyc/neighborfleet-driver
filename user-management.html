@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - YYC LocalFirst Admin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="auth-guard.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-card: #141414;
+            --bg-input: #1a1a1a;
+            --border: #2a2a2a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --accent-green: #22c55e;
+            --accent-green-dim: rgba(34, 197, 94, 0.1);
+            --accent-red: #ef4444;
+            --accent-red-dim: rgba(239, 68, 68, 0.1);
+            --accent-blue: #3b82f6;
+            --accent-blue-dim: rgba(59, 130, 246, 0.1);
+            --accent-orange: #f97316;
+            --accent-purple: #a855f7;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg-dark); color: var(--text-primary); min-height: 100vh; }
+        .header { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+        .logo { font-size: 1.5rem; font-weight: 700; color: var(--accent-green); }
+        .main { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+        .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+        .page-title { font-size: 1.5rem; font-weight: 700; }
+        .btn { padding: 0.6rem 1.25rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 0.5rem; }
+        .btn-primary { background: var(--accent-green); color: #000; }
+        .btn-secondary { background: var(--bg-input); color: var(--text-primary); border: 1px solid var(--border); }
+        .btn-danger { background: var(--accent-red-dim); color: var(--accent-red); }
+        .btn-sm { padding: 0.4rem 0.75rem; font-size: 0.75rem; }
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+        .stat-value { font-size: 2rem; font-weight: 700; }
+        .stat-label { color: var(--text-secondary); font-size: 0.85rem; }
+        .card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 1.5rem; }
+        .card-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .tabs { display: flex; gap: 0.5rem; padding: 1rem; border-bottom: 1px solid var(--border); }
+        .tab { padding: 0.5rem 1rem; border-radius: 8px; background: transparent; color: var(--text-secondary); border: none; cursor: pointer; }
+        .tab.active { background: var(--accent-green); color: #000; font-weight: 600; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.875rem 1.25rem; text-align: left; border-bottom: 1px solid var(--border); }
+        th { background: var(--bg-input); font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; }
+        .user-info { display: flex; align-items: center; gap: 0.75rem; }
+        .avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+        .avatar.admin { background: var(--accent-purple); color: white; }
+        .avatar.store_owner { background: var(--accent-blue); color: white; }
+        .avatar.driver { background: var(--accent-orange); color: white; }
+        .badge { padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-active { background: var(--accent-green-dim); color: var(--accent-green); }
+        .badge-inactive { background: var(--accent-red-dim); color: var(--accent-red); }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; }
+        .modal-overlay.active { display: block; }
+        .modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; z-index: 1001; }
+        .modal.active { display: block; }
+        .modal-header { padding: 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; }
+        .modal-body { padding: 1.25rem; }
+        .modal-footer { padding: 1.25rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.75rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; color: var(--text-secondary); }
+        .form-input { width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); }
+        .form-input:focus { outline: none; border-color: var(--accent-green); }
+        .password-req { background: var(--bg-input); border-radius: 8px; padding: 1rem; margin-top: 0.5rem; font-size: 0.8rem; }
+        .req { color: var(--text-secondary); margin-bottom: 0.25rem; }
+        .req.met { color: var(--accent-green); }
+        .alert { padding: 1rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+        .alert-error { background: var(--accent-red-dim); border: 1px solid var(--accent-red); color: var(--accent-red); }
+        .alert-success { background: var(--accent-green-dim); border: 1px solid var(--accent-green); color: var(--accent-green); }
+        @media (max-width: 768px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">🔐 User Management</div>
+        <div style="display: flex; gap: 1rem;">
+            <button class="btn btn-secondary" onclick="window.location.href='admin.html'">← Back to Admin</button>
+            <button class="btn btn-danger" onclick="logout()">🚪 Logout</button>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="page-header">
+            <h1 class="page-title">👥 User Accounts</h1>
+            <button class="btn btn-primary" onclick="openModal()">+ Create User</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card"><div class="stat-value" id="totalUsers">0</div><div class="stat-label">Total Users</div></div>
+            <div class="stat-card"><div class="stat-value" id="storeOwners">0</div><div class="stat-label">Store Owners</div></div>
+            <div class="stat-card"><div class="stat-value" id="drivers">0</div><div class="stat-label">Drivers</div></div>
+            <div class="stat-card"><div class="stat-value" id="lockedAccounts">0</div><div class="stat-label">Locked</div></div>
+        </div>
+
+        <div class="card">
+            <div class="tabs">
+                <button class="tab active" onclick="filterUsers('all', this)">All Users</button>
+                <button class="tab" onclick="filterUsers('admin', this)">🔐 Admins</button>
+                <button class="tab" onclick="filterUsers('store_owner', this)">🏪 Store Owners</button>
+                <button class="tab" onclick="filterUsers('driver', this)">🚗 Drivers</button>
+            </div>
+            <table>
+                <thead><tr><th>User</th><th>Role</th><th>Status</th><th>Last Login</th><th>2FA</th><th>Actions</th></tr></thead>
+                <tbody id="usersTable"></tbody>
+            </table>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal()"></div>
+    <div class="modal" id="modal">
+        <div class="modal-header">
+            <h2 id="modalTitle">Create New User</h2>
+            <button onclick="closeModal()" style="background:none;border:none;color:var(--text-secondary);font-size:1.5rem;cursor:pointer;">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-error" id="errorAlert"></div>
+            <div class="alert alert-success" id="successAlert"></div>
+            <form id="userForm">
+                <input type="hidden" id="userId">
+                <div class="form-group">
+                    <label class="form-label">Full Name *</label>
+                    <input type="text" class="form-input" id="userName" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email Address *</label>
+                    <input type="email" class="form-input" id="userEmail" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input type="tel" class="form-input" id="userPhone">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Role *</label>
+                    <select class="form-input" id="userRole" required onchange="handleRoleChange()">
+                        <option value="">Select Role</option>
+                        <option value="store_owner">🏪 Store Owner</option>
+                        <option value="driver">🚗 Driver</option>
+                        <option value="admin">🔐 Admin</option>
+                    </select>
+                </div>
+                <div class="form-group" id="restaurantGroup" style="display:none;">
+                    <label class="form-label">Linked Restaurant *</label>
+                    <select class="form-input" id="userRestaurant"></select>
+                </div>
+                <div class="form-group" id="passwordGroup">
+                    <label class="form-label">Password *</label>
+                    <div style="display:flex;gap:0.5rem;">
+                        <input type="text" class="form-input" id="userPassword" oninput="checkPassword()">
+                        <button type="button" class="btn btn-secondary" onclick="generatePwd()">Generate</button>
+                    </div>
+                    <div class="password-req">
+                        <div class="req" id="r1">○ 12+ characters</div>
+                        <div class="req" id="r2">○ Uppercase letter</div>
+                        <div class="req" id="r3">○ Lowercase letter</div>
+                        <div class="req" id="r4">○ Number</div>
+                        <div class="req" id="r5">○ Special char (!@#$%^&*)</div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:1rem;">
+                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="userActive" checked> Active</label>
+                    <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;"><input type="checkbox" id="user2FA"> Require 2FA</label>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="saveUser()">💾 Save User</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcyNzk0NTMsImV4cCI6MjA2Mjg1NTQ1M30.tpST3XqeBWsjLmn-HQdSfYVThn_7mR5LzNxxVKOVvic';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        let users = [], restaurants = [], currentFilter = 'all';
+
+        document.addEventListener('DOMContentLoaded', () => { loadUsers(); loadRestaurants(); });
+
+        async function loadUsers() {
+            const { data } = await supabase.from('app_users').select('*').order('created_at', { ascending: false });
+            users = data || [];
+            document.getElementById('totalUsers').textContent = users.length;
+            document.getElementById('storeOwners').textContent = users.filter(u => u.role === 'store_owner').length;
+            document.getElementById('drivers').textContent = users.filter(u => u.role === 'driver').length;
+            document.getElementById('lockedAccounts').textContent = users.filter(u => u.locked_until && new Date(u.locked_until) > new Date()).length;
+            renderUsers();
+        }
+
+        async function loadRestaurants() {
+            const { data } = await supabase.from('restaurants').select('id, name').order('name');
+            restaurants = data || [];
+            document.getElementById('userRestaurant').innerHTML = '<option value="">Select Restaurant</option>' + restaurants.map(r => `<option value="${r.id}">${r.name}</option>`).join('');
+        }
+
+        function renderUsers() {
+            const filtered = currentFilter === 'all' ? users : users.filter(u => u.role === currentFilter);
+            const tbody = document.getElementById('usersTable');
+            if (!filtered.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--text-secondary);">No users found</td></tr>'; return; }
+            tbody.innerHTML = filtered.map(u => {
+                const initials = u.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || '?';
+                const locked = u.locked_until && new Date(u.locked_until) > new Date();
+                const lastLogin = u.last_login_at ? new Date(u.last_login_at).toLocaleDateString() : 'Never';
+                return `<tr>
+                    <td><div class="user-info"><div class="avatar ${u.role}">${initials}</div><div><div style="font-weight:600;">${u.full_name}</div><div style="font-size:0.8rem;color:var(--text-secondary);">${u.email}</div></div></div></td>
+                    <td>${u.role === 'admin' ? '🔐 Admin' : u.role === 'store_owner' ? '🏪 Store' : '🚗 Driver'}</td>
+                    <td><span class="badge ${u.is_active && !locked ? 'badge-active' : 'badge-inactive'}">${locked ? '🔒 Locked' : u.is_active ? '✓ Active' : '✗ Inactive'}</span></td>
+                    <td>${lastLogin}</td>
+                    <td>${u.two_factor_enabled ? '✅' : '❌'}</td>
+                    <td><button class="btn btn-secondary btn-sm" onclick="editUser('${u.id}')">Edit</button> ${locked ? `<button class="btn btn-secondary btn-sm" onclick="unlockUser('${u.id}')">🔓</button>` : ''} <button class="btn btn-secondary btn-sm" onclick="resetPwd('${u.id}')">🔑</button></td>
+                </tr>`;
+            }).join('');
+        }
+
+        function filterUsers(filter, btn) { currentFilter = filter; document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); btn.classList.add('active'); renderUsers(); }
+        function openModal() { document.getElementById('modalOverlay').classList.add('active'); document.getElementById('modal').classList.add('active'); document.getElementById('userForm').reset(); document.getElementById('userId').value = ''; document.getElementById('passwordGroup').style.display = 'block'; hideAlerts(); }
+        function closeModal() { document.getElementById('modalOverlay').classList.remove('active'); document.getElementById('modal').classList.remove('active'); }
+        function handleRoleChange() { document.getElementById('restaurantGroup').style.display = document.getElementById('userRole').value === 'store_owner' ? 'block' : 'none'; }
+
+        function checkPassword() {
+            const p = document.getElementById('userPassword').value;
+            const checks = [[p.length >= 12, 'r1'], [/[A-Z]/.test(p), 'r2'], [/[a-z]/.test(p), 'r3'], [/[0-9]/.test(p), 'r4'], [/[!@#$%^&*]/.test(p), 'r5']];
+            checks.forEach(([ok, id]) => { const el = document.getElementById(id); el.className = 'req' + (ok ? ' met' : ''); el.innerHTML = (ok ? '●' : '○') + el.innerHTML.slice(1); });
+            return checks.every(([ok]) => ok);
+        }
+
+        function generatePwd() {
+            const c = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%^&*';
+            let p = 'A' + 'a' + '1' + '!';
+            for (let i = 0; i < 12; i++) p += c[Math.floor(Math.random() * c.length)];
+            document.getElementById('userPassword').value = p.split('').sort(() => Math.random() - 0.5).join('');
+            checkPassword();
+        }
+
+        async function saveUser() {
+            hideAlerts();
+            const id = document.getElementById('userId').value;
+            const data = {
+                full_name: document.getElementById('userName').value.trim(),
+                email: document.getElementById('userEmail').value.trim().toLowerCase(),
+                phone: document.getElementById('userPhone').value.trim() || null,
+                role: document.getElementById('userRole').value,
+                restaurant_id: document.getElementById('userRole').value === 'store_owner' ? document.getElementById('userRestaurant').value || null : null,
+                is_active: document.getElementById('userActive').checked,
+                two_factor_enabled: document.getElementById('user2FA').checked
+            };
+            if (!data.full_name || !data.email || !data.role) { showError('Please fill all required fields'); return; }
+            if (!id && !checkPassword()) { showError('Password does not meet requirements'); return; }
+            if (!id) data.password_hash = await hashPwd(document.getElementById('userPassword').value);
+            try {
+                if (id) await supabase.from('app_users').update(data).eq('id', id);
+                else await supabase.from('app_users').insert([data]);
+                showSuccess('User saved!');
+                setTimeout(() => { closeModal(); loadUsers(); }, 1000);
+            } catch (e) { showError(e.message); }
+        }
+
+        function editUser(id) {
+            const u = users.find(x => x.id === id); if (!u) return;
+            openModal();
+            document.getElementById('modalTitle').textContent = 'Edit User';
+            document.getElementById('userId').value = u.id;
+            document.getElementById('userName').value = u.full_name;
+            document.getElementById('userEmail').value = u.email;
+            document.getElementById('userPhone').value = u.phone || '';
+            document.getElementById('userRole').value = u.role;
+            document.getElementById('userRestaurant').value = u.restaurant_id || '';
+            document.getElementById('userActive').checked = u.is_active;
+            document.getElementById('user2FA').checked = u.two_factor_enabled;
+            document.getElementById('passwordGroup').style.display = 'none';
+            handleRoleChange();
+        }
+
+        async function unlockUser(id) {
+            if (!confirm('Unlock this account?')) return;
+            await supabase.from('app_users').update({ locked_until: null, failed_login_attempts: 0 }).eq('id', id);
+            loadUsers();
+        }
+
+        async function resetPwd(id) {
+            const u = users.find(x => x.id === id);
+            if (!confirm(`Reset password for ${u.full_name}?`)) return;
+            const pwd = 'Temp' + Math.random().toString(36).slice(2, 10) + '!1';
+            await supabase.from('app_users').update({ password_hash: await hashPwd(pwd) }).eq('id', id);
+            alert('Temporary password: ' + pwd);
+        }
+
+        async function hashPwd(p) {
+            const d = new TextEncoder().encode(p + 'yyclocalfirst_salt_2024');
+            const h = await crypto.subtle.digest('SHA-256', d);
+            return Array.from(new Uint8Array(h)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function showError(m) { const e = document.getElementById('errorAlert'); e.textContent = m; e.style.display = 'block'; }
+        function showSuccess(m) { const e = document.getElementById('successAlert'); e.textContent = m; e.style.display = 'block'; }
+        function hideAlerts() { document.getElementById('errorAlert').style.display = 'none'; document.getElementById('successAlert').style.display = 'none'; }
+        function logout() { localStorage.clear(); sessionStorage.clear(); window.location.href = 'login.html'; }
+    </script>
+</body>
+</html>
