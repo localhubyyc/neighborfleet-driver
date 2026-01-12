@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Secure Login - YYC LocalFirst</title>
+    <style>
+        :root {
+            --bg-dark: #0a0a0a;
+            --bg-card: #141414;
+            --bg-input: #1a1a1a;
+            --border: #2a2a2a;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #606060;
+            --accent-green: #22c55e;
+            --accent-green-dim: rgba(34, 197, 94, 0.1);
+            --accent-red: #ef4444;
+            --accent-red-dim: rgba(239, 68, 68, 0.1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        .logo { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .brand { font-size: 1.5rem; font-weight: 700; color: var(--accent-green); }
+        .tagline { color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.5rem; }
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 2rem;
+        }
+        .login-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        .role-selector {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .role-btn {
+            flex: 1;
+            padding: 0.75rem;
+            border-radius: 10px;
+            border: 2px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-secondary);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .role-btn:hover { border-color: var(--accent-green); }
+        .role-btn.active {
+            border-color: var(--accent-green);
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+        }
+        .role-btn-icon { font-size: 1.5rem; display: block; margin-bottom: 0.25rem; }
+        .role-btn-label { font-size: 0.8rem; font-weight: 600; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-input);
+            color: var(--text-primary);
+            font-size: 1rem;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent-green);
+        }
+        .btn {
+            width: 100%;
+            padding: 0.875rem;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            background: var(--accent-green);
+            color: #000;
+            margin-top: 1rem;
+        }
+        .btn:hover { background: #1ea550; }
+        .alert {
+            padding: 0.875rem 1rem;
+            border-radius: 10px;
+            margin-bottom: 1.25rem;
+            display: none;
+            font-size: 0.9rem;
+        }
+        .alert.visible { display: block; }
+        .alert.error {
+            background: var(--accent-red-dim);
+            border: 1px solid var(--accent-red);
+            color: var(--accent-red);
+        }
+        .alert.success {
+            background: var(--accent-green-dim);
+            border: 1px solid var(--accent-green);
+            color: var(--accent-green);
+        }
+        .debug-box {
+            background: #1a1a2e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #888;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <div class="logo">🍁</div>
+            <div class="brand">YYC LocalFirst</div>
+            <div class="tagline">Secure Portal Access</div>
+        </div>
+
+        <div class="login-card">
+            <h2 class="login-title">Sign In</h2>
+
+            <div class="role-selector">
+                <button type="button" class="role-btn active" data-role="store_owner" onclick="selectRole('store_owner')">
+                    <span class="role-btn-icon">🏪</span>
+                    <span class="role-btn-label">Store</span>
+                </button>
+                <button type="button" class="role-btn" data-role="admin" onclick="selectRole('admin')">
+                    <span class="role-btn-icon">🔐</span>
+                    <span class="role-btn-label">Admin</span>
+                </button>
+                <button type="button" class="role-btn" data-role="driver" onclick="selectRole('driver')">
+                    <span class="role-btn-icon">🚗</span>
+                    <span class="role-btn-label">Driver</span>
+                </button>
+            </div>
+
+            <div class="alert" id="alertBox"></div>
+
+            <form onsubmit="handleLogin(event)">
+                <div class="form-group">
+                    <label class="form-label">Email Address</label>
+                    <input type="email" class="form-input" id="email" placeholder="you@example.com" required>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <input type="password" class="form-input" id="password" placeholder="Enter password" required>
+                </div>
+
+                <button type="submit" class="btn" id="loginBtn">🔐 Sign In Securely</button>
+            </form>
+
+            <div class="debug-box" id="debugBox">Debug info will appear here...</div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcyNzk0NTMsImV4cCI6MjA2Mjg1NTQ1M30.tpST3XqeBWsjLmn-HQdSfYVThn_7mR5LzNxxVKOVvic';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let selectedRole = 'store_owner';
+
+        function selectRole(role) {
+            selectedRole = role;
+            document.querySelectorAll('.role-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.role === role);
+            });
+            debug('Role selected: ' + role);
+        }
+
+        function debug(msg) {
+            const box = document.getElementById('debugBox');
+            box.innerHTML += new Date().toLocaleTimeString() + ': ' + msg + '<br>';
+            box.scrollTop = box.scrollHeight;
+        }
+
+        function showAlert(type, message) {
+            const alertBox = document.getElementById('alertBox');
+            alertBox.className = 'alert ' + type + ' visible';
+            alertBox.textContent = message;
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value.trim().toLowerCase();
+            const password = document.getElementById('password').value;
+
+            debug('Login attempt - Email: ' + email + ', Role: ' + selectedRole);
+
+            try {
+                // Get user from database
+                debug('Querying database...');
+                const { data: user, error } = await db
+                    .from('app_users')
+                    .select('*')
+                    .eq('email', email)
+                    .eq('role', selectedRole)
+                    .single();
+
+                if (error) {
+                    debug('Database error: ' + JSON.stringify(error));
+                    showAlert('error', 'Invalid email or password');
+                    return;
+                }
+
+                if (!user) {
+                    debug('No user found');
+                    showAlert('error', 'Invalid email or password');
+                    return;
+                }
+
+                debug('User found: ' + user.full_name);
+                debug('Stored hash: ' + user.password_hash);
+
+                // Hash the entered password
+                const inputHash = await hashPassword(password);
+                debug('Input hash: ' + inputHash);
+                debug('Hashes match: ' + (inputHash === user.password_hash));
+
+                if (inputHash === user.password_hash) {
+                    debug('SUCCESS! Redirecting...');
+                    showAlert('success', 'Login successful! Redirecting...');
+                    
+                    // Store session
+                    localStorage.setItem('user', JSON.stringify({
+                        id: user.id,
+                        email: user.email,
+                        name: user.full_name,
+                        role: user.role
+                    }));
+                    localStorage.setItem('sessionToken', 'temp-session-' + Date.now());
+
+                    setTimeout(() => {
+                        const dashboards = {
+                            'admin': 'admin.html',
+                            'store_owner': 'store-owner.html',
+                            'driver': 'index.html',
+                            'customer': 'track.html'
+                        };
+                        window.location.href = dashboards[user.role] || 'index.html';
+                    }, 1500);
+                } else {
+                    debug('Password mismatch!');
+                    showAlert('error', 'Invalid email or password');
+                }
+
+            } catch (err) {
+                debug('Error: ' + err.message);
+                showAlert('error', 'An error occurred');
+            }
+        }
+
+        async function hashPassword(password) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(password + 'yyclocalfirst_salt_2024');
+            const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        debug('Page loaded. Ready for login.');
+    </script>
+</body>
+</html>
