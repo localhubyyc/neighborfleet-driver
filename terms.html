@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terms of Service - NeighborFleet by LocalFirst</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a5f4a;
+            --primary-light: #2d8a6e;
+            --accent: #f4a261;
+            --bg: #fafaf8;
+            --text: #1a1a1a;
+            --text-muted: #666;
+            --border: #e5e5e0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            font-size: 16px;
+        }
+        
+        .header {
+            background: var(--primary);
+            padding: 3rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.5;
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+        
+        .logo span {
+            color: var(--accent);
+        }
+        
+        .header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2.5rem;
+            color: white;
+            font-weight: 400;
+            margin-top: 1rem;
+        }
+        
+        .header p {
+            color: rgba(255,255,255,0.8);
+            margin-top: 0.5rem;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+        
+        .last-updated {
+            background: linear-gradient(135deg, var(--primary-light), var(--primary));
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            display: inline-block;
+            margin-bottom: 2rem;
+        }
+        
+        section {
+            margin-bottom: 2.5rem;
+            padding-bottom: 2.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        section:last-child {
+            border-bottom: none;
+        }
+        
+        h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-weight: 400;
+        }
+        
+        h3 {
+            font-size: 1.1rem;
+            color: var(--text);
+            margin: 1.5rem 0 0.75rem;
+            font-weight: 600;
+        }
+        
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+        }
+        
+        ul, ol {
+            margin: 1rem 0 1rem 1.5rem;
+            color: var(--text-muted);
+        }
+        
+        li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #f0f7f4, #e8f4f0);
+            border-left: 4px solid var(--primary);
+            padding: 1.5rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1.5rem 0;
+        }
+        
+        .highlight-box p {
+            margin: 0;
+            color: var(--text);
+        }
+        
+        .warning-box {
+            background: linear-gradient(135deg, #fff8f0, #fff3e6);
+            border-left: 4px solid var(--accent);
+            padding: 1.5rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1.5rem 0;
+        }
+        
+        .warning-box p {
+            margin: 0;
+            color: var(--text);
+        }
+        
+        .contact-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        
+        .contact-card h3 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+        
+        .contact-card a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .contact-card a:hover {
+            text-decoration: underline;
+        }
+        
+        .footer {
+            background: var(--text);
+            color: rgba(255,255,255,0.7);
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.875rem;
+        }
+        
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        @media (max-width: 640px) {
+            .header h1 {
+                font-size: 1.75rem;
+            }
+            
+            .container {
+                padding: 2rem 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">Neighbor<span>Fleet</span></div>
+            <h1>Terms of Service</h1>
+            <p>LocalFirst | 2166613 Alberta LTD</p>
+        </div>
+    </header>
+    
+    <main class="container">
+        <span class="last-updated">Last Updated: January 13, 2026</span>
+        
+        <section>
+            <h2>1. Agreement to Terms</h2>
+            <p>These Terms of Service ("Terms") constitute a legally binding agreement between you and LocalFirst (2166613 Alberta LTD), operating as NeighborFleet ("Company," "we," "us," or "our"). By accessing or using our delivery driver application and services (the "Service"), you agree to be bound by these Terms.</p>
+            
+            <div class="highlight-box">
+                <p><strong>Important:</strong> Please read these Terms carefully before using our Service. If you do not agree to these Terms, you may not access or use the Service.</p>
+            </div>
+        </section>
+        
+        <section>
+            <h2>2. Eligibility</h2>
+            <p>To use the Service as a delivery driver, you must:</p>
+            <ul>
+                <li>Be at least 18 years of age</li>
+                <li>Hold a valid driver's license</li>
+                <li>Have access to a reliable vehicle with valid insurance</li>
+                <li>Pass any required background checks</li>
+                <li>Have legal authorization to work in Canada</li>
+                <li>Own a smartphone capable of running our application</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2>3. Driver Relationship</h2>
+            <p>As a NeighborFleet driver, you operate as an independent contractor, not an employee of LocalFirst. You acknowledge that:</p>
+            <ul>
+                <li>You are free to choose when and whether to use the Service</li>
+                <li>You may provide services for other platforms or businesses</li>
+                <li>You are responsible for your own taxes, including income tax and GST/HST as applicable</li>
+                <li>You are responsible for maintaining your vehicle and all associated costs</li>
+                <li>The Company does not provide workers' compensation or employment benefits</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2>4. Service Description</h2>
+            <p>NeighborFleet provides a technology platform that connects drivers with customers requiring delivery services. Our Service includes:</p>
+            <ul>
+                <li>A mobile application for receiving and managing delivery requests</li>
+                <li>GPS navigation and route optimization</li>
+                <li>Real-time communication with customers and support</li>
+                <li>Payment processing and earnings tracking</li>
+                <li>WhatsApp Business notifications for delivery updates</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2>5. Driver Obligations</h2>
+            <p>When using the Service, you agree to:</p>
+            <ul>
+                <li>Provide accurate and complete information in your profile</li>
+                <li>Maintain valid driver's license and vehicle insurance at all times</li>
+                <li>Comply with all applicable traffic laws and regulations</li>
+                <li>Handle all deliveries with care and professionalism</li>
+                <li>Maintain a high standard of customer service</li>
+                <li>Keep your delivery vehicle clean and safe</li>
+                <li>Not use the Service while impaired by alcohol, drugs, or fatigue</li>
+                <li>Report any accidents or incidents promptly</li>
+                <li>Not share your account credentials with others</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2>6. Communications and Notifications</h2>
+            <p>By using the Service, you consent to receive communications from us, including:</p>
+            <ul>
+                <li>WhatsApp Business messages regarding deliveries</li>
+                <li>Push notifications about new delivery opportunities</li>
+                <li>SMS messages for account verification and alerts</li>
+                <li>Email communications about updates, policies, and promotions</li>
+            </ul>
+            <p>You may opt out of non-essential communications at any time through your account settings or by contacting support.</p>
+        </section>
+        
+        <section>
+            <h2>7. Payment Terms</h2>
+            <h3>Earnings</h3>
+            <p>Your earnings are based on completed deliveries and may include base pay, distance bonuses, tips, and promotional incentives. Payment rates are displayed in the app before you accept each delivery.</p>
+            
+            <h3>Payment Schedule</h3>
+            <p>Earnings are deposited to your designated bank account on a weekly basis, typically within 2-3 business days after the pay period ends.</p>
+            
+            <h3>Deductions</h3>
+            <p>We may deduct from your earnings any amounts you owe us, including fees for returned deliveries, damaged goods, or chargebacks resulting from your actions.</p>
+        </section>
+        
+        <section>
+            <h2>8. Ratings and Performance</h2>
+            <p>Customers may rate their delivery experience. Your rating affects your standing on the platform:</p>
+            <ul>
+                <li>Drivers with high ratings may receive priority access to deliveries</li>
+                <li>Consistently low ratings may result in account review or suspension</li>
+                <li>We provide feedback and resources to help you improve performance</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2>9. Account Suspension and Termination</h2>
+            <p>We reserve the right to suspend or terminate your account for:</p>
+            <ul>
+                <li>Violation of these Terms</li>
+                <li>Fraudulent or illegal activity</li>
+                <li>Consistently poor performance or low ratings</li>
+                <li>Customer complaints regarding safety or conduct</li>
+                <li>Providing false or misleading information</li>
+                <li>Extended periods of inactivity</li>
+            </ul>
+            
+            <div class="warning-box">
+                <p><strong>Note:</strong> You may terminate your account at any time by contacting support. Upon termination, any pending earnings will be paid according to the normal payment schedule.</p>
+            </div>
+        </section>
+        
+        <section>
+            <h2>10. Insurance and Liability</h2>
+            <p>You are required to maintain appropriate vehicle insurance covering your delivery activities. The Company does not provide insurance for your vehicle, cargo, or personal injuries. You are solely responsible for any damages, losses, or injuries that occur during your use of the Service.</p>
+        </section>
+        
+        <section>
+            <h2>11. Intellectual Property</h2>
+            <p>The Service, including all content, features, and functionality, is owned by LocalFirst and protected by intellectual property laws. You may not copy, modify, distribute, or create derivative works based on our Service without express written permission.</p>
+        </section>
+        
+        <section>
+            <h2>12. Limitation of Liability</h2>
+            <p>To the maximum extent permitted by law, LocalFirst shall not be liable for any indirect, incidental, special, consequential, or punitive damages, including loss of profits, data, or other intangible losses, resulting from your use of the Service.</p>
+        </section>
+        
+        <section>
+            <h2>13. Dispute Resolution</h2>
+            <p>Any disputes arising from these Terms or the Service shall be resolved through:</p>
+            <ol>
+                <li><strong>Informal Resolution:</strong> Contact our support team first to attempt resolution</li>
+                <li><strong>Mediation:</strong> If informal resolution fails, parties agree to mediation in Calgary, Alberta</li>
+                <li><strong>Arbitration:</strong> Unresolved disputes shall be settled by binding arbitration under Alberta law</li>
+            </ol>
+        </section>
+        
+        <section>
+            <h2>14. Governing Law</h2>
+            <p>These Terms are governed by the laws of the Province of Alberta and the federal laws of Canada applicable therein. Any legal proceedings shall take place in Calgary, Alberta.</p>
+        </section>
+        
+        <section>
+            <h2>15. Changes to Terms</h2>
+            <p>We may modify these Terms at any time. Material changes will be communicated via email or in-app notification at least 14 days before taking effect. Continued use of the Service after changes become effective constitutes acceptance of the revised Terms.</p>
+        </section>
+        
+        <section>
+            <h2>16. Contact Information</h2>
+            <p>For questions about these Terms, please contact us:</p>
+            
+            <div class="contact-card">
+                <h3>LocalFirst (2166613 Alberta LTD)</h3>
+                <p><strong>Email:</strong> <a href="mailto:localhubyyc@gmail.com">localhubyyc@gmail.com</a></p>
+                <p><strong>Address:</strong> 36 Sherwood Rise N.W<br>Calgary, Alberta T3R1P5<br>Canada</p>
+                <p><strong>Phone:</strong> <a href="tel:+14038265529">+1 (403) 826-5529</a></p>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="footer">
+        <p>&copy; 2026 LocalFirst (2166613 Alberta LTD). All rights reserved.</p>
+        <p style="margin-top: 0.5rem;"><a href="/terms">Terms of Service</a> | <a href="/privacy">Privacy Policy</a></p>
+    </footer>
+</body>
+</html>
