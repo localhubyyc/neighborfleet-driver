@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - NeighborFleet by LocalFirst</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #1a5f4a;
+            --primary-light: #2d8a6e;
+            --accent: #f4a261;
+            --bg: #fafaf8;
+            --text: #1a1a1a;
+            --text-muted: #666;
+            --border: #e5e5e0;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.7;
+            font-size: 16px;
+        }
+        
+        .header {
+            background: var(--primary);
+            padding: 3rem 2rem;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.5;
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2rem;
+            color: white;
+            margin-bottom: 0.5rem;
+        }
+        
+        .logo span {
+            color: var(--accent);
+        }
+        
+        .header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2.5rem;
+            color: white;
+            font-weight: 400;
+            margin-top: 1rem;
+        }
+        
+        .header p {
+            color: rgba(255,255,255,0.8);
+            margin-top: 0.5rem;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 3rem 2rem;
+        }
+        
+        .last-updated {
+            background: linear-gradient(135deg, var(--primary-light), var(--primary));
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.875rem;
+            display: inline-block;
+            margin-bottom: 2rem;
+        }
+        
+        section {
+            margin-bottom: 2.5rem;
+            padding-bottom: 2.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        section:last-child {
+            border-bottom: none;
+        }
+        
+        h2 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            font-weight: 400;
+        }
+        
+        h3 {
+            font-size: 1.1rem;
+            color: var(--text);
+            margin: 1.5rem 0 0.75rem;
+            font-weight: 600;
+        }
+        
+        p {
+            margin-bottom: 1rem;
+            color: var(--text-muted);
+        }
+        
+        ul {
+            margin: 1rem 0 1rem 1.5rem;
+            color: var(--text-muted);
+        }
+        
+        li {
+            margin-bottom: 0.5rem;
+        }
+        
+        .highlight-box {
+            background: linear-gradient(135deg, #f0f7f4, #e8f4f0);
+            border-left: 4px solid var(--primary);
+            padding: 1.5rem;
+            border-radius: 0 8px 8px 0;
+            margin: 1.5rem 0;
+        }
+        
+        .highlight-box p {
+            margin: 0;
+            color: var(--text);
+        }
+        
+        .contact-card {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        
+        .contact-card h3 {
+            margin-top: 0;
+            color: var(--primary);
+        }
+        
+        .contact-card a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+        
+        .contact-card a:hover {
+            text-decoration: underline;
+        }
+        
+        .footer {
+            background: var(--text);
+            color: rgba(255,255,255,0.7);
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.875rem;
+        }
+        
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+        
+        @media (max-width: 640px) {
+            .header h1 {
+                font-size: 1.75rem;
+            }
+            
+            .container {
+                padding: 2rem 1.25rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">Neighbor<span>Fleet</span></div>
+            <h1>Privacy Policy</h1>
+            <p>LocalFirst | 2166613 Alberta LTD</p>
+        </div>
+    </header>
+    
+    <main class="container">
+        <span class="last-updated">Last Updated: January 13, 2026</span>
+        
+        <section>
+            <h2>Introduction</h2>
+            <p>Welcome to NeighborFleet, a service operated by LocalFirst (2166613 Alberta LTD). We are committed to protecting your privacy and ensuring the security of your personal information. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our delivery driver application and related services.</p>
+            
+            <div class="highlight-box">
+                <p><strong>Our Commitment:</strong> We only collect information necessary to provide you with reliable delivery services and never sell your personal data to third parties.</p>
+            </div>
+        </section>
+        
+        <section>
+            <h2>Information We Collect</h2>
+            
+            <h3>Information You Provide</h3>
+            <ul>
+                <li><strong>Account Information:</strong> Name, email address, phone number, and profile photo</li>
+                <li><strong>Driver Information:</strong> Driver's license, vehicle details, and insurance information</li>
+                <li><strong>Payment Information:</strong> Bank account details for direct deposit payments</li>
+                <li><strong>Communications:</strong> Messages sent through our platform, including WhatsApp Business communications</li>
+            </ul>
+            
+            <h3>Information Collected Automatically</h3>
+            <ul>
+                <li><strong>Location Data:</strong> GPS coordinates during active deliveries for routing and tracking</li>
+                <li><strong>Device Information:</strong> Device type, operating system, and unique identifiers</li>
+                <li><strong>Usage Data:</strong> App interactions, delivery history, and performance metrics</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2>How We Use Your Information</h2>
+            <ul>
+                <li>Facilitate delivery assignments and route optimization</li>
+                <li>Process payments and maintain financial records</li>
+                <li>Send notifications via WhatsApp, SMS, or push notifications about deliveries</li>
+                <li>Provide customer support and respond to inquiries</li>
+                <li>Improve our services and develop new features</li>
+                <li>Ensure safety and security of our platform</li>
+                <li>Comply with legal obligations and regulations</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2>WhatsApp Business Communications</h2>
+            <p>We use WhatsApp Business API to send you important delivery notifications, including:</p>
+            <ul>
+                <li>New delivery assignment alerts</li>
+                <li>Pickup and delivery confirmations</li>
+                <li>Schedule updates and changes</li>
+                <li>Payment notifications</li>
+            </ul>
+            <p>By providing your phone number and opting in to WhatsApp communications, you consent to receive these business messages. You can opt out at any time by replying "STOP" to any message or adjusting your notification preferences in the app.</p>
+        </section>
+        
+        <section>
+            <h2>Information Sharing</h2>
+            <p>We may share your information with:</p>
+            <ul>
+                <li><strong>Customers:</strong> Limited information (first name, vehicle type) for delivery tracking</li>
+                <li><strong>Service Providers:</strong> Third parties who assist in operating our platform (payment processors, cloud hosting, analytics)</li>
+                <li><strong>Legal Requirements:</strong> When required by law, court order, or government request</li>
+                <li><strong>Business Transfers:</strong> In connection with a merger, acquisition, or sale of assets</li>
+            </ul>
+            
+            <div class="highlight-box">
+                <p><strong>We Never:</strong> Sell your personal information to advertisers or data brokers.</p>
+            </div>
+        </section>
+        
+        <section>
+            <h2>Data Security</h2>
+            <p>We implement appropriate technical and organizational measures to protect your personal information, including:</p>
+            <ul>
+                <li>Encryption of data in transit and at rest</li>
+                <li>Secure authentication mechanisms</li>
+                <li>Regular security assessments and updates</li>
+                <li>Access controls limiting employee access to personal data</li>
+            </ul>
+        </section>
+        
+        <section>
+            <h2>Your Rights</h2>
+            <p>Depending on your location, you may have the right to:</p>
+            <ul>
+                <li>Access the personal information we hold about you</li>
+                <li>Request correction of inaccurate information</li>
+                <li>Request deletion of your personal information</li>
+                <li>Object to or restrict certain processing activities</li>
+                <li>Data portability</li>
+                <li>Withdraw consent at any time</li>
+            </ul>
+            <p>To exercise any of these rights, please contact us using the information below.</p>
+        </section>
+        
+        <section>
+            <h2>Data Retention</h2>
+            <p>We retain your personal information for as long as necessary to provide our services and fulfill the purposes outlined in this policy. When you close your account, we will delete or anonymize your information within 90 days, except where retention is required for legal or legitimate business purposes.</p>
+        </section>
+        
+        <section>
+            <h2>Changes to This Policy</h2>
+            <p>We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new policy on this page and updating the "Last Updated" date. We encourage you to review this policy periodically.</p>
+        </section>
+        
+        <section>
+            <h2>Contact Us</h2>
+            <p>If you have any questions about this Privacy Policy or our privacy practices, please contact us:</p>
+            
+            <div class="contact-card">
+                <h3>LocalFirst (2166613 Alberta LTD)</h3>
+                <p><strong>Email:</strong> <a href="mailto:localhubyyc@gmail.com">localhubyyc@gmail.com</a></p>
+                <p><strong>Address:</strong> 36 Sherwood Rise N.W<br>Calgary, Alberta T3R1P5<br>Canada</p>
+                <p><strong>Phone:</strong> <a href="tel:+14038265529">+1 (403) 826-5529</a></p>
+            </div>
+        </section>
+    </main>
+    
+    <footer class="footer">
+        <p>&copy; 2026 LocalFirst (2166613 Alberta LTD). All rights reserved.</p>
+        <p style="margin-top: 0.5rem;"><a href="/terms">Terms of Service</a> | <a href="/privacy">Privacy Policy</a></p>
+    </footer>
+</body>
+</html>
