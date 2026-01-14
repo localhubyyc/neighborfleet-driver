@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LocalFirst YYC - Order Local</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: white;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 24px;
+            padding: 32px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .logo { 
+            font-size: 48px; 
+            margin-bottom: 8px; 
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        .brand { color: #1a1a2e; font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+        .tagline { color: #666; font-size: 14px; margin-bottom: 20px; }
+        
+        .savings-banner {
+            background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
+            color: white;
+            padding: 16px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+        }
+        .savings-title { font-size: 14px; opacity: 0.9; margin-bottom: 4px; }
+        .savings-amount { font-size: 32px; font-weight: 800; }
+        .savings-detail { font-size: 13px; opacity: 0.9; margin-top: 4px; }
+        
+        .qr-container {
+            background: white;
+            padding: 16px;
+            border-radius: 16px;
+            display: inline-block;
+            margin-bottom: 20px;
+            border: 3px solid #25D366;
+        }
+        .qr-container img { width: 200px; height: 200px; display: block; }
+        
+        .scan-text {
+            color: #1a1a2e;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .scan-subtext { color: #666; font-size: 13px; margin-bottom: 20px; }
+        
+        .features {
+            text-align: left;
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+        .feature {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            color: #333;
+            font-size: 14px;
+        }
+        .feature-icon { font-size: 18px; }
+        .feature:not(:last-child) { border-bottom: 1px solid #eee; }
+        
+        .comparison {
+            background: #fff3f3;
+            border: 1px solid #ffcccc;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 20px;
+        }
+        .comparison-title { color: #cc0000; font-size: 12px; font-weight: 600; margin-bottom: 8px; }
+        .comparison-row { display: flex; justify-content: space-between; font-size: 13px; color: #666; padding: 4px 0; }
+        .comparison-row.ours { color: #25D366; font-weight: 600; }
+        
+        .footer { color: #999; font-size: 11px; }
+        
+        .print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #25D366;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .print-btn:hover { background: #128C7E; }
+        
+        /* Restaurant-specific QR section */
+        .restaurant-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px dashed #ddd;
+        }
+        .restaurant-section h3 {
+            color: #1a1a2e;
+            font-size: 16px;
+            margin-bottom: 16px;
+        }
+        .restaurant-qr {
+            display: inline-block;
+            background: white;
+            padding: 12px;
+            border-radius: 12px;
+            border: 2px solid #ddd;
+        }
+        .restaurant-qr img { width: 120px; height: 120px; }
+        .restaurant-label { font-size: 12px; color: #666; margin-top: 8px; }
+        
+        @media print {
+            body { background: white; }
+            .print-btn { display: none; }
+            .card { box-shadow: none; border: 2px solid #eee; }
+        }
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">🖨️ Print</button>
+    
+    <div class="card">
+        <div class="logo">LF</div>
+        <div class="brand">LocalFirst YYC</div>
+        <div class="tagline">Calgary's Local Restaurant Delivery</div>
+        
+        <div class="savings-banner">
+            <div class="savings-title">🎉 FIRST ORDER BONUS</div>
+            <div class="savings-amount">SAVE $6.99</div>
+            <div class="savings-detail">FREE delivery on every order!</div>
+        </div>
+        
+        <div class="qr-container">
+            <!-- Generic discovery QR - shows all nearby restaurants -->
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&format=png&data=https://neighborfleet-driver.vercel.app/whatsapp-preview.html?promo=FIRST10" alt="Scan to order">
+        </div>
+        
+        <div class="scan-text">
+            📱 Scan to Find Restaurants Near You
+        </div>
+        <div class="scan-subtext">Open camera → Point at code → Browse local options</div>
+        
+        <div class="features">
+            <div class="feature">
+                <span class="feature-icon">🍕</span>
+                <span>Multiple local restaurants</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">🚗</span>
+                <span>FREE delivery (always!)</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">⚡</span>
+                <span>Order in 30 seconds via WhatsApp</span>
+            </div>
+            <div class="feature">
+                <span class="feature-icon">❤️</span>
+                <span>100% supports local businesses</span>
+            </div>
+        </div>
+        
+        <div class="comparison">
+            <div class="comparison-title">VS THE BIG APPS</div>
+            <div class="comparison-row">
+                <span>Skip/DoorDash fees:</span>
+                <span>$8 - $12</span>
+            </div>
+            <div class="comparison-row ours">
+                <span>LocalFirst YYC:</span>
+                <span>$0.00 ✓</span>
+            </div>
+        </div>
+        
+        <div class="footer">
+            LocalFirst YYC • Supporting Calgary's Local Restaurants
+        </div>
+        
+        <!-- Restaurant-specific QR codes -->
+        <div class="restaurant-section">
+            <h3>🏪 Restaurant-Specific QR Codes</h3>
+            <p style="font-size: 12px; color: #666; margin-bottom: 16px;">
+                Give these to partner restaurants for their own signage
+            </p>
+            
+            <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+                <div class="restaurant-qr">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&format=png&data=https://neighborfleet-driver.vercel.app/whatsapp-preview.html?store=abking%26promo=FIRST10" alt="AB King">
+                    <div class="restaurant-label">AB King Pizza</div>
+                </div>
+                <div class="restaurant-qr">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&format=png&data=https://neighborfleet-driver.vercel.app/whatsapp-preview.html?store=joes%26promo=FIRST10" alt="Joe's">
+                    <div class="restaurant-label">Joe's Wings</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
