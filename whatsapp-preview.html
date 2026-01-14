@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WhatsApp Ordering Preview - AB King Pizza</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * { -webkit-tap-highlight-color: transparent; }
+        body { 
+            background: #0a0a0f; 
+            overscroll-behavior: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .whatsapp-bg {
+            background-color: #0b141a;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h60v60H0z' fill='%230b141a'/%3E%3Cpath d='M30 30m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0' fill='%23ffffff05'/%3E%3C/svg%3E");
+        }
+        .msg-in { background: #202c33; border-radius: 8px 8px 8px 0; }
+        .msg-out { background: #005c4b; border-radius: 8px 8px 0 8px; }
+        .swipe-hint { animation: swipeHint 2s ease-in-out infinite; }
+        @keyframes swipeHint {
+            0%, 100% { transform: translateX(0); opacity: 0.5; }
+            50% { transform: translateX(10px); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // Sample menu with images (using placeholder food images)
+        const menuData = {
+            specials: [
+                { id: 's1', name: '🔥 TUESDAY SPECIAL', description: 'Large Pepperoni + 10 Wings', price: 29.99, originalPrice: 38.99, image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop' },
+                { id: 's2', name: '👨‍👩‍👧‍👦 FAMILY DEAL', description: '2 Large Pizzas + Wings + 2L Pop', price: 49.99, originalPrice: 62.99, image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop' },
+            ],
+            pizza: [
+                { id: 'p1', name: 'Pepperoni Pizza', description: 'Classic pepperoni with mozzarella', price: 14.99, image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop' },
+                { id: 'p2', name: 'Hawaiian Pizza', description: 'Ham, pineapple, mozzarella', price: 15.99, image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop' },
+                { id: 'p3', name: 'Meat Lovers', description: 'Pepperoni, sausage, bacon, beef', price: 17.99, image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop' },
+                { id: 'p4', name: 'Veggie Supreme', description: 'Peppers, mushrooms, olives, onions', price: 16.99, image: 'https://images.unsplash.com/photo-1511689660979-10d2b1aada49?w=400&h=300&fit=crop' },
+            ],
+            wings: [
+                { id: 'w1', name: 'Chicken Wings (10pc)', description: 'Crispy wings, choice of sauce', price: 12.99, image: 'https://images.unsplash.com/photo-1608039755401-742074f0548d?w=400&h=300&fit=crop' },
+                { id: 'w2', name: 'Boneless Wings (10pc)', description: 'Tender boneless bites', price: 13.99, image: 'https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=400&h=300&fit=crop' },
+            ],
+            sides: [
+                { id: 'd1', name: 'Garlic Bread', description: 'With melted cheese', price: 4.99, image: 'https://images.unsplash.com/photo-1619535860434-ba1d8fa12536?w=400&h=300&fit=crop' },
+                { id: 'd2', name: 'Caesar Salad', description: 'Fresh romaine, parmesan, croutons', price: 7.99, image: 'https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400&h=300&fit=crop' },
+            ]
+        };
+
+        const conversations = [
+            // Step 0: QR Scan
+            {
+                title: "Scan QR Code",
+                subtitle: "Customer scans QR at restaurant",
+                messages: [
+                    { type: 'system', text: '📱 Customer scans QR code at AB King Pizza' },
+                    { type: 'system', text: '→ WhatsApp opens with pre-filled "Hi"' },
+                ]
+            },
+            // Step 1: Welcome with Owner Story
+            {
+                title: "Welcome & Story",
+                subtitle: "Personal connection from owner",
+                messages: [
+                    { type: 'out', text: 'Hi' },
+                    { type: 'in', text: `👋 Welcome to AB King Pizza!
+
+I'm Abdul, and my family has been serving Calgary's NE community for 15 years. Every pizza we make uses my grandmother's dough recipe from Lahore.
+
+Thank you for ordering direct - it means my team gets paid fairly and you get fresher food, faster! 🙏
+
+How would you like to order?
+
+1️⃣ 🚗 Delivery (FREE!)
+2️⃣ 🏃 Pickup (Ready in 15 min)` },
+                ]
+            },
+            // Step 2: Delivery Selected
+            {
+                title: "Free Delivery",
+                subtitle: "No fees - differentiator from Skip",
+                messages: [
+                    { type: 'out', text: '1' },
+                    { type: 'in', text: `🚗 Great choice! FREE delivery to your door.
+
+(Skip would charge you $6.99 for this 😉)
+
+📍 Please share your delivery address:
+
+You can type it OR tap 📎 → Location to share your GPS pin` },
+                ]
+            },
+            // Step 3: Address + Show Specials First
+            {
+                title: "Daily Specials First",
+                subtitle: "Best deals shown immediately",
+                messages: [
+                    { type: 'out', text: '45 Sherwood Rise NW' },
+                    { type: 'in', text: `✅ Delivering to:
+45 Sherwood Rise NW, Calgary
+⏱️ ~30-40 mins | 🚗 FREE delivery
+
+━━━━━━━━━━━━━━━━
+🔥 *TODAY'S SPECIALS* 🔥
+━━━━━━━━━━━━━━━━` },
+                    { type: 'in', image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop', caption: `🔥 *TUESDAY SPECIAL*
+Large Pepperoni + 10 Wings
+
+~$38.99~ *$29.99* (Save $9!)
+
+Reply "T1" to add to cart` },
+                    { type: 'in', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop', caption: `👨‍👩‍👧‍👦 *FAMILY DEAL*
+2 Large Pizzas + Wings + 2L Pop
+
+~$62.99~ *$49.99* (Save $13!)
+
+Reply "T2" to add to cart` },
+                    { type: 'in', text: `Or browse our full menu:
+
+1️⃣ 🍕 Pizzas
+2️⃣ 🍗 Wings  
+3️⃣ 🥗 Sides & Drinks
+4️⃣ 🎁 More Deals` },
+                ]
+            },
+            // Step 4: Pizza Menu with Images
+            {
+                title: "Menu with Photos",
+                subtitle: "Visual menu - eat with your eyes",
+                messages: [
+                    { type: 'out', text: '1' },
+                    { type: 'in', text: `🍕 *OUR PIZZAS*
+Made fresh with Grandma's dough recipe!` },
+                    { type: 'in', image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop', caption: `*Pepperoni Pizza*
+Classic pepperoni with mozzarella
+
+Small $14.99 | Med $17.99 | Large $20.99
+
+Reply "P1" to customize` },
+                    { type: 'in', image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop', caption: `*Meat Lovers* 🥓
+Pepperoni, sausage, bacon, beef
+
+Small $17.99 | Med $20.99 | Large $23.99
+
+Reply "P3" to customize` },
+                    { type: 'in', text: `Reply with code (P1, P2, P3, P4) to select
+Or "0" to go back` },
+                ]
+            },
+            // Step 5: Customize Pizza
+            {
+                title: "Size & Toppings",
+                subtitle: "Easy customization",
+                messages: [
+                    { type: 'out', text: 'P1' },
+                    { type: 'in', text: `🍕 *Pepperoni Pizza*
+
+Choose your size:
+
+1️⃣ Small 10" - $14.99
+2️⃣ Medium 12" - $17.99  
+3️⃣ Large 14" - $20.99 ⭐ Popular
+4️⃣ XL 16" - $23.99
+
+Reply with number` },
+                ]
+            },
+            // Step 6: Size Selected
+            {
+                title: "Extra Toppings",
+                subtitle: "Upsell opportunity",
+                messages: [
+                    { type: 'out', text: '3' },
+                    { type: 'in', text: `✅ Large 14" Pepperoni - $20.99
+
+Want to add extra toppings? ($1.99 each)
+
+1️⃣ 🧀 Extra Cheese
+2️⃣ 🍄 Mushrooms
+3️⃣ 🫑 Green Peppers
+4️⃣ 🧅 Onions
+5️⃣ 🌶️ Jalapeños
+6️⃣ 🥓 Extra Bacon
+
+Reply with numbers (e.g. "1,6")
+Or "0" for no extras` },
+                ]
+            },
+            // Step 7: Added to Cart
+            {
+                title: "Cart & Continue",
+                subtitle: "Easy to add more",
+                messages: [
+                    { type: 'out', text: '1,6' },
+                    { type: 'in', text: `✅ Added to your order!
+
+🛒 *YOUR CART*
+━━━━━━━━━━━━━━━━
+🍕 Large Pepperoni Pizza
+   + Extra Cheese
+   + Extra Bacon
+   *$24.97*
+━━━━━━━━━━━━━━━━
+Subtotal: $24.97
+Delivery: FREE 🎉
+━━━━━━━━━━━━━━━━
+
+1️⃣ ➕ Add more items
+2️⃣ ✅ Checkout
+3️⃣ 🗑️ Clear cart` },
+                ]
+            },
+            // Step 8: Checkout with Tip
+            {
+                title: "Checkout & Tip",
+                subtitle: "Support your driver",
+                messages: [
+                    { type: 'out', text: '2' },
+                    { type: 'in', text: `📋 *ORDER SUMMARY*
+━━━━━━━━━━━━━━━━
+🍕 Large Pepperoni Pizza
+   + Extra Cheese, Bacon    $24.97
+━━━━━━━━━━━━━━━━
+Subtotal:              $24.97
+Delivery:              FREE 🎉
+━━━━━━━━━━━━━━━━
+
+🚗 *Add a tip for your driver?*
+
+Your driver today earns 100% of tips.
+Every dollar helps support local families.
+
+1️⃣ $3
+2️⃣ $5 
+3️⃣ $7
+4️⃣ Custom amount
+5️⃣ No tip
+
+Reply with number` },
+                ]
+            },
+            // Step 9: Tip Selected + Payment
+            {
+                title: "Payment",
+                subtitle: "Secure Stripe checkout",
+                messages: [
+                    { type: 'out', text: '2' },
+                    { type: 'in', text: `🙏 Thank you! Your driver will appreciate that.
+
+📋 *FINAL TOTAL*
+━━━━━━━━━━━━━━━━
+Order:                 $24.97
+Delivery:              FREE
+Driver Tip:            $5.00
+━━━━━━━━━━━━━━━━
+*TOTAL: $29.97*
+
+📍 45 Sherwood Rise NW
+⏱️ Ready in ~35-40 mins
+
+How would you like to pay?
+
+1️⃣ 💳 Pay Now (Card)
+2️⃣ 💵 Cash at Door` },
+                ]
+            },
+            // Step 10: Payment Link
+            {
+                title: "Secure Payment",
+                subtitle: "One tap to pay",
+                messages: [
+                    { type: 'out', text: '1' },
+                    { type: 'in', text: `💳 *SECURE CHECKOUT*
+
+Tap below to pay safely with Stripe:
+
+🔗 pay.neighborfleet.ca/ord/AK7291
+
+✅ 256-bit encryption
+✅ No card details stored
+💰 Total: $29.97
+
+I'll confirm once payment is complete!` },
+                    { type: 'system', text: '→ Customer taps link and pays' },
+                ]
+            },
+            // Step 11: Order Confirmed
+            {
+                title: "Confirmed!",
+                subtitle: "Order in the system",
+                messages: [
+                    { type: 'in', text: `🎉 *ORDER CONFIRMED!*
+
+Order #AK-7291
+
+✅ Payment received: $29.97
+📍 Delivering to: 45 Sherwood Rise NW
+⏱️ Estimated: 7:45 PM
+
+Your order is now with Abdul's kitchen team! They've been with us for 8 years and take pride in every pizza they make.
+
+I'll update you when it's ready! 🍕` },
+                ]
+            },
+            // Step 12: Driver Assigned with Story
+            {
+                title: "Meet Your Driver",
+                subtitle: "Human connection",
+                messages: [
+                    { type: 'in', text: `👨‍🍳 *PREPARING YOUR ORDER*
+
+Abdul's team is crafting your pizza now!
+Fresh dough, hand-stretched, into our stone oven... 🔥` },
+                    { type: 'in', text: `🚗 *YOUR DRIVER*
+
+Meet Mike! 👋
+
+Mike has been delivering in your neighborhood for 2 years. He's completed 1,247 deliveries with a 4.9⭐ rating.
+
+Fun fact: Mike's favorite on our menu is the Meat Lovers!
+
+He'll be at your door in about 15 minutes.
+
+📍 Track live: track.neighborfleet.ca/AK-7291` },
+                ]
+            },
+            // Step 13: Delivered + Review
+            {
+                title: "Delivered!",
+                subtitle: "Close the loop",
+                messages: [
+                    { type: 'in', text: `🚗 *OUT FOR DELIVERY*
+
+Mike just picked up your order!
+ETA: 12 minutes
+
+🚙 Grey Honda Civic
+📞 Need him? Tap to call` },
+                    { type: 'in', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop', caption: `✅ *DELIVERED!*
+
+Your pizza has arrived! 📸
+
+Thank you for supporting local:
+• Abdul's family restaurant stays open
+• Mike earns a fair wage  
+• You saved $6.99 vs Skip!
+
+Enjoy your meal! 🍕❤️` },
+                    { type: 'in', text: `How was everything?
+
+1️⃣ 😍 Amazing!
+2️⃣ 😊 Good
+3️⃣ 😐 Okay
+4️⃣ 😞 Had an issue
+
+Your feedback helps Abdul improve!` },
+                ]
+            },
+            // Step 14: Returning Customer
+            {
+                title: "Returning Customer",
+                subtitle: "Easy reorder",
+                messages: [
+                    { type: 'system', text: '📱 Same customer orders again next week...' },
+                    { type: 'out', text: 'Hi' },
+                    { type: 'in', text: `Welcome back! 🎉
+
+Great to see you again! Abdul here.
+
+🍕 *YOUR USUAL?*
+Last time you had:
+• Large Pepperoni + Extra Cheese, Bacon
+
+1️⃣ ✅ Order the same ($29.97)
+2️⃣ 📋 Browse menu
+3️⃣ 📜 See past orders
+
+Reply with number` },
+                ]
+            },
+        ];
+
+        const WhatsAppPreview = () => {
+            const [step, setStep] = useState(0);
+            const [touchStart, setTouchStart] = useState(null);
+
+            const currentConvo = conversations[step];
+
+            const handleTouchStart = (e) => {
+                setTouchStart(e.touches[0].clientX);
+            };
+
+            const handleTouchEnd = (e) => {
+                if (!touchStart) return;
+                const touchEnd = e.changedTouches[0].clientX;
+                const diff = touchStart - touchEnd;
+
+                if (Math.abs(diff) > 50) {
+                    if (diff > 0 && step < conversations.length - 1) {
+                        setStep(step + 1);
+                    } else if (diff < 0 && step > 0) {
+                        setStep(step - 1);
+                    }
+                }
+                setTouchStart(null);
+            };
+
+            return (
+                <div className="min-h-screen bg-gray-900 flex flex-col">
+                    {/* Header */}
+                    <div className="bg-gray-800 px-4 py-3 flex items-center justify-between border-b border-gray-700">
+                        <div>
+                            <h1 className="text-green-400 font-bold">WhatsApp Preview</h1>
+                            <p className="text-gray-400 text-xs">{currentConvo.title}</p>
+                        </div>
+                        <div className="text-right">
+                            <div className="text-white text-sm font-medium">{step + 1}/{conversations.length}</div>
+                            <div className="text-gray-400 text-xs">Swipe to navigate →</div>
+                        </div>
+                    </div>
+
+                    {/* Progress */}
+                    <div className="h-1 bg-gray-700">
+                        <div 
+                            className="h-full bg-green-500 transition-all duration-300"
+                            style={{ width: `${((step + 1) / conversations.length) * 100}%` }}
+                        />
+                    </div>
+
+                    {/* WhatsApp Container */}
+                    <div 
+                        className="flex-1 flex flex-col"
+                        onTouchStart={handleTouchStart}
+                        onTouchEnd={handleTouchEnd}
+                    >
+                        {/* WhatsApp Header */}
+                        <div className="bg-teal-800 px-4 py-3 flex items-center gap-3">
+                            <div className="text-white text-xl">←</div>
+                            <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center text-xl">
+                                🍕
+                            </div>
+                            <div className="flex-1">
+                                <div className="text-white font-semibold">AB King Pizza</div>
+                                <div className="text-teal-200 text-xs">online</div>
+                            </div>
+                            <div className="flex gap-5 text-white text-lg">
+                                <span>📹</span>
+                                <span>📞</span>
+                            </div>
+                        </div>
+
+                        {/* Messages */}
+                        <div className="flex-1 whatsapp-bg overflow-y-auto p-3 space-y-2">
+                            {currentConvo.messages.map((msg, i) => (
+                                <div key={i}>
+                                    {msg.type === 'system' ? (
+                                        <div className="flex justify-center my-2">
+                                            <div className="bg-gray-700/70 text-gray-300 text-xs px-3 py-1 rounded-full">
+                                                {msg.text}
+                                            </div>
+                                        </div>
+                                    ) : msg.image ? (
+                                        <div className={`flex ${msg.type === 'out' ? 'justify-end' : 'justify-start'}`}>
+                                            <div className={`max-w-[85%] rounded-lg overflow-hidden ${msg.type === 'out' ? 'msg-out' : 'msg-in'}`}>
+                                                <img src={msg.image} alt="" className="w-full h-40 object-cover" />
+                                                {msg.caption && (
+                                                    <div className="p-2 text-sm text-white whitespace-pre-wrap">
+                                                        {msg.caption}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className={`flex ${msg.type === 'out' ? 'justify-end' : 'justify-start'}`}>
+                                            <div className={`max-w-[85%] px-3 py-2 text-sm text-white whitespace-pre-wrap ${msg.type === 'out' ? 'msg-out' : 'msg-in'}`}>
+                                                {msg.text}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Input Bar */}
+                        <div className="bg-gray-800 px-3 py-2 flex items-center gap-2">
+                            <div className="text-gray-400 text-xl">😊</div>
+                            <div className="text-gray-400 text-xl">📎</div>
+                            <div className="flex-1 bg-gray-700 rounded-full px-4 py-2 text-sm text-gray-400">
+                                Type a message
+                            </div>
+                            <div className="w-10 h-10 bg-teal-600 rounded-full flex items-center justify-center text-xl">
+                                🎤
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Navigation Dots */}
+                    <div className="bg-gray-800 px-4 py-3 border-t border-gray-700">
+                        <div className="flex justify-center gap-2 mb-2 flex-wrap">
+                            {conversations.map((_, i) => (
+                                <button
+                                    key={i}
+                                    onClick={() => setStep(i)}
+                                    className={`w-2.5 h-2.5 rounded-full transition ${i === step ? 'bg-green-500' : 'bg-gray-600'}`}
+                                />
+                            ))}
+                        </div>
+                        <div className="flex justify-between">
+                            <button
+                                onClick={() => setStep(Math.max(0, step - 1))}
+                                disabled={step === 0}
+                                className="px-4 py-2 bg-gray-700 text-white rounded-lg disabled:opacity-30 text-sm"
+                            >
+                                ← Prev
+                            </button>
+                            <div className="text-gray-400 text-xs self-center">
+                                {currentConvo.subtitle}
+                            </div>
+                            <button
+                                onClick={() => setStep(Math.min(conversations.length - 1, step + 1))}
+                                disabled={step === conversations.length - 1}
+                                className="px-4 py-2 bg-green-600 text-white rounded-lg disabled:opacity-30 text-sm"
+                            >
+                                Next →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        ReactDOM.render(<WhatsAppPreview />, document.getElementById('root'));
+    </script>
+</body>
+</html>
