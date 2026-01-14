@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WhatsApp Ordering Preview - AB King Pizza</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background: #0a0a0f; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .container { max-width: 500px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        /* Header */
+        .header { background: #1a1a2e; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
+        .header-left h1 { color: #25D366; font-size: 16px; font-weight: 600; }
+        .header-left p { color: #888; font-size: 11px; margin-top: 2px; }
+        .header-right { text-align: right; }
+        .header-right .step { color: white; font-size: 14px; font-weight: 600; }
+        .header-right .hint { color: #888; font-size: 10px; }
+        
+        /* Progress */
+        .progress { height: 3px; background: #333; }
+        .progress-bar { height: 100%; background: #25D366; transition: width 0.3s; }
+        
+        /* WhatsApp Header */
+        .wa-header { background: #075E54; padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
+        .wa-back { color: white; font-size: 20px; }
+        .wa-avatar { width: 40px; height: 40px; background: #FF6B35; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+        .wa-info { flex: 1; }
+        .wa-name { color: white; font-weight: 600; font-size: 15px; }
+        .wa-status { color: #a8d8c8; font-size: 12px; }
+        .wa-icons { display: flex; gap: 20px; color: white; font-size: 18px; }
+        
+        /* Chat Area */
+        .chat-area { 
+            flex: 1; 
+            background: #0b141a;
+            padding: 12px;
+            overflow-y: auto;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h60v60H0z' fill='%230b141a'/%3E%3Cpath d='M30 30m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0' fill='%23ffffff05'/%3E%3C/svg%3E");
+        }
+        
+        /* Messages */
+        .message { margin-bottom: 8px; display: flex; }
+        .message.out { justify-content: flex-end; }
+        .message.in { justify-content: flex-start; }
+        .message.system { justify-content: center; }
+        
+        .bubble { max-width: 85%; padding: 8px 12px; font-size: 14px; line-height: 1.4; white-space: pre-wrap; }
+        .bubble.out { background: #005c4b; border-radius: 8px 8px 0 8px; }
+        .bubble.in { background: #202c33; border-radius: 8px 8px 8px 0; }
+        .bubble.system { background: rgba(255,255,255,0.1); border-radius: 20px; font-size: 11px; color: #aaa; padding: 4px 12px; }
+        
+        .bubble img { width: 100%; border-radius: 6px; margin-bottom: 6px; max-height: 160px; object-fit: cover; }
+        .bubble.with-image { padding: 4px; padding-bottom: 8px; }
+        .bubble.with-image .caption { padding: 4px 8px 0; }
+        
+        /* Input Bar */
+        .input-bar { background: #1a1a2e; padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+        .input-icons { color: #888; font-size: 20px; }
+        .input-field { flex: 1; background: #333; border-radius: 20px; padding: 10px 16px; color: #888; font-size: 14px; }
+        .input-mic { width: 40px; height: 40px; background: #00a884; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        
+        /* Navigation */
+        .nav { background: #1a1a2e; padding: 12px 16px; border-top: 1px solid #333; }
+        .nav-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+        .nav-dot { width: 8px; height: 8px; border-radius: 50%; background: #444; cursor: pointer; border: none; }
+        .nav-dot.active { background: #25D366; }
+        .nav-buttons { display: flex; justify-content: space-between; align-items: center; }
+        .nav-btn { padding: 10px 20px; border-radius: 8px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .nav-btn.prev { background: #333; color: white; }
+        .nav-btn.next { background: #25D366; color: white; }
+        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .nav-subtitle { color: #888; font-size: 11px; max-width: 120px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1>WhatsApp Preview</h1>
+                <p id="stepTitle">Loading...</p>
+            </div>
+            <div class="header-right">
+                <div class="step"><span id="currentStep">1</span>/<span id="totalSteps">16</span></div>
+                <div class="hint">Swipe or tap arrows</div>
+            </div>
+        </div>
+        
+        <div class="progress">
+            <div class="progress-bar" id="progressBar" style="width: 0%"></div>
+        </div>
+        
+        <div class="wa-header">
+            <div class="wa-back">←</div>
+            <div class="wa-avatar">🍕</div>
+            <div class="wa-info">
+                <div class="wa-name">AB King Pizza</div>
+                <div class="wa-status">online</div>
+            </div>
+            <div class="wa-icons">
+                <span>📹</span>
+                <span>📞</span>
+            </div>
+        </div>
+        
+        <div class="chat-area" id="chatArea"></div>
+        
+        <div class="input-bar">
+            <span class="input-icons">😊</span>
+            <span class="input-icons">📎</span>
+            <div class="input-field">Type a message</div>
+            <div class="input-mic">🎤</div>
+        </div>
+        
+        <div class="nav">
+            <div class="nav-dots" id="navDots"></div>
+            <div class="nav-buttons">
+                <button class="nav-btn prev" id="prevBtn" onclick="prevStep()">← Prev</button>
+                <div class="nav-subtitle" id="stepSubtitle"></div>
+                <button class="nav-btn next" id="nextBtn" onclick="nextStep()">Next →</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const conversations = [
+            {
+                title: "Scan QR Code",
+                subtitle: "Customer scans QR at restaurant",
+                messages: [
+                    { type: 'system', text: '📱 Customer scans QR code at AB King Pizza' },
+                    { type: 'system', text: '→ WhatsApp opens with pre-filled "Hi"' },
+                ]
+            },
+            {
+                title: "Welcome & Story",
+                subtitle: "Personal connection from owner",
+                messages: [
+                    { type: 'out', text: 'Hi' },
+                    { type: 'in', text: "👋 Welcome to AB King Pizza!\n\nI'm Abdul, and my family has been serving Calgary's NE community for 15 years. Every pizza we make uses my grandmother's dough recipe from Lahore.\n\nThank you for ordering direct - it means my team gets paid fairly and you get fresher food, faster! 🙏\n\nHow would you like to order?\n\n1️⃣ 🚗 Delivery (FREE!)\n2️⃣ 🏃 Pickup (Ready in 15 min)" },
+                ]
+            },
+            {
+                title: "Free Delivery",
+                subtitle: "No fees - beats Skip!",
+                messages: [
+                    { type: 'out', text: '1' },
+                    { type: 'in', text: "🚗 Great choice! FREE delivery to your door.\n\n(Skip would charge you $6.99 for this 😉)\n\n📍 Please share your delivery address:\n\nYou can type it OR tap 📎 → Location to share your GPS pin" },
+                ]
+            },
+            {
+                title: "Search or Browse",
+                subtitle: "Quick search feature",
+                messages: [
+                    { type: 'out', text: '45 Sherwood Rise NW' },
+                    { type: 'in', text: "✅ Delivering to:\n45 Sherwood Rise NW, Calgary\n⏱️ ~30-40 mins | 🚗 FREE delivery\n\nNow let's build your order!\n\n🔍 *QUICK SEARCH*\nJust type what you're craving:\n• \"pep\" → Pepperoni items\n• \"wing\" → All wings\n• \"meat\" → Meat options\n• \"veg\" → Vegetarian\n\nOr browse by category:\n1️⃣ 🔥 Today's Specials\n2️⃣ 🍕 Pizzas\n3️⃣ 🍗 Wings\n4️⃣ 🥗 Sides & Drinks" },
+                ]
+            },
+            {
+                title: "Search Results",
+                subtitle: "Type a few letters",
+                messages: [
+                    { type: 'out', text: 'pep' },
+                    { type: 'in', text: "🔍 Found 3 items for \"pep\":" },
+                    { type: 'in', text: "1️⃣ 🍕 *Pepperoni Pizza*\nSmall $14.99 | Large $20.99\n\n2️⃣ 🍕 *Pepperoni Lovers*\nDouble pepperoni, extra cheese\nSmall $16.99 | Large $22.99\n\n3️⃣ 🔥 *SPECIAL: Pepperoni + Wings*\n$29.99 (Save $9!)\n\nReply with number or search again" },
+                ]
+            },
+            {
+                title: "Today's Specials",
+                subtitle: "Best deals first",
+                messages: [
+                    { type: 'out', text: '1' },
+                    { type: 'in', text: "🔥 *TODAY'S SPECIALS* 🔥\n━━━━━━━━━━━━━━━━" },
+                    { type: 'in', image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop', caption: "🔥 *TUESDAY SPECIAL*\nLarge Pepperoni + 10 Wings\n\n~$38.99~ *$29.99* (Save $9!)\n\nReply \"S1\" to add" },
+                    { type: 'in', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop', caption: "👨‍👩‍👧‍👦 *FAMILY DEAL*\n2 Large Pizzas + Wings + 2L Pop\n\n~$62.99~ *$49.99* (Save $13!)\n\nReply \"S2\" to add" },
+                ]
+            },
+            {
+                title: "Menu with Photos",
+                subtitle: "Visual menu",
+                messages: [
+                    { type: 'out', text: '2' },
+                    { type: 'in', text: "🍕 *OUR PIZZAS*\nMade fresh with Grandma's recipe!" },
+                    { type: 'in', image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop', caption: "*Pepperoni Pizza*\nClassic pepperoni with mozzarella\n\nSm $14.99 | Md $17.99 | Lg $20.99\n\nReply \"P1\" to customize" },
+                    { type: 'in', image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop', caption: "*Meat Lovers* 🥓\nPepperoni, sausage, bacon, beef\n\nSm $17.99 | Md $20.99 | Lg $23.99\n\nReply \"P3\" to customize" },
+                ]
+            },
+            {
+                title: "Size Selection",
+                subtitle: "Easy customization",
+                messages: [
+                    { type: 'out', text: 'P1' },
+                    { type: 'in', text: "🍕 *Pepperoni Pizza*\n\nChoose your size:\n\n1️⃣ Small 10\" - $14.99\n2️⃣ Medium 12\" - $17.99\n3️⃣ Large 14\" - $20.99 ⭐ Popular\n4️⃣ XL 16\" - $23.99\n\nReply with number" },
+                ]
+            },
+            {
+                title: "Extra Toppings",
+                subtitle: "Upsell opportunity",
+                messages: [
+                    { type: 'out', text: '3' },
+                    { type: 'in', text: "✅ Large 14\" Pepperoni - $20.99\n\nWant extra toppings? ($1.99 each)\n\n1️⃣ 🧀 Extra Cheese\n2️⃣ 🍄 Mushrooms\n3️⃣ 🫑 Green Peppers\n4️⃣ 🧅 Onions\n5️⃣ 🌶️ Jalapeños\n6️⃣ 🥓 Extra Bacon\n\nReply with numbers (e.g. \"1,6\")\nOr \"0\" for no extras" },
+                ]
+            },
+            {
+                title: "Added to Cart",
+                subtitle: "Easy to add more",
+                messages: [
+                    { type: 'out', text: '1,6' },
+                    { type: 'in', text: "✅ Added to your order!\n\n🛒 *YOUR CART*\n━━━━━━━━━━━━━━━━\n🍕 Large Pepperoni Pizza\n   + Extra Cheese\n   + Extra Bacon\n   *$24.97*\n━━━━━━━━━━━━━━━━\nSubtotal: $24.97\nDelivery: FREE 🎉\n━━━━━━━━━━━━━━━━\n\n1️⃣ ➕ Add more items\n2️⃣ ✅ Checkout\n3️⃣ 🗑️ Clear cart" },
+                ]
+            },
+            {
+                title: "Driver Tip",
+                subtitle: "Support your driver",
+                messages: [
+                    { type: 'out', text: '2' },
+                    { type: 'in', text: "📋 *ORDER SUMMARY*\n━━━━━━━━━━━━━━━━\n🍕 Large Pepperoni Pizza\n   + Extra Cheese, Bacon    $24.97\n━━━━━━━━━━━━━━━━\nSubtotal:              $24.97\nDelivery:              FREE 🎉\n━━━━━━━━━━━━━━━━\n\n🚗 *Add a tip for your driver?*\n\nYour driver earns 100% of tips.\nEvery dollar helps support local families.\n\n1️⃣ $3\n2️⃣ $5\n3️⃣ $7\n4️⃣ Custom amount\n5️⃣ No tip" },
+                ]
+            },
+            {
+                title: "Payment",
+                subtitle: "Secure Stripe checkout",
+                messages: [
+                    { type: 'out', text: '2' },
+                    { type: 'in', text: "🙏 Thank you! Your driver will appreciate it.\n\n📋 *FINAL TOTAL*\n━━━━━━━━━━━━━━━━\nOrder:                 $24.97\nDelivery:              FREE\nDriver Tip:            $5.00\n━━━━━━━━━━━━━━━━\n*TOTAL: $29.97*\n\n📍 45 Sherwood Rise NW\n⏱️ Ready in ~35-40 mins\n\n1️⃣ 💳 Pay Now (Card)\n2️⃣ 💵 Cash at Door" },
+                ]
+            },
+            {
+                title: "Order Confirmed",
+                subtitle: "In the system",
+                messages: [
+                    { type: 'out', text: '1' },
+                    { type: 'in', text: "💳 *SECURE CHECKOUT*\n\nTap to pay safely:\n🔗 pay.neighborfleet.ca/ord/AK7291\n\n✅ 256-bit encryption\n💰 Total: $29.97" },
+                    { type: 'system', text: '→ Customer pays via Stripe' },
+                    { type: 'in', text: "🎉 *ORDER CONFIRMED!*\n\nOrder #AK-7291\n\n✅ Payment received: $29.97\n📍 45 Sherwood Rise NW\n⏱️ Estimated: 7:45 PM\n\nYour order is now with Abdul's kitchen team - they take pride in every pizza! 🍕" },
+                ]
+            },
+            {
+                title: "Meet Your Driver",
+                subtitle: "Human connection",
+                messages: [
+                    { type: 'in', text: "👨‍🍳 *PREPARING*\n\nAbdul's team is crafting your pizza now!\nFresh dough → hand-stretched → stone oven 🔥" },
+                    { type: 'in', text: "🚗 *MEET YOUR DRIVER*\n\n👋 Mike is on his way!\n\n📊 1,247 deliveries completed\n⭐ 4.9 rating in your area\n🍕 His favorite: Meat Lovers!\n\nMike has been delivering in your neighborhood for 2 years. He knows exactly where to park!\n\n📍 Track: track.neighborfleet.ca/AK-7291" },
+                ]
+            },
+            {
+                title: "Delivered!",
+                subtitle: "Close the loop",
+                messages: [
+                    { type: 'in', text: "🚗 *OUT FOR DELIVERY*\n\nMike just picked up your order!\nETA: 12 minutes\n\n🚙 Grey Honda Civic" },
+                    { type: 'in', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop', caption: "✅ *DELIVERED!*\n\nYour pizza has arrived! 📸\n\nThank you for supporting local:\n• Abdul's restaurant stays open\n• Mike earns a fair wage\n• You saved $6.99 vs Skip!\n\nEnjoy! 🍕❤️" },
+                    { type: 'in', text: "How was everything?\n\n1️⃣ 😍 Amazing!\n2️⃣ 😊 Good\n3️⃣ 😐 Okay\n4️⃣ 😞 Had an issue" },
+                ]
+            },
+            {
+                title: "Returning Customer",
+                subtitle: "Easy reorder",
+                messages: [
+                    { type: 'system', text: '📱 Same customer, next week...' },
+                    { type: 'out', text: 'Hi' },
+                    { type: 'in', text: "Welcome back! 🎉\n\nGreat to see you again!\n\n🍕 *YOUR USUAL?*\nLast time you had:\n• Large Pepperoni + Cheese, Bacon\n\n1️⃣ ✅ Order the same ($29.97)\n2️⃣ 🔍 Search menu\n3️⃣ 📋 Browse categories\n4️⃣ 📜 Past orders" },
+                ]
+            },
+        ];
+
+        let currentStep = 0;
+
+        function render() {
+            const convo = conversations[currentStep];
+            
+            document.getElementById('stepTitle').textContent = convo.title;
+            document.getElementById('currentStep').textContent = currentStep + 1;
+            document.getElementById('totalSteps').textContent = conversations.length;
+            document.getElementById('stepSubtitle').textContent = convo.subtitle;
+            document.getElementById('progressBar').style.width = ((currentStep + 1) / conversations.length * 100) + '%';
+            
+            const chatArea = document.getElementById('chatArea');
+            chatArea.innerHTML = convo.messages.map(msg => {
+                if (msg.type === 'system') {
+                    return '<div class="message system"><div class="bubble system">' + msg.text + '</div></div>';
+                } else if (msg.image) {
+                    return '<div class="message ' + msg.type + '"><div class="bubble ' + msg.type + ' with-image"><img src="' + msg.image + '" alt=""><div class="caption">' + (msg.caption || '') + '</div></div></div>';
+                } else {
+                    return '<div class="message ' + msg.type + '"><div class="bubble ' + msg.type + '">' + msg.text + '</div></div>';
+                }
+            }).join('');
+            
+            chatArea.scrollTop = chatArea.scrollHeight;
+            
+            document.getElementById('navDots').innerHTML = conversations.map(function(_, i) {
+                return '<button class="nav-dot ' + (i === currentStep ? 'active' : '') + '" onclick="goToStep(' + i + ')"></button>';
+            }).join('');
+            
+            document.getElementById('prevBtn').disabled = currentStep === 0;
+            document.getElementById('nextBtn').disabled = currentStep === conversations.length - 1;
+        }
+
+        function nextStep() {
+            if (currentStep < conversations.length - 1) {
+                currentStep++;
+                render();
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 0) {
+                currentStep--;
+                render();
+            }
+        }
+
+        function goToStep(step) {
+            currentStep = step;
+            render();
+        }
+
+        var touchStartX = 0;
+        document.addEventListener('touchstart', function(e) { touchStartX = e.touches[0].clientX; });
+        document.addEventListener('touchend', function(e) {
+            var diff = touchStartX - e.changedTouches[0].clientX;
+            if (Math.abs(diff) > 50) {
+                if (diff > 0) nextStep();
+                else prevStep();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight') nextStep();
+            if (e.key === 'ArrowLeft') prevStep();
+        });
+
+        render();
+    </script>
+</body>
+</html>
