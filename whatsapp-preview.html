@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LocalFirst YYC</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html { height: 100%; }
+        body { 
+            min-height: 100%;
+            height: 100%;
+            background: #0b141a; 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* Centered container */
+        .app { 
+            width: 100%;
+            height: 100%;
+            max-width: 480px;
+            display: flex;
+            flex-direction: column;
+            background: #0b141a;
+        }
+        
+        /* Header */
+        .header { 
+            background: #075E54; 
+            padding: 16px 20px; 
+            display: flex; 
+            align-items: center; 
+            gap: 14px;
+            flex-shrink: 0;
+        }
+        .header .avatar { 
+            width: 44px; height: 44px; 
+            background: linear-gradient(135deg, #25D366, #128C7E); 
+            border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; font-size: 15px;
+        }
+        .header .info { flex: 1; }
+        .header .name { font-weight: 600; font-size: 18px; }
+        .header .status { font-size: 13px; color: #a8d8c8; }
+        
+        /* Chat area */
+        .chat { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 20px; 
+            display: flex;
+            flex-direction: column;
+        }
+        
+        /* Messages */
+        .msg { margin-bottom: 16px; max-width: 90%; }
+        .msg.out { margin-left: auto; }
+        .msg.center { max-width: 100%; margin: 0 auto 16px; }
+        .msg.full { max-width: 100%; }
+        
+        .bubble { 
+            padding: 14px 18px; 
+            font-size: 16px; 
+            line-height: 1.5; 
+            border-radius: 16px; 
+        }
+        .msg.in .bubble { background: #202c33; border-bottom-left-radius: 4px; }
+        .msg.out .bubble { background: #005c4b; border-bottom-right-radius: 4px; }
+        
+        /* Savings banner */
+        .banner { 
+            background: linear-gradient(135deg, #25D366, #128C7E); 
+            border-radius: 16px; 
+            padding: 20px; 
+            text-align: center; 
+            box-shadow: 0 4px 20px rgba(37, 211, 102, 0.3);
+        }
+        .banner .big { font-size: 26px; font-weight: 800; }
+        .banner .sub { font-size: 14px; margin-top: 6px; opacity: 0.95; }
+        
+        /* Buttons */
+        .buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+        .btn { 
+            background: transparent; 
+            border: 2px solid #00a884; 
+            color: #00a884; 
+            padding: 16px 18px; 
+            border-radius: 12px; 
+            font-size: 16px; 
+            font-weight: 600; 
+            cursor: pointer;
+            text-align: center;
+        }
+        .btn:active { background: rgba(0,168,132,0.15); }
+        .btn.primary { background: #00a884; color: white; border: none; }
+        .btn.primary:active { background: #008f72; }
+        
+        /* Restaurant button - compact */
+        .restaurant-btn {
+            background: #00a884;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .restaurant-btn:active { background: #008f72; }
+        .restaurant-btn .icon {
+            font-size: 28px;
+            width: 40px;
+            text-align: center;
+        }
+        .restaurant-btn .info { flex: 1; }
+        .restaurant-btn .name {
+            font-size: 16px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 4px;
+        }
+        .restaurant-btn .meta {
+            font-size: 13px;
+            color: rgba(255,255,255,0.85);
+            display: flex;
+            gap: 10px;
+        }
+        .restaurant-btn .arrow {
+            font-size: 20px;
+            color: rgba(255,255,255,0.7);
+        }
+        
+        /* Input field */
+        .input-bubble {
+            background: #202c33;
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 16px;
+        }
+        .input-bubble input {
+            width: 100%;
+            background: #2a3942;
+            border: none;
+            border-radius: 10px;
+            padding: 16px 18px;
+            color: white;
+            font-size: 17px;
+            outline: none;
+            margin-bottom: 12px;
+        }
+        .input-bubble input::placeholder { color: #8696a0; }
+        .input-bubble .btn { padding: 16px; font-size: 17px; }
+        
+        /* Disclaimer */
+        .disclaimer {
+            font-size: 11px;
+            color: #8696a0;
+            text-align: center;
+            margin-top: 12px;
+        }
+        
+        /* Loading */
+        .spinner { 
+            width: 20px; height: 20px; 
+            border: 2px solid #2a3942; 
+            border-top-color: #25D366; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <div class="avatar" id="avatar">LF</div>
+            <div class="info">
+                <div class="name" id="headerName">LocalFirst YYC</div>
+                <div class="status">online</div>
+            </div>
+        </div>
+        
+        <div class="chat" id="chat"></div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIG
+        // ============================================
+        var SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
+        var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MzM3MDUsImV4cCI6MjA4MzQwOTcwNX0.zWDiVBwgeRDlnvb2FQxAnU-VDX6Yee4EiLmyWHRYYjM';
+        var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // ============================================
+        // STATE
+        // ============================================
+        var state = {
+            step: 'welcome',
+            customer: null,
+            restaurants: [],
+            restaurant: null
+        };
+        
+        var params = new URLSearchParams(window.location.search);
+        var hasPromo = params.has('promo');
+        
+        var chat = document.getElementById('chat');
+        
+        // ============================================
+        // LOCAL STORAGE
+        // ============================================
+        function saveCustomer() {
+            if (state.customer) {
+                localStorage.setItem('localfirst_customer', JSON.stringify(state.customer));
+            }
+        }
+        
+        function loadCustomer() {
+            var saved = localStorage.getItem('localfirst_customer');
+            if (saved) {
+                try {
+                    state.customer = JSON.parse(saved);
+                    return true;
+                } catch(e) {}
+            }
+            return false;
+        }
+        
+        // ============================================
+        // HELPERS
+        // ============================================
+        function scroll() {
+            chat.scrollTop = chat.scrollHeight;
+        }
+        
+        function addMsg(type, html) {
+            var div = document.createElement('div');
+            div.className = 'msg ' + type;
+            div.innerHTML = html;
+            chat.appendChild(div);
+            scroll();
+            
+            div.querySelectorAll('.btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var action = this.getAttribute('data-action');
+                    if (action) handleAction(action);
+                });
+            });
+            
+            div.querySelectorAll('.restaurant-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var id = this.getAttribute('data-id');
+                    if (id) selectRestaurant(id);
+                });
+            });
+            
+            div.querySelectorAll('.input-submit').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var inputId = this.getAttribute('data-input');
+                    var action = this.getAttribute('data-action');
+                    var input = document.getElementById(inputId);
+                    if (input && input.value.trim()) {
+                        handleInput(action, input.value.trim());
+                    }
+                });
+            });
+            
+            div.querySelectorAll('input').forEach(function(inp) {
+                inp.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        var btn = div.querySelector('.input-submit');
+                        if (btn) btn.click();
+                    }
+                });
+            });
+        }
+        
+        function bubble(type, text, buttons) {
+            var html = '<div class="bubble">' + text.replace(/\n/g, '<br>');
+            if (buttons && buttons.length) {
+                html += '<div class="buttons">';
+                buttons.forEach(function(b, i) {
+                    var cls = i === 0 ? 'btn primary' : 'btn';
+                    html += '<button class="' + cls + '" data-action="' + b.action + '">' + b.label + '</button>';
+                });
+                html += '</div>';
+            }
+            html += '</div>';
+            addMsg(type, html);
+        }
+        
+        function inputBubble(placeholder, buttonText, inputId, action) {
+            var html = '<div class="input-bubble">' +
+                '<input type="text" id="' + inputId + '" placeholder="' + placeholder + '" autocomplete="off">' +
+                '<button class="btn primary input-submit" data-input="' + inputId + '" data-action="' + action + '">' + buttonText + '</button>' +
+                '</div>';
+            addMsg('in', html);
+            setTimeout(function() {
+                var inp = document.getElementById(inputId);
+                if (inp) inp.focus();
+            }, 100);
+        }
+        
+        function showBanner() {
+            addMsg('center', '<div class="banner"><div class="big">🎉 YOU SAVE $6.99!</div><div class="sub">FREE delivery within 3 km*</div></div>');
+        }
+        
+        function showLoading(text) {
+            addMsg('in', '<div class="bubble"><span class="spinner"></span>' + text + '</div>');
+        }
+        
+        function removeLastMsg() {
+            var msgs = chat.querySelectorAll('.msg');
+            if (msgs.length > 0) msgs[msgs.length - 1].remove();
+        }
+        
+        // ============================================
+        // GEOLOCATION
+        // ============================================
+        function getLocation() {
+            showLoading('Finding your location...');
+            
+            if (!navigator.geolocation) {
+                removeLastMsg();
+                bubble('in', '📍 Location not available. Please type your address:');
+                inputBubble('Enter your delivery address', 'Continue', 'address_input', 'submit_address');
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+                },
+                function() {
+                    removeLastMsg();
+                    bubble('in', '📍 Could not get location. Please type your address:');
+                    inputBubble('Enter your delivery address', 'Continue', 'address_input', 'submit_address');
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+        
+        function reverseGeocode(lat, lng) {
+            var url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&addressdetails=1';
+            
+            fetch(url)
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    removeLastMsg();
+                    
+                    var fullAddress = 'Calgary, AB';
+                    if (data && data.address) {
+                        var addr = data.address;
+                        var street = ((addr.house_number || '') + ' ' + (addr.road || addr.street || '')).trim();
+                        var city = addr.city || addr.town || addr.village || 'Calgary';
+                        if (street) {
+                            fullAddress = street + ', ' + city;
+                        }
+                    }
+                    
+                    state.customer = state.customer || {};
+                    state.customer.address = fullAddress;
+                    state.customer.lat = lat;
+                    state.customer.lng = lng;
+                    confirmAddress(fullAddress);
+                })
+                .catch(function() {
+                    removeLastMsg();
+                    state.customer = state.customer || {};
+                    state.customer.address = 'Calgary, AB';
+                    confirmAddress('Calgary, AB');
+                });
+        }
+        
+        // ============================================
+        // ACTIONS
+        // ============================================
+        function handleAction(action) {
+            if (action === 'share_location') {
+                bubble('out', '📍 Share My Location', []);
+                getLocation();
+            }
+            else if (action === 'type_address') {
+                bubble('out', '✏️ Type Address', []);
+                inputBubble('Enter your full delivery address', 'Continue', 'address_input', 'submit_address');
+            }
+            else if (action === 'confirm_address') {
+                showRestaurants();
+            }
+            else if (action === 'change_address') {
+                inputBubble('Enter your full delivery address', 'Update', 'address_input', 'submit_address');
+            }
+        }
+        
+        function handleInput(action, value) {
+            if (action === 'submit_name') {
+                state.customer = state.customer || {};
+                state.customer.name = value;
+                bubble('out', value, []);
+                saveCustomer();
+                askForAddress();
+            }
+            else if (action === 'submit_address') {
+                state.customer = state.customer || {};
+                state.customer.address = value;
+                bubble('out', value, []);
+                saveCustomer();
+                confirmAddress(value);
+            }
+        }
+        
+        // ============================================
+        // FLOWS
+        // ============================================
+        function showWelcome() {
+            state.step = 'welcome';
+            
+            if (loadCustomer() && state.customer.name) {
+                if (hasPromo) showBanner();
+                setTimeout(function() {
+                    bubble('in', 
+                        '👋 Welcome back, <b>' + state.customer.name + '</b>!\n\nReady to order?',
+                        [
+                            { label: '📍 ' + (state.customer.address || 'My Location'), action: 'confirm_address' },
+                            { label: '✏️ Different Address', action: 'type_address' }
+                        ]
+                    );
+                }, 300);
+            } else {
+                if (hasPromo) showBanner();
+                setTimeout(function() {
+                    bubble('in', 
+                        '👋 Welcome to <b>LocalFirst YYC</b>!\n\n' +
+                        'Order from Calgary\'s best local restaurants.\n' +
+                        '🚗 FREE delivery within 3 km*\n\n' +
+                        'What\'s your name?'
+                    );
+                    inputBubble('Enter your name', 'Continue', 'name_input', 'submit_name');
+                }, 300);
+            }
+        }
+        
+        function askForAddress() {
+            setTimeout(function() {
+                bubble('in', 
+                    'Nice to meet you, <b>' + state.customer.name + '</b>! 👋\n\nWhere should we deliver?',
+                    [
+                        { label: '📍 Share My Location', action: 'share_location' },
+                        { label: '✏️ Type Address', action: 'type_address' }
+                    ]
+                );
+            }, 300);
+        }
+        
+        function confirmAddress(address) {
+            state.customer.address = address;
+            saveCustomer();
+            
+            bubble('in', 
+                '✅ <b>Delivering to:</b>\n' + address,
+                [
+                    { label: '✓ Looks Good!', action: 'confirm_address' },
+                    { label: '✏️ Change', action: 'change_address' }
+                ]
+            );
+        }
+        
+        function showRestaurants() {
+            state.step = 'restaurants';
+            
+            // Demo restaurants - max 5, compact buttons
+            var restaurants = [
+                { id: '1', icon: '🍕', name: 'AB King Pizza', rating: '4.8', distance: '0.8 km', time: '25 min' },
+                { id: '2', icon: '🍔', name: 'Burger Barn', rating: '4.7', distance: '1.2 km', time: '30 min' },
+                { id: '3', icon: '🍗', name: 'Wing House', rating: '4.6', distance: '1.5 km', time: '35 min' },
+                { id: '4', icon: '🌮', name: 'Taco Fiesta', rating: '4.5', distance: '2.0 km', time: '35 min' },
+                { id: '5', icon: '🍜', name: 'Noodle King', rating: '4.7', distance: '2.2 km', time: '40 min' }
+            ];
+            
+            var html = '<div class="bubble" style="padding: 14px;">' +
+                '<div style="font-size: 16px; font-weight: 600; margin-bottom: 14px;">🍽️ Restaurants near you:</div>';
+            
+            restaurants.forEach(function(r) {
+                html += '<div class="restaurant-btn" data-id="' + r.id + '">' +
+                    '<div class="icon">' + r.icon + '</div>' +
+                    '<div class="info">' +
+                    '<div class="name">' + r.name + '</div>' +
+                    '<div class="meta">' +
+                    '<span>⭐ ' + r.rating + '</span>' +
+                    '<span>📍 ' + r.distance + '</span>' +
+                    '<span>🕐 ' + r.time + '</span>' +
+                    '</div>' +
+                    '</div>' +
+                    '<div class="arrow">›</div>' +
+                    '</div>';
+            });
+            
+            html += '<div class="disclaimer">*FREE delivery within 3 km. $2.99 for 3-5 km.</div>';
+            html += '</div>';
+            
+            addMsg('full', html);
+        }
+        
+        function selectRestaurant(id) {
+            var names = {
+                '1': 'AB King Pizza',
+                '2': 'Burger Barn', 
+                '3': 'Wing House',
+                '4': 'Taco Fiesta',
+                '5': 'Noodle King'
+            };
+            var name = names[id] || 'Restaurant';
+            
+            bubble('out', '🍽️ ' + name, []);
+            
+            document.getElementById('headerName').textContent = name;
+            document.getElementById('avatar').textContent = name.substring(0, 2).toUpperCase();
+            
+            setTimeout(function() {
+                bubble('in', 
+                    '✅ <b>' + name + '</b>\n\n' +
+                    '👤 ' + state.customer.name + '\n' +
+                    '📍 ' + state.customer.address + '\n' +
+                    '🚗 FREE delivery*\n\n' +
+                    '⏳ Loading menu...'
+                );
+                
+                // PAGE 2 would load here
+                setTimeout(function() {
+                    bubble('in', 
+                        '📋 <b>Ready for Page 2 (Menu)</b>\n\n' +
+                        'Should I build the menu page next?'
+                    );
+                }, 1000);
+            }, 300);
+        }
+        
+        // ============================================
+        // INIT
+        // ============================================
+        function init() {
+            db.from('restaurants').select('*').then(function(res) {
+                state.restaurants = res.data || [];
+                showWelcome();
+            }).catch(function() {
+                showWelcome();
+            });
+        }
+        
+        init();
+    </script>
+</body>
+</html>
