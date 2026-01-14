@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LocalFirst YYC</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { 
+            height: 100%; 
+            width: 100%;
+            overflow: hidden;
+            background: #0b141a; 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            color: white;
+        }
+        
+        /* Centered container */
+        .app { 
+            display: flex; 
+            flex-direction: column; 
+            height: 100%; 
+            width: 100%;
+            max-width: 500px; 
+            margin: 0 auto;
+            position: relative;
+        }
+        
+        /* Header */
+        .header { 
+            background: #075E54; 
+            padding: 14px 16px; 
+            display: flex; 
+            align-items: center; 
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .header .avatar { 
+            width: 42px; height: 42px; 
+            background: linear-gradient(135deg, #25D366, #128C7E); 
+            border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; font-size: 14px;
+        }
+        .header .info { flex: 1; }
+        .header .name { font-weight: 600; font-size: 17px; }
+        .header .status { font-size: 13px; color: #a8d8c8; }
+        
+        /* Chat area */
+        .chat { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 16px; 
+            background: #0b141a;
+        }
+        
+        /* Messages */
+        .msg { margin-bottom: 14px; max-width: 88%; }
+        .msg.out { margin-left: auto; }
+        .msg.center { max-width: 100%; text-align: center; }
+        
+        .bubble { 
+            padding: 12px 16px; 
+            font-size: 16px; 
+            line-height: 1.5; 
+            border-radius: 12px; 
+        }
+        .msg.in .bubble { background: #202c33; border-bottom-left-radius: 4px; }
+        .msg.out .bubble { background: #005c4b; border-bottom-right-radius: 4px; }
+        
+        /* Savings banner */
+        .banner { 
+            background: linear-gradient(135deg, #25D366, #128C7E); 
+            border-radius: 16px; 
+            padding: 20px; 
+            text-align: center; 
+            margin-bottom: 14px;
+            box-shadow: 0 4px 20px rgba(37, 211, 102, 0.3);
+        }
+        .banner .big { font-size: 28px; font-weight: 800; }
+        .banner .sub { font-size: 14px; margin-top: 6px; opacity: 0.95; }
+        
+        /* Buttons */
+        .buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+        .btn { 
+            background: transparent; 
+            border: 2px solid #00a884; 
+            color: #00a884; 
+            padding: 16px 20px; 
+            border-radius: 12px; 
+            font-size: 17px; 
+            font-weight: 600; 
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn:active { background: rgba(0,168,132,0.2); transform: scale(0.98); }
+        .btn.primary { background: #00a884; color: white; border: none; }
+        .btn.primary:active { background: #008f72; }
+        
+        /* Input field for name/address */
+        .input-bubble {
+            background: #202c33;
+            border-radius: 12px;
+            padding: 12px;
+            margin-top: 14px;
+        }
+        .input-bubble input {
+            width: 100%;
+            background: #2a3942;
+            border: none;
+            border-radius: 8px;
+            padding: 14px 16px;
+            color: white;
+            font-size: 16px;
+            outline: none;
+            margin-bottom: 10px;
+        }
+        .input-bubble input::placeholder { color: #8696a0; }
+        .input-bubble .btn { padding: 14px; }
+        
+        /* Restaurant card */
+        .card { 
+            background: #202c33; 
+            border-radius: 16px; 
+            overflow: hidden; 
+            margin-bottom: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .card img { width: 100%; height: 140px; object-fit: cover; }
+        .card .body { padding: 14px; }
+        .card .title { font-weight: 700; font-size: 18px; margin-bottom: 6px; }
+        .card .meta { font-size: 14px; color: #8696a0; margin-bottom: 12px; }
+        .card .meta span { margin-right: 12px; }
+        .card .btn { width: 100%; padding: 14px; }
+        
+        /* Loading spinner */
+        .loading { text-align: center; padding: 20px; }
+        .spinner { 
+            width: 24px; height: 24px; 
+            border: 3px solid #2a3942; 
+            border-top-color: #25D366; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Hide scrollbar but keep functionality */
+        .chat::-webkit-scrollbar { width: 0; }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header">
+            <div class="avatar" id="avatar">LF</div>
+            <div class="info">
+                <div class="name" id="headerName">LocalFirst YYC</div>
+                <div class="status">online</div>
+            </div>
+        </div>
+        
+        <div class="chat" id="chat"></div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIG
+        // ============================================
+        var SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
+        var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MzM3MDUsImV4cCI6MjA4MzQwOTcwNX0.zWDiVBwgeRDlnvb2FQxAnU-VDX6Yee4EiLmyWHRYYjM';
+        var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // ============================================
+        // STATE
+        // ============================================
+        var state = {
+            step: 'welcome',
+            customer: null,  // { name, phone, address }
+            restaurants: [],
+            restaurant: null,
+            menu: [],
+            categories: [],
+            cart: [],
+            tip: 0
+        };
+        
+        // Check URL params
+        var params = new URLSearchParams(window.location.search);
+        var storeId = params.get('store');
+        var hasPromo = params.has('promo');
+        
+        // Elements
+        var chat = document.getElementById('chat');
+        
+        // ============================================
+        // LOCAL STORAGE - Remember customer
+        // ============================================
+        function saveCustomer() {
+            if (state.customer) {
+                localStorage.setItem('localfirst_customer', JSON.stringify(state.customer));
+            }
+        }
+        
+        function loadCustomer() {
+            var saved = localStorage.getItem('localfirst_customer');
+            if (saved) {
+                try {
+                    state.customer = JSON.parse(saved);
+                    return true;
+                } catch(e) {}
+            }
+            return false;
+        }
+        
+        // ============================================
+        // HELPERS
+        // ============================================
+        function scroll() {
+            chat.scrollTop = chat.scrollHeight;
+        }
+        
+        function addMsg(type, html) {
+            var div = document.createElement('div');
+            div.className = 'msg ' + type;
+            div.innerHTML = html;
+            chat.appendChild(div);
+            scroll();
+            
+            // Add button click handlers
+            div.querySelectorAll('.btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var action = this.getAttribute('data-action');
+                    if (action) handleAction(action);
+                });
+            });
+            
+            // Add input submit handlers
+            div.querySelectorAll('.input-submit').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var inputId = this.getAttribute('data-input');
+                    var action = this.getAttribute('data-action');
+                    var input = document.getElementById(inputId);
+                    if (input && input.value.trim()) {
+                        handleInput(action, input.value.trim());
+                    }
+                });
+            });
+            
+            // Handle enter key on inputs
+            div.querySelectorAll('input').forEach(function(inp) {
+                inp.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        var btn = div.querySelector('.input-submit');
+                        if (btn) btn.click();
+                    }
+                });
+            });
+        }
+        
+        function bubble(type, text, buttons) {
+            var html = '<div class="bubble">' + text.replace(/\n/g, '<br>');
+            if (buttons && buttons.length) {
+                html += '<div class="buttons">';
+                buttons.forEach(function(b, i) {
+                    var cls = i === 0 ? 'btn primary' : 'btn';
+                    html += '<button class="' + cls + '" data-action="' + b.action + '">' + b.label + '</button>';
+                });
+                html += '</div>';
+            }
+            html += '</div>';
+            addMsg(type, html);
+        }
+        
+        function inputBubble(placeholder, buttonText, inputId, action) {
+            var html = '<div class="input-bubble">' +
+                '<input type="text" id="' + inputId + '" placeholder="' + placeholder + '" autocomplete="off">' +
+                '<button class="btn primary input-submit" data-input="' + inputId + '" data-action="' + action + '">' + buttonText + '</button>' +
+                '</div>';
+            addMsg('in', html);
+            
+            // Focus the input
+            setTimeout(function() {
+                var inp = document.getElementById(inputId);
+                if (inp) inp.focus();
+            }, 100);
+        }
+        
+        function showBanner() {
+            addMsg('center', '<div class="banner"><div class="big">🎉 YOU SAVE $6.99!</div><div class="sub">FREE delivery on your order!</div></div>');
+        }
+        
+        function showLoading(text) {
+            addMsg('in', '<div class="bubble"><span class="spinner"></span>' + text + '</div>');
+        }
+        
+        function removeLastMsg() {
+            var msgs = chat.querySelectorAll('.msg');
+            if (msgs.length > 0) {
+                msgs[msgs.length - 1].remove();
+            }
+        }
+        
+        // ============================================
+        // GEOLOCATION - Get real address
+        // ============================================
+        function getLocation() {
+            showLoading('Finding your location...');
+            
+            if (!navigator.geolocation) {
+                removeLastMsg();
+                bubble('in', '📍 Location not available. Please type your address:');
+                inputBubble('Enter your delivery address', 'Continue', 'address_input', 'submit_address');
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    // Got location - now reverse geocode
+                    reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+                },
+                function(err) {
+                    removeLastMsg();
+                    bubble('in', '📍 Could not get location. Please type your address:');
+                    inputBubble('Enter your delivery address', 'Continue', 'address_input', 'submit_address');
+                },
+                { enableHighAccuracy: true, timeout: 10000 }
+            );
+        }
+        
+        function reverseGeocode(lat, lng) {
+            // Use OpenStreetMap Nominatim (free, no API key)
+            var url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&addressdetails=1';
+            
+            fetch(url)
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    removeLastMsg();
+                    
+                    if (data && data.address) {
+                        var addr = data.address;
+                        var street = (addr.house_number || '') + ' ' + (addr.road || addr.street || '');
+                        var city = addr.city || addr.town || addr.village || 'Calgary';
+                        var fullAddress = street.trim() + ', ' + city;
+                        
+                        if (!street.trim()) {
+                            fullAddress = data.display_name.split(',').slice(0, 3).join(',');
+                        }
+                        
+                        state.customer = state.customer || {};
+                        state.customer.address = fullAddress;
+                        state.customer.lat = lat;
+                        state.customer.lng = lng;
+                        
+                        confirmAddress(fullAddress);
+                    } else {
+                        state.customer = state.customer || {};
+                        state.customer.address = 'Calgary, AB';
+                        confirmAddress('Calgary, AB');
+                    }
+                })
+                .catch(function() {
+                    removeLastMsg();
+                    state.customer = state.customer || {};
+                    state.customer.address = 'Calgary, AB';
+                    confirmAddress('Calgary, AB');
+                });
+        }
+        
+        // ============================================
+        // HANDLE ACTIONS
+        // ============================================
+        function handleAction(action) {
+            console.log('Action:', action);
+            
+            if (action === 'share_location') {
+                bubble('out', '📍 Share My Location', []);
+                getLocation();
+            }
+            else if (action === 'type_address') {
+                bubble('out', '✏️ Type Address', []);
+                inputBubble('Enter your full delivery address', 'Continue', 'address_input', 'submit_address');
+            }
+            else if (action === 'confirm_address') {
+                showRestaurants();
+            }
+            else if (action === 'change_address') {
+                inputBubble('Enter your full delivery address', 'Update', 'address_input', 'submit_address');
+            }
+            else if (action.indexOf('select_restaurant_') === 0) {
+                var id = action.replace('select_restaurant_', '');
+                selectRestaurant(id);
+            }
+        }
+        
+        function handleInput(action, value) {
+            if (action === 'submit_name') {
+                state.customer = state.customer || {};
+                state.customer.name = value;
+                bubble('out', value, []);
+                saveCustomer();
+                askForAddress();
+            }
+            else if (action === 'submit_address') {
+                state.customer = state.customer || {};
+                state.customer.address = value;
+                bubble('out', value, []);
+                saveCustomer();
+                confirmAddress(value);
+            }
+        }
+        
+        // ============================================
+        // FLOWS
+        // ============================================
+        function showWelcome() {
+            state.step = 'welcome';
+            
+            // Check if returning customer
+            if (loadCustomer() && state.customer.name) {
+                // Returning customer!
+                if (hasPromo) showBanner();
+                
+                setTimeout(function() {
+                    bubble('in', 
+                        '👋 Welcome back, <b>' + state.customer.name + '</b>!\n\n' +
+                        'Great to see you again! 🎉\n\n' +
+                        'Ready to order?',
+                        [
+                            { label: '📍 Deliver to: ' + (state.customer.address || 'My Location'), action: 'confirm_address' },
+                            { label: '📍 Different Address', action: 'type_address' }
+                        ]
+                    );
+                }, 300);
+            } else {
+                // New customer - get their name first
+                if (hasPromo) showBanner();
+                
+                setTimeout(function() {
+                    bubble('in', 
+                        '👋 Welcome to <b>LocalFirst YYC</b>!\n\n' +
+                        'Order from Calgary\'s best local restaurants.\n' +
+                        '🚗 FREE delivery • No app fees\n\n' +
+                        'First, what\'s your name?'
+                    );
+                    inputBubble('Enter your name', 'Continue', 'name_input', 'submit_name');
+                }, 300);
+            }
+        }
+        
+        function askForAddress() {
+            setTimeout(function() {
+                bubble('in', 
+                    'Nice to meet you, <b>' + state.customer.name + '</b>! 👋\n\n' +
+                    'Where should we deliver?',
+                    [
+                        { label: '📍 Share My Location', action: 'share_location' },
+                        { label: '✏️ Type Address', action: 'type_address' }
+                    ]
+                );
+            }, 300);
+        }
+        
+        function confirmAddress(address) {
+            state.customer.address = address;
+            saveCustomer();
+            
+            bubble('in', 
+                '✅ <b>Delivery Address:</b>\n' + address + '\n\n' +
+                '🚗 FREE delivery • ~30-40 min',
+                [
+                    { label: '✓ Looks Good!', action: 'confirm_address' },
+                    { label: '✏️ Change Address', action: 'change_address' }
+                ]
+            );
+        }
+        
+        function showRestaurants() {
+            state.step = 'restaurants';
+            
+            bubble('in', '🍽️ <b>Restaurants near you:</b>');
+            
+            showLoading('Finding restaurants...');
+            
+            setTimeout(function() {
+                removeLastMsg();
+                
+                if (state.restaurants.length === 0) {
+                    // Demo restaurants
+                    var demo = [
+                        { 
+                            id: '1', 
+                            name: 'AB King Pizza', 
+                            cuisine: 'Pizza • Wings',
+                            rating: '4.8', 
+                            distance: '0.8 km', 
+                            time: '25-35 min', 
+                            image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=200&fit=crop' 
+                        },
+                        { 
+                            id: '2', 
+                            name: 'Joe\'s Wings & Things', 
+                            cuisine: 'Wings • Sides',
+                            rating: '4.6', 
+                            distance: '1.2 km', 
+                            time: '30-40 min', 
+                            image: 'https://images.unsplash.com/photo-1608039755401-742074f0548d?w=400&h=200&fit=crop' 
+                        },
+                        { 
+                            id: '3', 
+                            name: 'Burger Palace', 
+                            cuisine: 'Burgers • Fries',
+                            rating: '4.7', 
+                            distance: '1.5 km', 
+                            time: '25-35 min', 
+                            image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=200&fit=crop' 
+                        }
+                    ];
+                    demo.forEach(function(r, i) {
+                        setTimeout(function() { restaurantCard(r); }, i * 200);
+                    });
+                } else {
+                    state.restaurants.forEach(function(r, i) {
+                        setTimeout(function() { restaurantCard(r); }, i * 200);
+                    });
+                }
+            }, 800);
+        }
+        
+        function restaurantCard(r) {
+            var html = '<div class="card">' +
+                '<img src="' + (r.image || r.logo_url || 'https://placehold.co/400x140/1a1a2e/666?text=' + encodeURIComponent(r.name)) + '" onerror="this.src=\'https://placehold.co/400x140/1a1a2e/666?text=Restaurant\'">' +
+                '<div class="body">' +
+                '<div class="title">' + r.name + '</div>' +
+                '<div class="meta">' +
+                '<span>⭐ ' + (r.rating || '4.7') + '</span>' +
+                '<span>📍 ' + (r.distance || '1 km') + '</span>' +
+                '<span>🕐 ' + (r.time || '30 min') + '</span>' +
+                '</div>' +
+                '<button class="btn primary" data-action="select_restaurant_' + r.id + '">Order Now - FREE Delivery</button>' +
+                '</div></div>';
+            addMsg('in', html);
+        }
+        
+        function selectRestaurant(id) {
+            var r = state.restaurants.find(function(x) { return x.id === id; });
+            if (!r) {
+                // Demo restaurant
+                r = { id: id, name: id === '1' ? 'AB King Pizza' : id === '2' ? 'Joe\'s Wings' : 'Burger Palace' };
+            }
+            
+            state.restaurant = r;
+            bubble('out', '🍽️ ' + r.name, []);
+            
+            // Update header
+            document.getElementById('headerName').textContent = r.name;
+            document.getElementById('avatar').textContent = r.name.substring(0, 2).toUpperCase();
+            
+            // Show confirmation and redirect info
+            setTimeout(function() {
+                bubble('in', 
+                    '✅ Great choice!\n\n' +
+                    '👤 ' + state.customer.name + '\n' +
+                    '📍 ' + state.customer.address + '\n\n' +
+                    '⏳ Loading ' + r.name + ' menu...'
+                );
+                
+                // Here you would redirect to the restaurant's menu page
+                // For now, show a message
+                setTimeout(function() {
+                    bubble('in', 
+                        '🍕 <b>' + r.name + ' Menu</b>\n\n' +
+                        'This is where Page 2 (menu) would load.\n\n' +
+                        'Ready to build the menu page?'
+                    );
+                }, 1500);
+            }, 300);
+        }
+        
+        // ============================================
+        // INIT
+        // ============================================
+        function init() {
+            // Load restaurants from database
+            db.from('restaurants').select('*').then(function(res) {
+                state.restaurants = res.data || [];
+                showWelcome();
+            }).catch(function() {
+                showWelcome();
+            });
+        }
+        
+        init();
+    </script>
+</body>
+</html>
