@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>WhatsApp Ordering - Live Preview</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { 
+            background: #0a0a0f; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        .container { max-width: 500px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+        
+        /* Header */
+        .header { background: #1a1a2e; padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #333; }
+        .header-left h1 { color: #25D366; font-size: 16px; font-weight: 600; }
+        .header-left p { color: #888; font-size: 11px; margin-top: 2px; }
+        .header-right { text-align: right; }
+        .header-right .step { color: white; font-size: 14px; font-weight: 600; }
+        .header-right .hint { color: #888; font-size: 10px; }
+        .db-status { font-size: 10px; padding: 2px 8px; border-radius: 10px; margin-top: 4px; display: inline-block; }
+        .db-status.connected { background: #25D36622; color: #25D366; }
+        .db-status.loading { background: #ff990022; color: #ff9900; }
+        .db-status.error { background: #ff000022; color: #ff4444; }
+        
+        /* WhatsApp Header */
+        .wa-header { background: #075E54; padding: 10px 16px; display: flex; align-items: center; gap: 12px; }
+        .wa-back { color: white; font-size: 20px; }
+        .wa-avatar { width: 40px; height: 40px; background: #FF6B35; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; overflow: hidden; }
+        .wa-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .wa-info { flex: 1; }
+        .wa-name { color: white; font-weight: 600; font-size: 15px; }
+        .wa-status { color: #a8d8c8; font-size: 12px; }
+        .wa-icons { display: flex; gap: 20px; color: white; font-size: 18px; }
+        
+        /* Chat Area */
+        .chat-area { 
+            flex: 1; 
+            background: #0b141a;
+            padding: 12px;
+            overflow-y: auto;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M0 0h60v60H0z' fill='%230b141a'/%3E%3Cpath d='M30 30m-1 0a1 1 0 1 0 2 0a1 1 0 1 0-2 0' fill='%23ffffff05'/%3E%3C/svg%3E");
+        }
+        
+        /* Messages */
+        .message { margin-bottom: 8px; display: flex; animation: fadeIn 0.3s ease; }
+        .message.out { justify-content: flex-end; }
+        .message.in { justify-content: flex-start; }
+        .message.system { justify-content: center; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .bubble { max-width: 85%; padding: 8px 12px; font-size: 14px; line-height: 1.4; white-space: pre-wrap; word-wrap: break-word; }
+        .bubble.out { background: #005c4b; border-radius: 8px 8px 0 8px; }
+        .bubble.in { background: #202c33; border-radius: 8px 8px 8px 0; }
+        .bubble.system { background: rgba(255,255,255,0.1); border-radius: 20px; font-size: 11px; color: #aaa; padding: 4px 12px; }
+        
+        .bubble img { width: 100%; border-radius: 6px; margin-bottom: 6px; max-height: 180px; object-fit: cover; }
+        .bubble.with-image { padding: 4px; padding-bottom: 8px; }
+        .bubble.with-image .caption { padding: 4px 8px 0; }
+        
+        /* Savings Splash */
+        .savings-splash {
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 8px;
+            text-align: center;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(37, 211, 102, 0); }
+        }
+        .savings-splash .big-text { font-size: 28px; font-weight: 800; }
+        .savings-splash .sub-text { font-size: 13px; opacity: 0.9; margin-top: 4px; }
+        
+        /* WhatsApp Style Buttons */
+        .wa-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #374045;
+        }
+        .wa-button {
+            background: transparent;
+            border: 1px solid #00a884;
+            color: #00a884;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        .wa-button:hover, .wa-button:active {
+            background: #00a88422;
+        }
+        .wa-button.primary {
+            background: #00a884;
+            color: white;
+            border: none;
+        }
+        .wa-button.primary:hover {
+            background: #008f6f;
+        }
+        
+        /* Input Bar */
+        .input-bar { background: #1a1a2e; padding: 8px 12px; display: flex; align-items: center; gap: 8px; }
+        .input-icons { color: #888; font-size: 20px; cursor: pointer; }
+        .input-field { flex: 1; background: #333; border: none; border-radius: 20px; padding: 10px 16px; color: white; font-size: 14px; outline: none; }
+        .input-field::placeholder { color: #888; }
+        .send-btn { width: 40px; height: 40px; background: #00a884; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; border: none; }
+        .mic-btn { width: 40px; height: 40px; background: #00a884; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; border: none; }
+        
+        /* Voice Recording Indicator */
+        .voice-hint {
+            background: #1a1a2e;
+            padding: 8px 16px;
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+            border-top: 1px solid #333;
+        }
+        .voice-hint span { color: #00a884; }
+        
+        /* Reset Button */
+        .reset-btn { position: fixed; bottom: 20px; right: 20px; background: #ff4444; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-size: 12px; cursor: pointer; z-index: 100; }
+        
+        /* Loading */
+        .loading { text-align: center; padding: 20px; color: #888; }
+        .spinner { width: 30px; height: 30px; border: 3px solid #333; border-top-color: #25D366; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 10px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-left">
+                <h1>WhatsApp Order Preview</h1>
+                <p id="storeName">Loading store...</p>
+                <span class="db-status loading" id="dbStatus">⏳ Connecting...</span>
+            </div>
+            <div class="header-right">
+                <div class="step">LIVE DATA</div>
+                <div class="hint">From your dashboard</div>
+            </div>
+        </div>
+        
+        <div class="wa-header">
+            <div class="wa-back">←</div>
+            <div class="wa-avatar" id="storeAvatar">🍕</div>
+            <div class="wa-info">
+                <div class="wa-name" id="waStoreName">Loading...</div>
+                <div class="wa-status">online</div>
+            </div>
+            <div class="wa-icons">
+                <span>📹</span>
+                <span>📞</span>
+            </div>
+        </div>
+        
+        <div class="chat-area" id="chatArea">
+            <div class="loading">
+                <div class="spinner"></div>
+                Loading menu from database...
+            </div>
+        </div>
+        
+        <div class="voice-hint">
+            🎤 <span>Hold mic button</span> to speak your order • Or tap buttons • Or type
+        </div>
+        
+        <div class="input-bar">
+            <span class="input-icons">😊</span>
+            <span class="input-icons">📎</span>
+            <input type="text" class="input-field" id="userInput" placeholder="Type or use buttons above...">
+            <button class="mic-btn" id="micBtn" title="Hold to speak">🎤</button>
+        </div>
+    </div>
+    
+    <button class="reset-btn" onclick="resetChat()">🔄 Start Over</button>
+
+    <script>
+        // ============================================
+        // SUPABASE CONNECTION
+        // ============================================
+        const SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MzM3MDUsImV4cCI6MjA4MzQwOTcwNX0.zWDiVBwgeRDlnvb2FQxAnU-VDX6Yee4EiLmyWHRYYjM';
+        
+        const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // ============================================
+        // STATE
+        // ============================================
+        let menuItems = [];
+        let categories = [];
+        let currentRestaurant = null;
+        let cart = [];
+        let conversationState = 'welcome';
+        let customerAddress = '';
+        let selectedItem = null;
+        let driverTip = 0;
+        let hasPromo = false;
+        
+        // Check for promo in URL
+        const urlParams = new URLSearchParams(window.location.search);
+        hasPromo = urlParams.has('promo');
+        
+        // ============================================
+        // LOAD DATA
+        // ============================================
+        async function loadData() {
+            try {
+                const { data: restData } = await db.from('restaurants').select('*').limit(1);
+                if (restData && restData.length > 0) {
+                    currentRestaurant = restData[0];
+                    document.getElementById('storeName').textContent = currentRestaurant.name || 'Restaurant';
+                    document.getElementById('waStoreName').textContent = currentRestaurant.name || 'Restaurant';
+                }
+                
+                const { data: menuData } = await db.from('menu_items').select('*').eq('is_available', true).order('category');
+                menuItems = menuData || [];
+                categories = [...new Set(menuItems.map(item => item.category).filter(Boolean))];
+                
+                document.getElementById('dbStatus').className = 'db-status connected';
+                document.getElementById('dbStatus').textContent = '✓ ' + menuItems.length + ' items loaded';
+                
+                startConversation();
+            } catch (err) {
+                console.error('Database error:', err);
+                document.getElementById('dbStatus').className = 'db-status error';
+                document.getElementById('dbStatus').textContent = '✗ Connection failed';
+                addMessage('system', '⚠️ Could not load menu.');
+            }
+        }
+        
+        // ============================================
+        // CHAT FUNCTIONS
+        // ============================================
+        function addMessage(type, text, options = {}) {
+            const chatArea = document.getElementById('chatArea');
+            const loading = chatArea.querySelector('.loading');
+            if (loading) loading.remove();
+            
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message ' + type;
+            
+            let content = '';
+            
+            if (options.splash) {
+                content = '<div class="savings-splash"><div class="big-text">' + options.splash.title + '</div><div class="sub-text">' + options.splash.subtitle + '</div></div>';
+            } else if (options.image) {
+                content = '<div class="bubble ' + type + ' with-image"><img src="' + options.image + '" alt="" onerror="this.style.display=\'none\'"><div class="caption">' + text + '</div></div>';
+            } else if (type === 'system') {
+                content = '<div class="bubble system">' + text + '</div>';
+            } else {
+                content = '<div class="bubble ' + type + '">' + text + '</div>';
+            }
+            
+            // Add buttons if provided
+            if (options.buttons && options.buttons.length > 0) {
+                content = '<div class="bubble ' + type + '">' + text + '<div class="wa-buttons">';
+                options.buttons.forEach(function(btn, i) {
+                    var btnClass = i === 0 ? 'wa-button primary' : 'wa-button';
+                    content += '<button class="' + btnClass + '" onclick="handleButtonClick(\'' + btn.value + '\')">' + btn.label + '</button>';
+                });
+                content += '</div></div>';
+            }
+            
+            msgDiv.innerHTML = content;
+            chatArea.appendChild(msgDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+        
+        function addMenuItemMessage(item, index) {
+            const chatArea = document.getElementById('chatArea');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = 'message in';
+            
+            const imageUrl = item.image_url || 'https://via.placeholder.com/400x200/333/888?text=' + encodeURIComponent(item.name);
+            
+            msgDiv.innerHTML = '<div class="bubble in with-image">' +
+                '<img src="' + imageUrl + '" alt="' + item.name + '" onerror="this.src=\'https://via.placeholder.com/400x200/333/888?text=' + encodeURIComponent(item.name) + '\'">' +
+                '<div class="caption"><strong>' + item.name + '</strong>' +
+                (item.description ? '<br><span style="color:#888;font-size:12px;">' + item.description + '</span>' : '') +
+                '<br><span style="color:#25D366;font-weight:600;">$' + (item.base_price || 0).toFixed(2) + '</span></div>' +
+                '<div class="wa-buttons"><button class="wa-button primary" onclick="selectItemById(\'' + item.id + '\')">Add to Order</button></div>' +
+                '</div>';
+            
+            chatArea.appendChild(msgDiv);
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+        
+        // ============================================
+        // BUTTON HANDLER
+        // ============================================
+        function handleButtonClick(value) {
+            handleUserInput(value);
+        }
+        
+        window.selectItemById = function(itemId) {
+            var item = menuItems.find(function(i) { return i.id === itemId; });
+            if (item) {
+                addMessage('out', item.name);
+                selectItem(item);
+            }
+        };
+        
+        // ============================================
+        // CONVERSATION FLOW
+        // ============================================
+        function startConversation() {
+            conversationState = 'welcome';
+            const storeName = currentRestaurant?.name || 'Our Restaurant';
+            
+            // Show savings splash FIRST if promo exists
+            if (hasPromo) {
+                setTimeout(function() {
+                    addMessage('in', '', { 
+                        splash: { 
+                            title: '🎉 YOU SAVE $6.99!', 
+                            subtitle: 'FREE delivery on this order • Skip charges $6.99' 
+                        }
+                    });
+                    showWelcome(storeName);
+                }, 300);
+            } else {
+                showWelcome(storeName);
+            }
+        }
+        
+        function showWelcome(storeName) {
+            setTimeout(function() {
+                addMessage('in', '👋 Welcome to ' + storeName + '!\n\nI\'m Abdul, and my family has been serving Calgary for 15 years. Every order you place direct helps us keep our doors open.\n\nHow would you like to order?', {
+                    buttons: [
+                        { label: '🚗 Delivery (FREE!)', value: 'delivery' },
+                        { label: '🏃 Pickup (15 min)', value: 'pickup' }
+                    ]
+                });
+                conversationState = 'order_type';
+            }, hasPromo ? 800 : 300);
+        }
+        
+        function handleUserInput(input) {
+            // Don't show "delivery" or "pickup" as message, show friendly version
+            if (input !== 'delivery' && input !== 'pickup' && input !== 'cart' && input !== 'checkout' && !input.startsWith('cat_') && !input.startsWith('tip_')) {
+                addMessage('out', input);
+            }
+            
+            if (conversationState !== 'welcome' && conversationState !== 'order_type' && conversationState !== 'address' && input.length >= 2 && isNaN(input) && !input.startsWith('cat_') && !input.startsWith('tip_')) {
+                searchMenu(input);
+                return;
+            }
+            
+            switch(conversationState) {
+                case 'order_type': handleOrderType(input); break;
+                case 'address': handleAddress(input); break;
+                case 'menu': handleMenuChoice(input); break;
+                case 'category': handleCategoryChoice(input); break;
+                case 'item': handleItemChoice(input); break;
+                case 'toppings': handleToppingsChoice(input); break;
+                case 'cart': handleCartChoice(input); break;
+                case 'tip': handleTipChoice(input); break;
+                case 'payment': handlePaymentChoice(input); break;
+                default: showMainMenu();
+            }
+        }
+        
+        function handleOrderType(input) {
+            if (input === 'delivery' || input === '1') {
+                addMessage('out', '🚗 Delivery');
+                setTimeout(function() {
+                    addMessage('in', '🚗 Great! FREE delivery to your door.\n\n(Skip would charge $6.99 for this 😉)\n\n📍 Where should we deliver?\n\nType your address or tap 📎 to share location');
+                    conversationState = 'address';
+                }, 300);
+            } else if (input === 'pickup' || input === '2') {
+                addMessage('out', '🏃 Pickup');
+                customerAddress = 'PICKUP';
+                setTimeout(showMainMenu, 300);
+            }
+        }
+        
+        function handleAddress(input) {
+            customerAddress = input;
+            setTimeout(function() {
+                addMessage('in', '✅ Delivering to:\n' + customerAddress + '\n⏱️ ~30-40 mins • 🚗 FREE');
+                showMainMenu();
+            }, 300);
+        }
+        
+        function showMainMenu() {
+            conversationState = 'menu';
+            
+            var menuText = '🔍 Search: Type what you want (e.g. "pepperoni")\n\nOr browse by category:';
+            var buttons = [];
+            
+            categories.forEach(function(cat, i) {
+                var emoji = getCategoryEmoji(cat);
+                buttons.push({ label: emoji + ' ' + cat, value: 'cat_' + i });
+            });
+            
+            if (cart.length > 0) {
+                buttons.push({ label: '🛒 View Cart (' + cart.length + ')', value: 'cart' });
+            }
+            
+            setTimeout(function() {
+                addMessage('in', menuText, { buttons: buttons });
+            }, 300);
+        }
+        
+        function getCategoryEmoji(category) {
+            var lower = category.toLowerCase();
+            if (lower.includes('pizza')) return '🍕';
+            if (lower.includes('wing')) return '🍗';
+            if (lower.includes('side') || lower.includes('appetizer')) return '🥗';
+            if (lower.includes('drink') || lower.includes('beverage')) return '🥤';
+            if (lower.includes('dessert')) return '🍰';
+            if (lower.includes('special') || lower.includes('deal')) return '🔥';
+            return '🍽️';
+        }
+        
+        function handleMenuChoice(input) {
+            if (input === 'cart') {
+                addMessage('out', '🛒 View Cart');
+                showCart();
+                return;
+            }
+            if (input.startsWith('cat_')) {
+                var idx = parseInt(input.replace('cat_', ''));
+                addMessage('out', getCategoryEmoji(categories[idx]) + ' ' + categories[idx]);
+                showCategory(categories[idx]);
+                return;
+            }
+            var categoryIndex = parseInt(input) - 1;
+            if (categoryIndex >= 0 && categoryIndex < categories.length) {
+                showCategory(categories[categoryIndex]);
+            }
+        }
+        
+        function searchMenu(query) {
+            var results = menuItems.filter(function(item) {
+                return item.name.toLowerCase().includes(query.toLowerCase()) ||
+                    (item.description && item.description.toLowerCase().includes(query.toLowerCase()));
+            });
+            
+            if (results.length === 0) {
+                addMessage('in', '🔍 No items found for "' + query + '"\n\nTry another search or browse categories.', {
+                    buttons: [{ label: '📋 Show Menu', value: 'menu' }]
+                });
+                return;
+            }
+            
+            addMessage('in', '🔍 Found ' + results.length + ' item(s) for "' + query + '":');
+            
+            results.slice(0, 4).forEach(function(item, i) {
+                setTimeout(function() {
+                    addMenuItemMessage(item, i);
+                }, i * 200);
+            });
+            
+            conversationState = 'menu';
+        }
+        
+        function showCategory(category) {
+            conversationState = 'category';
+            var items = menuItems.filter(function(item) { return item.category === category; });
+            
+            var emoji = getCategoryEmoji(category);
+            addMessage('in', emoji + ' ' + category.toUpperCase());
+            
+            items.forEach(function(item, i) {
+                setTimeout(function() {
+                    addMenuItemMessage(item, i);
+                }, i * 200);
+            });
+            
+            setTimeout(function() {
+                addMessage('in', '', {
+                    buttons: [
+                        { label: '⬅️ Back to Menu', value: 'menu' },
+                        cart.length > 0 ? { label: '🛒 Cart (' + cart.length + ')', value: 'cart' } : null
+                    ].filter(Boolean)
+                });
+            }, items.length * 200 + 300);
+            
+            window.currentCategoryItems = items;
+        }
+        
+        function handleCategoryChoice(input) {
+            if (input === 'back' || input === 'menu') {
+                showMainMenu();
+                return;
+            }
+            if (input === 'cart') {
+                showCart();
+                return;
+            }
+        }
+        
+        function selectItem(item) {
+            selectedItem = item;
+            conversationState = 'toppings';
+            
+            addMessage('in', '✅ ' + item.name + '\n$' + (item.base_price || 0).toFixed(2) + '\n\n' + (item.description || ''), {
+                buttons: [
+                    { label: '✅ Add to Cart - $' + (item.base_price || 0).toFixed(2), value: 'add' },
+                    { label: '⬅️ Back', value: 'back' }
+                ]
+            });
+        }
+        
+        function handleToppingsChoice(input) {
+            if (input === 'add' || input === '1') {
+                addToCart(selectedItem);
+            } else {
+                showMainMenu();
+            }
+        }
+        
+        function addToCart(item) {
+            cart.push({
+                id: item.id,
+                name: item.name,
+                price: item.base_price || 0,
+                quantity: 1
+            });
+            
+            addMessage('in', '✅ Added to cart!\n\n' + item.name + ' - $' + (item.base_price || 0).toFixed(2), {
+                buttons: [
+                    { label: '➕ Add More', value: 'menu' },
+                    { label: '✅ Checkout', value: 'checkout' }
+                ]
+            });
+            conversationState = 'cart';
+        }
+        
+        function handleCartChoice(input) {
+            if (input === 'menu' || input === '1') {
+                showMainMenu();
+            } else if (input === 'checkout' || input === '2') {
+                showTipOptions();
+            } else if (input === 'clear' || input === '3') {
+                cart = [];
+                addMessage('in', '🗑️ Cart cleared!');
+                showMainMenu();
+            }
+        }
+        
+        function showCart() {
+            conversationState = 'cart';
+            
+            if (cart.length === 0) {
+                addMessage('in', '🛒 Your cart is empty!', {
+                    buttons: [{ label: '📋 Browse Menu', value: 'menu' }]
+                });
+                return;
+            }
+            
+            var subtotal = 0;
+            var cartText = '🛒 YOUR CART\n━━━━━━━━━━━━━━━━';
+            cart.forEach(function(item) {
+                cartText += '\n' + item.name + ' - $' + item.price.toFixed(2);
+                subtotal += item.price * item.quantity;
+            });
+            cartText += '\n━━━━━━━━━━━━━━━━\nSubtotal: $' + subtotal.toFixed(2) + '\nDelivery: FREE 🎉';
+            
+            addMessage('in', cartText, {
+                buttons: [
+                    { label: '✅ Checkout', value: 'checkout' },
+                    { label: '➕ Add More', value: 'menu' },
+                    { label: '🗑️ Clear Cart', value: 'clear' }
+                ]
+            });
+        }
+        
+        function showTipOptions() {
+            conversationState = 'tip';
+            
+            var subtotal = cart.reduce(function(sum, item) { return sum + (item.price * item.quantity); }, 0);
+            
+            addMessage('in', '🚗 Add a tip for your driver?\n\nYour driver earns 100% of tips.\nEvery dollar helps support local families.', {
+                buttons: [
+                    { label: '💵 $3', value: 'tip_3' },
+                    { label: '💵 $5', value: 'tip_5' },
+                    { label: '💵 $7', value: 'tip_7' },
+                    { label: 'No tip', value: 'tip_0' }
+                ]
+            });
+        }
+        
+        function handleTipChoice(input) {
+            var tipAmount = 0;
+            if (input === 'tip_3' || input === '1') tipAmount = 3;
+            else if (input === 'tip_5' || input === '2') tipAmount = 5;
+            else if (input === 'tip_7' || input === '3') tipAmount = 7;
+            
+            driverTip = tipAmount;
+            
+            if (tipAmount > 0) {
+                addMessage('out', '💵 $' + tipAmount + ' tip');
+                addMessage('in', '🙏 Thank you! Your driver will appreciate the $' + tipAmount + ' tip.');
+            } else {
+                addMessage('out', 'No tip');
+            }
+            
+            setTimeout(showPaymentOptions, 300);
+        }
+        
+        function showPaymentOptions() {
+            conversationState = 'payment';
+            
+            var subtotal = cart.reduce(function(sum, item) { return sum + (item.price * item.quantity); }, 0);
+            var total = subtotal + driverTip;
+            
+            var summaryText = '📋 FINAL ORDER\n━━━━━━━━━━━━━━━━\n';
+            cart.forEach(function(item) {
+                summaryText += item.name + ' $' + item.price.toFixed(2) + '\n';
+            });
+            summaryText += '━━━━━━━━━━━━━━━━\n';
+            summaryText += 'Subtotal: $' + subtotal.toFixed(2) + '\n';
+            summaryText += 'Delivery: FREE\n';
+            if (driverTip > 0) summaryText += 'Tip: $' + driverTip.toFixed(2) + '\n';
+            summaryText += '━━━━━━━━━━━━━━━━\n';
+            summaryText += 'TOTAL: $' + total.toFixed(2) + '\n\n';
+            summaryText += '📍 ' + (customerAddress === 'PICKUP' ? 'Pickup at store' : customerAddress);
+            
+            addMessage('in', summaryText, {
+                buttons: [
+                    { label: '💳 Pay Now (Card)', value: 'card' },
+                    { label: '💵 Cash at Door', value: 'cash' }
+                ]
+            });
+        }
+        
+        function handlePaymentChoice(input) {
+            var subtotal = cart.reduce(function(sum, item) { return sum + (item.price * item.quantity); }, 0);
+            var total = subtotal + driverTip;
+            
+            if (input === 'card' || input === '1') {
+                addMessage('out', '💳 Pay Now');
+                addMessage('in', '💳 SECURE CHECKOUT\n\nTap to pay:\n🔗 pay.neighborfleet.ca/ord/AB' + Math.floor(Math.random() * 9000 + 1000) + '\n\n✅ 256-bit encryption\n💰 Total: $' + total.toFixed(2));
+                
+                setTimeout(function() {
+                    addMessage('system', '→ Payment completed');
+                    confirmOrder(total, false);
+                }, 1500);
+            } else {
+                addMessage('out', '💵 Cash');
+                confirmOrder(total, true);
+            }
+        }
+        
+        function confirmOrder(total, isCash) {
+            var orderNum = 'AB-' + Math.floor(Math.random() * 9000 + 1000);
+            
+            setTimeout(function() {
+                addMessage('in', '🎉 ORDER CONFIRMED!\n\nOrder #' + orderNum + '\n\n' + (isCash ? '💵 Pay $' + total.toFixed(2) + ' at door' : '✅ Paid: $' + total.toFixed(2)) + '\n📍 ' + (customerAddress === 'PICKUP' ? 'Pickup' : customerAddress) + '\n⏱️ Est: ' + new Date(Date.now() + 40*60000).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '\n\nYour order is being prepared! 🍕');
+                
+                conversationState = 'confirmed';
+                
+                setTimeout(function() {
+                    addMessage('in', '🚗 MEET YOUR DRIVER\n\n👋 Mike is on his way!\n\n📊 1,247 deliveries\n⭐ 4.9 rating\n\nThanks for supporting local! ❤️', {
+                        buttons: [{ label: '🔄 New Order', value: 'new' }]
+                    });
+                }, 3000);
+            }, 500);
+        }
+        
+        function resetChat() {
+            cart = [];
+            customerAddress = '';
+            selectedItem = null;
+            driverTip = 0;
+            document.getElementById('chatArea').innerHTML = '';
+            startConversation();
+        }
+        
+        // Event listeners
+        document.getElementById('userInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                var val = e.target.value.trim();
+                if (val) {
+                    handleUserInput(val);
+                    e.target.value = '';
+                }
+            }
+        });
+        
+        document.getElementById('micBtn').addEventListener('click', function() {
+            alert('🎤 Voice ordering!\n\nIn production, this will use speech-to-text.\n\nCustomers can say:\n"I want a large pepperoni pizza"\n"Add wings to my order"\n"Checkout"');
+        });
+        
+        // Initialize
+        loadData();
+    </script>
+</body>
+</html>
