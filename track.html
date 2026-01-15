@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Track Your Order - YYC LocalBites</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-primary: #0f0f1a;
+            --bg-card: #252542;
+            --accent-green: #00d26a;
+            --accent-green-dim: rgba(0, 210, 106, 0.15);
+            --accent-orange: #ff6b35;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0b8;
+            --text-dim: #6b6b80;
+            --border-color: #353550;
+        }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        .container { max-width: 500px; margin: 0 auto; padding: 0.75rem; }
+        .app-logo { text-align: center; padding: 0.5rem 0; }
+        .logo-text { font-size: 1.3rem; font-weight: 800; }
+        .logo-yyc {
+            background: linear-gradient(135deg, #00d26a, #00a854);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .status-header { text-align: center; padding: 0.75rem 0; }
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            background: var(--accent-green-dim); color: var(--accent-green);
+            padding: 0.4rem 1rem; border-radius: 50px; font-weight: 600; font-size: 0.85rem;
+        }
+        .pulse-dot {
+            width: 8px; height: 8px; background: currentColor; border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .status-header h1 { font-size: 1.35rem; font-weight: 800; margin: 0.5rem 0 0.2rem; }
+        .status-header p { color: var(--text-secondary); font-size: 0.9rem; }
+        
+        .progress-container { padding: 0.5rem 0.5rem 1rem; }
+        .progress-steps { display: flex; justify-content: space-between; position: relative; }
+        .progress-line { position: absolute; top: 14px; left: 40px; right: 40px; height: 3px; background: var(--border-color); }
+        .progress-fill { height: 100%; background: var(--accent-green); width: 75%; transition: width 0.5s; }
+        .step { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; z-index: 1; }
+        .step-icon {
+            width: 28px; height: 28px; border-radius: 50%; background: var(--border-color);
+            display: flex; align-items: center; justify-content: center; font-size: 0.8rem;
+        }
+        .step.completed .step-icon { background: var(--accent-green); }
+        .step.active .step-icon { background: var(--accent-orange); box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.3); }
+        .step-label { font-size: 0.65rem; color: var(--text-dim); font-weight: 500; }
+        .step.completed .step-label, .step.active .step-label { color: var(--text-secondary); }
+
+        .map-container {
+            background: var(--bg-card); border-radius: 16px; overflow: hidden;
+            margin-bottom: 0.75rem; height: 300px; position: relative;
+        }
+        #map { width: 100%; height: 100%; }
+        .map-overlay {
+            position: absolute; top: 10px; left: 10px; background: rgba(15, 15, 26, 0.95);
+            border-radius: 12px; padding: 0.6rem 0.9rem; z-index: 100;
+        }
+        .eta-label { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; }
+        .eta-value { font-size: 1.4rem; font-weight: 800; color: var(--accent-green); }
+        .eta-value span { font-size: 0.8rem; font-weight: 600; }
+        .speed-badge {
+            position: absolute; top: 10px; right: 10px; background: var(--accent-orange);
+            color: white; padding: 0.35rem 0.6rem; border-radius: 6px;
+            font-size: 0.65rem; font-weight: 700; z-index: 100;
+        }
+        .route-info {
+            position: absolute; bottom: 10px; left: 10px; right: 10px;
+            background: rgba(15, 15, 26, 0.95); border-radius: 10px;
+            padding: 0.5rem 0.75rem; z-index: 100; display: flex;
+            justify-content: space-between; font-size: 0.75rem;
+        }
+        .route-info .label { color: var(--text-dim); }
+        .route-info .value { color: var(--text-primary); font-weight: 600; }
+
+        .driver-card {
+            background: var(--bg-card); border-radius: 14px; padding: 0.9rem;
+            margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.9rem;
+        }
+        .driver-avatar {
+            width: 52px; height: 52px; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+        }
+        .driver-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .driver-info { flex: 1; }
+        .driver-name { font-size: 1rem; font-weight: 700; }
+        .driver-vehicle { font-size: 0.8rem; color: var(--text-secondary); }
+        .driver-rating { font-size: 0.75rem; margin-top: 0.15rem; }
+        .driver-rating .stars { color: #fbbf24; letter-spacing: 1px; }
+        .driver-rating .star-partial { color: #fbbf24; opacity: 0.9; position: relative; }
+        .driver-rating .star-partial::after { content: '★'; position: absolute; left: 0; color: #3a3a50; clip-path: inset(0 0 0 90%); }
+        .call-btn {
+            width: 42px; height: 42px; background: var(--accent-green); border: none;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;
+        }
+        .call-btn svg { width: 20px; height: 20px; fill: white; }
+
+        .order-card { background: var(--bg-card); border-radius: 14px; padding: 0.9rem; margin-bottom: 0.75rem; }
+        .order-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 0.6rem; padding-bottom: 0.6rem; border-bottom: 1px solid var(--border-color);
+        }
+        .restaurant-name { font-weight: 700; font-size: 0.95rem; }
+        .order-total { font-weight: 700; color: var(--accent-green); }
+        .order-items { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; }
+
+        .addresses { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .address-card { background: var(--bg-card); border-radius: 14px; padding: 0.75rem; }
+        .address-icon { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.4rem; font-size: 0.9rem; }
+        .address-icon.pickup { background: rgba(255, 107, 53, 0.15); }
+        .address-icon.delivery { background: var(--accent-green-dim); }
+        .address-label { font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 0.2rem; }
+        .address-text { font-size: 0.8rem; font-weight: 500; line-height: 1.3; }
+
+        .footer { text-align: center; padding: 1rem 0; color: var(--text-dim); font-size: 0.75rem; }
+        .footer a { color: var(--accent-green); text-decoration: none; }
+        .demo-badge {
+            position: fixed; top: 8px; left: 50%; transform: translateX(-50%);
+            background: linear-gradient(135deg, #00d26a, #00a854); color: white;
+            padding: 0.3rem 1rem; border-radius: 20px; font-size: 0.7rem;
+            font-weight: 700; text-transform: uppercase; z-index: 1000;
+        }
+        .loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; }
+        .loading-spinner { width: 40px; height: 40px; border: 3px solid var(--border-color); border-top-color: var(--accent-green); border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="demo-badge">🚀 Live Demo - 10x Speed</div>
+    
+    <div class="container">
+        <!-- Back Button -->
+        <div style="margin-bottom: 10px;">
+            <a href="whatsapp-preview.html" style="display: inline-flex; align-items: center; gap: 8px; color: #00d26a; text-decoration: none; font-size: 14px; font-weight: 600;">
+                ← Back to Order
+            </a>
+        </div>
+        
+        <div class="app-logo"><span class="logo-text"><span class="logo-yyc">Local</span>Bites</span></div>
+
+        <div class="status-header">
+            <div class="status-badge"><span class="pulse-dot"></span><span id="statusText">On the way</span></div>
+            <h1 id="mainStatus">Your driver is en route</h1>
+            <p id="subStatus">Ahmed is heading to your location</p>
+        </div>
+
+        <div class="progress-container">
+            <div class="progress-steps">
+                <div class="progress-line"><div class="progress-fill" id="progressFill"></div></div>
+                <div class="step completed"><div class="step-icon">✓</div><div class="step-label">Ordered</div></div>
+                <div class="step completed"><div class="step-icon">✓</div><div class="step-label">Preparing</div></div>
+                <div class="step completed"><div class="step-icon">✓</div><div class="step-label">Picked Up</div></div>
+                <div class="step active" id="deliveryStep"><div class="step-icon">🚗</div><div class="step-label">Delivering</div></div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="mapLoading" class="loading" style="position:absolute;top:0;left:0;right:0;bottom:0;background:var(--bg-card);z-index:50;">
+                <div class="loading-spinner"></div>
+                <p style="margin-top:1rem;color:var(--text-secondary);">Loading route...</p>
+            </div>
+            <div class="map-overlay">
+                <div class="eta-label">Arriving in</div>
+                <div class="eta-value" id="etaValue">-- <span>min</span></div>
+            </div>
+            <div class="speed-badge">10x SPEED</div>
+            <div class="route-info">
+                <div><span class="label">Distance:</span> <span class="value" id="distanceValue">-- km</span></div>
+                <div><span class="label">Via:</span> <span class="value" id="routeVia">Loading...</span></div>
+            </div>
+            <div id="map"></div>
+        </div>
+
+        <div class="driver-card">
+            <div class="driver-avatar">
+                <img src="data:image/jpeg;base64,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" alt="Ahmed">
+            </div>
+            <div class="driver-info">
+                <div class="driver-name">Ahmed</div>
+                <div class="driver-vehicle">Red Toyota Camry • CYY 4R2</div>
+                <div class="driver-rating"><span class="stars">★★★★</span><span class="star-partial">★</span> 4.9 (243 deliveries)</div>
+            </div>
+            <button class="call-btn" onclick="alert('Demo mode - calling disabled')">
+                <svg viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+            </button>
+        </div>
+
+        <div class="order-card">
+            <div class="order-header">
+                <div class="restaurant-name">🍕 AB King Pizza</div>
+                <div class="order-total">$42.99</div>
+            </div>
+            <div class="order-items">1× Super Loaded Pizza (Large) • 1× Meat Lovers (Medium)<br>1× Garlic Bread • 2× Coke</div>
+        </div>
+
+        <div class="addresses">
+            <div class="address-card">
+                <div class="address-icon pickup">🏢</div>
+                <div class="address-label">Picked up from</div>
+                <div class="address-text">Suncor Energy Centre<br>150 6 Ave SW</div>
+            </div>
+            <div class="address-card">
+                <div class="address-icon delivery">🏠</div>
+                <div class="address-label">Delivering to</div>
+                <div class="address-text">36 Sherwood Rise NW<br>Calgary</div>
+            </div>
+        </div>
+
+        <div class="footer">Powered by <a href="#">YYC LocalBites</a> • 15% commission, supporting local 💚</div>
+    </div>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD4T_RiDo2RqzDZNnhoUwwsrEQqf1AjUMs&libraries=geometry&callback=initMap" async defer></script>
+    <script>
+        const START_POS = { lat: 51.0453, lng: -114.0713 };
+        const END_POS = { lat: 51.1078, lng: -114.1347 };
+        
+        // ORIGINAL WORKING RED CAR IMAGE - DO NOT CHANGE
+        const carImageBase64 = 'data:image/png;base64,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';
+
+        let map, carMarker, directionsService, directionsRenderer;
+        let routePath = [], currentIndex = 0, lastBearing = 0;
+        let totalDistance = 0, totalDuration = 0, isZoomedIn = false;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 12,
+                center: { lat: 51.0750, lng: -114.1000 },
+                disableDefaultUI: true,
+                styles: [
+                    { elementType: "geometry", stylers: [{ color: "#1a1a2e" }] },
+                    { elementType: "labels.text.stroke", stylers: [{ color: "#1a1a2e" }] },
+                    { elementType: "labels.text.fill", stylers: [{ color: "#6b6b80" }] },
+                    { featureType: "road", elementType: "geometry", stylers: [{ color: "#353550" }] },
+                    { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#454560" }] },
+                    { featureType: "water", elementType: "geometry", stylers: [{ color: "#0e0e1a" }] },
+                    { featureType: "poi", stylers: [{ visibility: "off" }] },
+                    { featureType: "transit", stylers: [{ visibility: "off" }] }
+                ]
+            });
+            directionsService = new google.maps.DirectionsService();
+            directionsRenderer = new google.maps.DirectionsRenderer({
+                map: map, suppressMarkers: true,
+                polylineOptions: { strokeColor: '#00d26a', strokeOpacity: 0.7, strokeWeight: 5 }
+            });
+            calculateRoute();
+        }
+
+        function calculateRoute() {
+            directionsService.route({
+                origin: START_POS, destination: END_POS, travelMode: google.maps.TravelMode.DRIVING
+            }, (result, status) => {
+                if (status === 'OK') {
+                    directionsRenderer.setDirections(result);
+                    const leg = result.routes[0].legs[0];
+                    totalDistance = leg.distance.value / 1000;
+                    totalDuration = leg.duration.value / 60;
+                    document.getElementById('distanceValue').textContent = totalDistance.toFixed(1) + ' km';
+                    document.getElementById('etaValue').innerHTML = Math.round(totalDuration) + ' <span>min</span>';
+                    document.getElementById('routeVia').textContent = 'City Streets';
+                    
+                    routePath = [];
+                    result.routes[0].overview_path.forEach(p => routePath.push({ lat: p.lat(), lng: p.lng() }));
+                    routePath = interpolate(routePath, 250);
+                    
+                    addMarkers();
+                    createCar();
+                    document.getElementById('mapLoading').style.display = 'none';
+                    setTimeout(startAnimation, 1500);
+                }
+            });
+        }
+
+        function interpolate(path, target) {
+            const result = [];
+            const perSeg = Math.ceil(target / path.length);
+            for (let i = 0; i < path.length - 1; i++) {
+                for (let j = 0; j < perSeg; j++) {
+                    const t = j / perSeg;
+                    result.push({ lat: path[i].lat + (path[i+1].lat - path[i].lat) * t, lng: path[i].lng + (path[i+1].lng - path[i].lng) * t });
+                }
+            }
+            result.push(path[path.length - 1]);
+            return result;
+        }
+
+        function addMarkers() {
+            new google.maps.Marker({ position: START_POS, map: map, icon: { url: 'data:image/svg+xml,' + encodeURIComponent('<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="16" fill="#ff6b35" stroke="#fff" stroke-width="2"/><text x="20" y="26" text-anchor="middle" font-size="14">🏢</text></svg>'), scaledSize: new google.maps.Size(40, 40), anchor: new google.maps.Point(20, 20) }});
+            new google.maps.Marker({ position: END_POS, map: map, icon: { url: 'data:image/svg+xml,' + encodeURIComponent('<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"><circle cx="20" cy="20" r="16" fill="#00d26a" stroke="#fff" stroke-width="2"/><text x="20" y="26" text-anchor="middle" font-size="14">🏠</text></svg>'), scaledSize: new google.maps.Size(40, 40), anchor: new google.maps.Point(20, 20) }});
+        }
+
+        function createCar() {
+            carMarker = new google.maps.Marker({ position: routePath[0], map: map, icon: getCarIcon(0), zIndex: 1000 });
+        }
+
+        function getCarIcon(bearing) {
+            const rot = bearing - 90;
+            return {
+                url: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 80 80"><g transform="rotate(' + rot + ', 40, 40)"><image href="' + carImageBase64 + '" x="0" y="0" width="80" height="80"/></g></svg>'),
+                scaledSize: new google.maps.Size(45, 45),
+                anchor: new google.maps.Point(22, 22)
+            };
+        }
+
+        function getBearing(from, to) {
+            const dLng = (to.lng - from.lng) * Math.PI / 180;
+            const lat1 = from.lat * Math.PI / 180, lat2 = to.lat * Math.PI / 180;
+            const y = Math.sin(dLng) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+            return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+        }
+
+        function getDistanceToEnd(pos) {
+            return google.maps.geometry.spherical.computeDistanceBetween(
+                new google.maps.LatLng(pos.lat, pos.lng), new google.maps.LatLng(END_POS.lat, END_POS.lng)
+            ) / 1000;
+        }
+
+        const MOVE_MS = 60;
+        let moveStart, fromPos, toPos;
+
+        function startAnimation() { currentIndex = 0; animate(); }
+
+        function animate() {
+            if (currentIndex >= routePath.length - 1) { showDelivered(); return; }
+            fromPos = routePath[currentIndex];
+            toPos = routePath[currentIndex + 1];
+            moveStart = performance.now();
+
+            const bearing = getBearing(fromPos, toPos);
+            if (Math.abs(bearing - lastBearing) > 8) { lastBearing = bearing; carMarker.setIcon(getCarIcon(bearing)); }
+
+            const progress = currentIndex / routePath.length;
+            const remainingMin = Math.max(1, Math.round(totalDuration * (1 - progress)));
+            const remainingKm = getDistanceToEnd(fromPos);
+            document.getElementById('etaValue').innerHTML = remainingMin + ' <span>min</span>';
+            document.getElementById('distanceValue').textContent = remainingKm.toFixed(1) + ' km';
+
+            // ZOOM IN for last 3km
+            if (remainingKm <= 3 && !isZoomedIn) { isZoomedIn = true; map.setZoom(15); document.getElementById('subStatus').textContent = 'Almost there!'; }
+            if (remainingKm <= 1) { map.setZoom(16); }
+            if (remainingKm <= 0.3) { map.setZoom(17); }
+
+            requestAnimationFrame(step);
+        }
+
+        function step(ts) {
+            const elapsed = ts - moveStart;
+            const p = Math.min(elapsed / MOVE_MS, 1);
+            const ease = p < 0.5 ? 2*p*p : 1 - Math.pow(-2*p + 2, 2) / 2;
+            const lat = fromPos.lat + (toPos.lat - fromPos.lat) * ease;
+            const lng = fromPos.lng + (toPos.lng - fromPos.lng) * ease;
+            carMarker.setPosition({ lat, lng });
+            if (currentIndex % (isZoomedIn ? 3 : 8) === 0) map.panTo({ lat, lng });
+            if (p < 1) requestAnimationFrame(step);
+            else { currentIndex++; animate(); }
+        }
+
+        function showDelivered() {
+            document.getElementById('statusText').textContent = 'Delivered!';
+            document.getElementById('mainStatus').textContent = 'Order Delivered! 🎉';
+            document.getElementById('subStatus').textContent = 'Enjoy your meal!';
+            document.getElementById('etaValue').innerHTML = '0 <span>min</span>';
+            document.getElementById('distanceValue').textContent = '0 km';
+            document.getElementById('progressFill').style.width = '100%';
+            const step = document.getElementById('deliveryStep');
+            step.classList.remove('active'); step.classList.add('completed');
+            step.querySelector('.step-icon').textContent = '✓';
+            map.setZoom(17); map.panTo(END_POS);
+            setTimeout(() => location.reload(), 5000);
+        }
+    </script>
+</body>
+</html>
