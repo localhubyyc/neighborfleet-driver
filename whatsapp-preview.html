@@ -1,0 +1,3157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LocalFirst YYC</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { 
+            height: 100%;
+            width: 100%;
+            background: #0b141a; 
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: stretch;
+        }
+        
+        .app { 
+            width: 100%;
+            height: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            background: #0b141a;
+            position: relative;
+        }
+        
+        @media (min-width: 481px) {
+            .app {
+                border-left: 1px solid #2a3942;
+                border-right: 1px solid #2a3942;
+            }
+        }
+        
+        /* Header */
+        .header { 
+            background: #075E54; 
+            padding: 16px 20px; 
+            display: flex; 
+            align-items: center; 
+            gap: 14px;
+            flex-shrink: 0;
+        }
+        .header .back {
+            font-size: 24px;
+            cursor: pointer;
+            padding: 4px;
+            display: none;
+        }
+        .header.has-back .back { display: block; }
+        .header .avatar { 
+            width: 48px; height: 48px; 
+            background: linear-gradient(135deg, #25D366, #128C7E); 
+            border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center; 
+            font-weight: bold; font-size: 16px;
+        }
+        .header .info { flex: 1; }
+        .header .name { font-weight: 700; font-size: 22px; }
+        .header .status { font-size: 14px; color: #a8d8c8; }
+        
+        /* Content area */
+        .content { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 20px;
+        }
+        
+        /* Page title */
+        .page-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        /* Messages */
+        .msg { margin-bottom: 16px; }
+        .bubble { 
+            padding: 14px 18px; 
+            font-size: 16px; 
+            line-height: 1.5; 
+            border-radius: 16px;
+            background: #202c33;
+        }
+        
+        /* Savings banner */
+        .banner { 
+            background: linear-gradient(135deg, #25D366, #128C7E); 
+            border-radius: 16px; 
+            padding: 20px; 
+            text-align: center; 
+            margin-bottom: 20px;
+        }
+        .banner .big { font-size: 26px; font-weight: 800; }
+        .banner .sub { font-size: 14px; margin-top: 6px; opacity: 0.95; }
+        
+        /* Buttons */
+        .buttons { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+        .btn { 
+            background: transparent; 
+            border: 2px solid #00a884; 
+            color: #00a884; 
+            padding: 16px 18px; 
+            border-radius: 12px; 
+            font-size: 16px; 
+            font-weight: 600; 
+            cursor: pointer;
+            text-align: center;
+        }
+        .btn:active { background: rgba(0,168,132,0.15); }
+        .btn.primary { background: #00a884; color: white; border: none; }
+        .btn.primary:active { background: #008f72; }
+        
+        /* Restaurant button */
+        .restaurant-btn {
+            background: #00a884;
+            border: none;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .restaurant-btn:active { background: #008f72; }
+        .restaurant-btn .icon { font-size: 28px; width: 40px; text-align: center; }
+        .restaurant-btn .info { flex: 1; }
+        .restaurant-btn .name { font-size: 18px; font-weight: 700; color: white; margin-bottom: 4px; }
+        .restaurant-btn .meta { font-size: 13px; color: rgba(255,255,255,0.85); display: flex; gap: 10px; }
+        .restaurant-btn .arrow { font-size: 20px; color: rgba(255,255,255,0.7); }
+        
+        /* Category button */
+        .category-btn {
+            background: #202c33;
+            border: none;
+            border-radius: 12px;
+            padding: 18px 20px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            width: 100%;
+        }
+        .category-btn:active { background: #2a3a43; }
+        .category-btn .icon { font-size: 32px; }
+        .category-btn .label { font-size: 17px; font-weight: 600; flex: 1; }
+        .category-btn .arrow { font-size: 20px; color: #8696a0; }
+        
+        /* Menu item card */
+        .menu-item {
+            background: #202c33;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 14px;
+            cursor: pointer;
+        }
+        .menu-item:active { background: #2a3a43; }
+        .menu-item img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+        }
+        .menu-item .body { padding: 14px; }
+        .menu-item .name { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+        .menu-item .desc { font-size: 13px; color: #8696a0; margin-bottom: 8px; line-height: 1.4; }
+        .menu-item .price { font-size: 18px; font-weight: 700; color: #25D366; }
+        .menu-item .size-note { font-size: 12px; color: #8696a0; }
+        
+        /* Custom pizza option */
+        .custom-btn {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+            border: none;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 14px;
+            cursor: pointer;
+            text-align: center;
+            width: 100%;
+        }
+        .custom-btn:active { opacity: 0.9; }
+        .custom-btn .icon { font-size: 40px; margin-bottom: 8px; }
+        .custom-btn .label { font-size: 18px; font-weight: 700; }
+        .custom-btn .sub { font-size: 13px; opacity: 0.9; margin-top: 4px; }
+        
+        /* Input field */
+        .input-bubble {
+            background: #202c33;
+            border-radius: 12px;
+            padding: 14px;
+            margin-top: 16px;
+        }
+        .input-bubble input {
+            width: 100%;
+            background: #2a3942;
+            border: none;
+            border-radius: 10px;
+            padding: 16px 18px;
+            color: white;
+            font-size: 17px;
+            outline: none;
+            margin-bottom: 12px;
+        }
+        .input-bubble input::placeholder { color: #8696a0; }
+        
+        /* Section header */
+        .section-header {
+            font-size: 14px;
+            font-weight: 600;
+            color: #8696a0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 20px 0 14px;
+            padding-left: 4px;
+        }
+        
+        /* Disclaimer */
+        .disclaimer {
+            font-size: 11px;
+            color: #8696a0;
+            text-align: center;
+            margin-top: 16px;
+        }
+        
+        /* Loading */
+        .spinner { 
+            width: 20px; height: 20px; 
+            border: 2px solid #2a3942; 
+            border-top-color: #25D366; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* Cart badge */
+        .cart-badge {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #00a884;
+            padding: 14px 28px;
+            border-radius: 30px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 100;
+        }
+        .cart-badge:active { background: #008f72; }
+        .cart-badge.show { display: block; }
+        
+        /* Size selection */
+        .size-btn {
+            background: #202c33;
+            border: 2px solid #2a3942;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .size-btn:active { background: #2a3a43; border-color: #00a884; }
+        .size-btn .size-label {
+            font-size: 18px;
+            font-weight: 700;
+        }
+        .size-btn .size-name {
+            font-size: 14px;
+            color: #8696a0;
+            margin-left: 8px;
+        }
+        .size-btn .size-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: #25D366;
+        }
+        .size-btn.popular {
+            border-color: #00a884;
+            background: rgba(0, 168, 132, 0.1);
+        }
+        .size-btn.popular .popular-tag {
+            background: #00a884;
+            color: white;
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+        }
+        
+        /* Item detail image */
+        .item-hero {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 16px;
+            margin-bottom: 16px;
+        }
+        .item-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .item-desc {
+            font-size: 15px;
+            color: #8696a0;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        /* Topping button */
+        .topping-btn {
+            background: #202c33;
+            border: 2px solid #2a3942;
+            border-radius: 10px;
+            padding: 14px 16px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .topping-btn:active { background: #2a3a43; }
+        .topping-btn.selected {
+            border-color: #25D366;
+            background: rgba(37, 211, 102, 0.1);
+        }
+        .topping-btn .check {
+            width: 24px;
+            height: 24px;
+            border: 2px solid #8696a0;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .topping-btn.selected .check {
+            background: #25D366;
+            border-color: #25D366;
+            color: white;
+        }
+        .topping-btn .topping-name {
+            flex: 1;
+            margin-left: 12px;
+            font-size: 15px;
+        }
+        .topping-btn .topping-price {
+            font-size: 14px;
+            color: #8696a0;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <div class="header" id="header">
+            <div class="back" id="backBtn">←</div>
+            <div class="avatar" id="avatar">LF</div>
+            <div class="info">
+                <div class="name" id="headerName">LocalFirst YYC</div>
+                <div class="status" id="headerStatus">online</div>
+            </div>
+        </div>
+        
+        <div class="content" id="content"></div>
+        
+        <div class="cart-badge" id="cartBadge">🛒 View Cart (0) - $0.00</div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIG
+        // ============================================
+        var SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
+        var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MzM3MDUsImV4cCI6MjA4MzQwOTcwNX0.zWDiVBwgeRDlnvb2FQxAnU-VDX6Yee4EiLmyWHRYYjM';
+        var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        
+        // ============================================
+        // STATE
+        // ============================================
+        var state = {
+            page: 'welcome',
+            customer: null,
+            restaurant: null,
+            menuItems: [],
+            categories: [],
+            cart: [],
+            history: [],
+            currentCategory: null,
+            selectedItem: null,
+            selectedSize: null,
+            selectedToppings: [],
+            selectedSpecial: null,
+            specials: [],
+            customPizzaToppings: [],
+            tip: 0,
+            // Discount tracking
+            firstOrderDiscount: isFirstTimeCustomer,
+            discountPercent: 10,
+            freeDelivery: true,
+            orderDiscount: 0,
+            // Order tracking
+            lastOrders: [],
+            codAllowed: true,
+            codBlockReason: null,
+            selectedPaymentMethod: null,
+            displayPaymentMethod: null,
+            assignedDriver: null
+        };
+        
+        var params = new URLSearchParams(window.location.search);
+        var hasPromo = params.has('promo');
+        var isFirstTimeCustomer = !localStorage.getItem('localfirst_customer') && !localStorage.getItem('localfirst_first_order_used');
+        
+        var content = document.getElementById('content');
+        var header = document.getElementById('header');
+        var cartBadge = document.getElementById('cartBadge');
+        
+        // ============================================
+        // STORAGE
+        // ============================================
+        function saveCustomer() {
+            if (state.customer) {
+                localStorage.setItem('localfirst_customer', JSON.stringify(state.customer));
+            }
+        }
+        
+        function loadCustomer() {
+            var saved = localStorage.getItem('localfirst_customer');
+            if (saved) {
+                try { state.customer = JSON.parse(saved); return true; } catch(e) {}
+            }
+            return false;
+        }
+        
+        // ============================================
+        // ORDER TRACKING - DATABASE
+        // ============================================
+        
+        // Save order to database
+        function saveOrderToDatabase(orderData) {
+            var customer = state.customer || {};
+            
+            var order = {
+                order_number: orderData.orderNumber,
+                customer_name: customer.name || 'Guest',
+                customer_phone: customer.phone || null,
+                customer_address: customer.address || null,
+                customer_lat: customer.lat || null,
+                customer_lng: customer.lng || null,
+                restaurant_id: state.restaurant ? state.restaurant.id : null,
+                restaurant_name: state.restaurant ? state.restaurant.name : null,
+                items: JSON.stringify(state.cart),
+                subtotal: state.cart.reduce(function(s, i) { return s + i.price; }, 0),
+                discount: orderData.discount || 0,
+                discount_type: state.firstOrderDiscount ? 'first_order' : null,
+                delivery_fee: state.firstOrderDiscount ? 0 : 0, // Currently always free
+                tip: state.tip,
+                total: orderData.total,
+                payment_method: orderData.paymentMethod,
+                payment_status: orderData.paymentMethod === 'cash' ? 'pending' : 'paid',
+                delivery_status: 'preparing',
+                cod_successful: null, // Will be updated after delivery
+                created_at: new Date().toISOString()
+            };
+            
+            console.log('Saving order to database:', order);
+            
+            // Save to Supabase
+            db.from('orders').insert([order]).then(function(res) {
+                console.log('Order saved:', res);
+                if (res.error) {
+                    console.error('Error saving order:', res.error);
+                }
+            }).catch(function(err) {
+                console.error('Failed to save order:', err);
+            });
+            
+            // Also save locally
+            var localOrders = JSON.parse(localStorage.getItem('localfirst_orders') || '[]');
+            localOrders.push(order);
+            localStorage.setItem('localfirst_orders', JSON.stringify(localOrders.slice(-20))); // Keep last 20
+            
+            return order;
+        }
+        
+        // Load customer's order history
+        function loadCustomerHistory() {
+            var customer = state.customer;
+            if (!customer || !customer.name) return;
+            
+            // Load from local storage first (faster)
+            var localOrders = JSON.parse(localStorage.getItem('localfirst_orders') || '[]');
+            state.lastOrders = localOrders.filter(function(o) {
+                return o.customer_name === customer.name || o.customer_address === customer.address;
+            });
+            
+            // Check COD eligibility
+            checkCODEligibility();
+            
+            // Also try to load from database
+            db.from('orders')
+                .select('*')
+                .or('customer_name.eq.' + customer.name + ',customer_address.eq.' + customer.address)
+                .order('created_at', { ascending: false })
+                .limit(10)
+                .then(function(res) {
+                    if (res.data && res.data.length > 0) {
+                        state.lastOrders = res.data;
+                        checkCODEligibility();
+                        console.log('Loaded customer history:', res.data);
+                    }
+                }).catch(function(err) {
+                    console.log('Could not load history from DB:', err);
+                });
+        }
+        
+        // Check if customer is eligible for COD
+        function checkCODEligibility() {
+            state.codAllowed = true;
+            state.codBlockReason = null;
+            
+            if (!state.lastOrders || state.lastOrders.length === 0) {
+                return; // New customer, allow COD
+            }
+            
+            // Check for failed COD payments
+            var failedCOD = state.lastOrders.filter(function(o) {
+                return o.payment_method === 'cash' && o.cod_successful === false;
+            });
+            
+            if (failedCOD.length > 0) {
+                state.codAllowed = false;
+                state.codBlockReason = 'Previous cash payment was unsuccessful. Please use card payment.';
+                console.log('COD blocked - failed payment history');
+                return;
+            }
+            
+            // Check for pending COD (unpaid)
+            var pendingCOD = state.lastOrders.filter(function(o) {
+                return o.payment_method === 'cash' && o.payment_status === 'pending';
+            });
+            
+            if (pendingCOD.length >= 2) {
+                state.codAllowed = false;
+                state.codBlockReason = 'Too many pending cash payments. Please use card payment.';
+                console.log('COD blocked - too many pending');
+            }
+        }
+        
+        // Mark COD order as successful or failed (called by driver/admin)
+        function updateCODStatus(orderNumber, successful) {
+            // Update in database
+            db.from('orders')
+                .update({ 
+                    cod_successful: successful,
+                    payment_status: successful ? 'paid' : 'failed'
+                })
+                .eq('order_number', orderNumber)
+                .then(function(res) {
+                    console.log('COD status updated:', res);
+                }).catch(function(err) {
+                    console.error('Failed to update COD status:', err);
+                });
+            
+            // Update locally
+            var localOrders = JSON.parse(localStorage.getItem('localfirst_orders') || '[]');
+            localOrders.forEach(function(o) {
+                if (o.order_number === orderNumber) {
+                    o.cod_successful = successful;
+                    o.payment_status = successful ? 'paid' : 'failed';
+                }
+            });
+            localStorage.setItem('localfirst_orders', JSON.stringify(localOrders));
+        }
+        
+        // DEMO: Simulate a failed COD to test blocking
+        // Call this from console: simulateFailedCOD()
+        window.simulateFailedCOD = function() {
+            var customer = state.customer || { name: 'Test User', address: 'Test Address' };
+            var fakeOrder = {
+                order_number: 'LF-FAKE-' + Date.now(),
+                customer_name: customer.name,
+                customer_address: customer.address,
+                restaurant_name: 'Test Restaurant',
+                payment_method: 'cash',
+                payment_status: 'failed',
+                cod_successful: false,
+                total: 25.99,
+                created_at: new Date().toISOString()
+            };
+            
+            var localOrders = JSON.parse(localStorage.getItem('localfirst_orders') || '[]');
+            localOrders.push(fakeOrder);
+            localStorage.setItem('localfirst_orders', JSON.stringify(localOrders));
+            
+            state.lastOrders = localOrders;
+            checkCODEligibility();
+            
+            console.log('Simulated failed COD. COD allowed:', state.codAllowed);
+            alert('Failed COD simulated!\n\nCOD now blocked: ' + (state.codAllowed ? 'No' : 'Yes') + '\n\nGo to payment page to see the blocked COD option.');
+        };
+        
+        // DEMO: Reset COD status
+        window.resetCODStatus = function() {
+            localStorage.removeItem('localfirst_orders');
+            state.lastOrders = [];
+            state.codAllowed = true;
+            state.codBlockReason = null;
+            console.log('COD status reset');
+            alert('COD status reset!\n\nCOD is now allowed again.');
+        };
+        
+        // DEMO: View order history
+        window.viewOrderHistory = function() {
+            var localOrders = JSON.parse(localStorage.getItem('localfirst_orders') || '[]');
+            console.table(localOrders);
+            return localOrders;
+        };
+        
+        // DEMO: View saved customer data
+        window.viewCustomer = function() {
+            var customer = JSON.parse(localStorage.getItem('localfirst_customer') || 'null');
+            console.log('=== Saved Customer ===');
+            console.log('Name:', customer ? customer.name : 'none');
+            console.log('Address:', customer ? customer.address : 'none');
+            console.log('Phone:', customer ? customer.phone : 'none');
+            console.log('Lat/Lng:', customer ? (customer.lat + ', ' + customer.lng) : 'none');
+            console.log('Full data:', customer);
+            return customer;
+        };
+        
+        // DEMO: Reset everything (fresh start)
+        window.resetEverything = function() {
+            localStorage.removeItem('localfirst_customer');
+            localStorage.removeItem('localfirst_orders');
+            localStorage.removeItem('localfirst_first_order_used');
+            state.customer = null;
+            state.lastOrders = [];
+            state.codAllowed = true;
+            state.codBlockReason = null;
+            state.firstOrderDiscount = true;
+            console.log('Everything reset! Refresh the page.');
+            alert('Everything reset!\n\nRefresh the page to see the new customer welcome screen with discount.');
+            location.reload();
+        };
+        
+        // ============================================
+        // DELIVERY MODULE
+        // ============================================
+        var deliveryState = {
+            mode: 'customer', // 'customer' or 'driver'
+            activeOrders: [],
+            driverLocation: { lat: 51.0447, lng: -114.0719 },
+            deliveryStatus: 'pending' // 'pending', 'preparing', 'picked_up', 'arriving', 'delivered'
+        };
+        
+        // Demo drivers for assignment
+        var availableDrivers = [
+            { id: 'd1', name: 'Ahmed Hassan', phone: '14035551001', vehicle: 'Honda Civic', rating: 4.9, available: true, 
+              location: { lat: 51.0450, lng: -114.0700 }, story: "Engineering student at U of C" },
+            { id: 'd2', name: 'Priya Sharma', phone: '14035551002', vehicle: 'Toyota Corolla', rating: 4.8, available: true,
+              location: { lat: 51.0440, lng: -114.0750 }, story: "Working to support my family back home" },
+            { id: 'd3', name: 'Marcus Williams', phone: '14035551003', vehicle: 'Ford Focus', rating: 4.7, available: false,
+              location: { lat: 51.0460, lng: -114.0680 }, story: "Saving up to start my own business" }
+        ];
+        
+        // DEMO: Switch to driver mode
+        window.driverMode = function() {
+            deliveryState.mode = 'driver';
+            console.log('🚗 Switched to DRIVER MODE');
+            showDriverDashboard();
+        };
+        
+        // DEMO: Switch to customer mode
+        window.customerMode = function() {
+            deliveryState.mode = 'customer';
+            console.log('👤 Switched to CUSTOMER MODE');
+            renderPage('welcome');
+        };
+        
+        // DEMO: Simulate order flow
+        window.simulateDelivery = function() {
+            if (!state.orderNumber) {
+                console.log('No active order. Place an order first!');
+                alert('No active order!\n\nPlace an order first, then run simulateDelivery()');
+                return;
+            }
+            
+            console.log('🚀 Starting delivery simulation for order', state.orderNumber);
+            
+            // Step 1: Preparing (immediate)
+            setTimeout(function() {
+                deliveryState.deliveryStatus = 'preparing';
+                console.log('👨‍🍳 Order is being prepared...');
+                updateDeliveryUI();
+            }, 1000);
+            
+            // Step 2: Driver picked up (5 seconds)
+            setTimeout(function() {
+                deliveryState.deliveryStatus = 'picked_up';
+                console.log('🚗 Driver has picked up the order!');
+                updateDeliveryUI();
+            }, 5000);
+            
+            // Step 3: Arriving (10 seconds)
+            setTimeout(function() {
+                deliveryState.deliveryStatus = 'arriving';
+                console.log('📍 Driver is arriving soon!');
+                updateDeliveryUI();
+            }, 10000);
+            
+            // Step 4: Delivered (15 seconds)
+            setTimeout(function() {
+                deliveryState.deliveryStatus = 'delivered';
+                console.log('✅ Order delivered!');
+                updateDeliveryUI();
+            }, 15000);
+        };
+        
+        // Show driver dashboard
+        function showDriverDashboard() {
+            setHeader('Driver Dashboard', '🚗', 'online');
+            
+            var pendingOrders = JSON.parse(localStorage.getItem('localfirst_orders') || '[]')
+                .filter(function(o) { return o.delivery_status !== 'delivered'; })
+                .slice(-5);
+            
+            var html = '<div style="padding: 10px 0;">';
+            
+            // Driver status toggle
+            html += '<div style="background: linear-gradient(135deg, #25D366, #128C7E); border-radius: 16px; padding: 20px; margin-bottom: 20px; text-align: center;">' +
+                '<div style="font-size: 14px; opacity: 0.9; margin-bottom: 8px;">DRIVER STATUS</div>' +
+                '<div style="font-size: 24px; font-weight: 800;">🟢 ONLINE</div>' +
+                '<div style="font-size: 13px; margin-top: 8px;">Ready to accept orders</div>' +
+                '</div>';
+            
+            // Stats
+            html += '<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 20px;">' +
+                '<div style="background: #202c33; border-radius: 12px; padding: 14px; text-align: center;">' +
+                '<div style="font-size: 24px; font-weight: 700; color: #25D366;">$127</div>' +
+                '<div style="font-size: 11px; color: #8696a0;">Today</div></div>' +
+                '<div style="background: #202c33; border-radius: 12px; padding: 14px; text-align: center;">' +
+                '<div style="font-size: 24px; font-weight: 700;">8</div>' +
+                '<div style="font-size: 11px; color: #8696a0;">Deliveries</div></div>' +
+                '<div style="background: #202c33; border-radius: 12px; padding: 14px; text-align: center;">' +
+                '<div style="font-size: 24px; font-weight: 700;">⭐ 4.9</div>' +
+                '<div style="font-size: 11px; color: #8696a0;">Rating</div></div>' +
+                '</div>';
+            
+            // Pending orders
+            html += '<div style="font-size: 14px; font-weight: 600; color: #8696a0; margin-bottom: 12px;">📋 AVAILABLE ORDERS</div>';
+            
+            if (pendingOrders.length === 0) {
+                html += '<div style="background: #202c33; border-radius: 12px; padding: 30px; text-align: center;">' +
+                    '<div style="font-size: 40px; margin-bottom: 10px;">🕐</div>' +
+                    '<div style="font-size: 16px; color: #8696a0;">No orders available</div>' +
+                    '<div style="font-size: 13px; color: #8696a0; margin-top: 6px;">New orders will appear here</div>' +
+                    '</div>';
+            } else {
+                pendingOrders.forEach(function(order) {
+                    var statusColor = order.delivery_status === 'preparing' ? '#ffaa00' : '#25D366';
+                    var statusText = order.delivery_status === 'preparing' ? '🍳 Preparing' : '📦 Ready';
+                    
+                    html += '<div style="background: #202c33; border-radius: 12px; padding: 16px; margin-bottom: 12px;">' +
+                        '<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">' +
+                        '<div style="font-size: 18px; font-weight: 700;">#' + order.order_number + '</div>' +
+                        '<div style="background: ' + statusColor + '22; color: ' + statusColor + '; padding: 4px 10px; border-radius: 20px; font-size: 12px;">' + statusText + '</div>' +
+                        '</div>' +
+                        '<div style="font-size: 14px; margin-bottom: 8px;">🍽️ ' + (order.restaurant_name || 'Restaurant') + '</div>' +
+                        '<div style="font-size: 13px; color: #8696a0; margin-bottom: 8px;">📍 ' + (order.customer_address || 'Address') + '</div>' +
+                        '<div style="display: flex; justify-content: space-between; align-items: center;">' +
+                        '<div style="font-size: 16px; font-weight: 700; color: #25D366;">$' + (order.total || 0).toFixed(2);
+                    
+                    if (order.payment_method === 'cash') {
+                        html += ' <span style="background: #ffaa0033; color: #ffaa00; padding: 2px 8px; border-radius: 10px; font-size: 11px;">COD</span>';
+                    }
+                    
+                    html += '</div>' +
+                        '<button class="btn primary" style="padding: 8px 16px; font-size: 13px;" data-action="accept_order" data-value="' + order.order_number + '">Accept</button>' +
+                        '</div></div>';
+                });
+            }
+            
+            // Back to customer mode
+            html += '<div style="margin-top: 20px; text-align: center;">' +
+                '<button class="btn" data-action="switch_to_customer" style="background: #2a3942;">← Back to Customer View</button>' +
+                '</div>';
+            
+            html += '</div>';
+            render(html);
+        }
+        
+        // Update delivery tracking UI
+        function updateDeliveryUI() {
+            if (state.page === 'confirmed' || state.page === 'tracking') {
+                // Re-render if on tracking page
+                if (deliveryState.deliveryStatus === 'delivered') {
+                    showDeliveryComplete();
+                }
+            }
+        }
+        
+        // Show delivery complete
+        function showDeliveryComplete() {
+            var html = '<div style="text-align: center; padding: 40px 0;">' +
+                '<div style="font-size: 80px; margin-bottom: 20px;">🎉</div>' +
+                '<div style="font-size: 28px; font-weight: 800; color: #25D366; margin-bottom: 10px;">Delivered!</div>' +
+                '<div style="font-size: 16px; color: #8696a0; margin-bottom: 30px;">Enjoy your meal!</div>' +
+                '</div>';
+            
+            html += '<div style="background: linear-gradient(135deg, #1a3020, #0d2010); border: 1px solid #25D366; border-radius: 16px; padding: 24px; text-align: center; margin-bottom: 20px;">' +
+                '<div style="font-size: 16px; font-weight: 600; color: #25D366; margin-bottom: 12px;">Rate your experience</div>' +
+                '<div style="font-size: 32px; letter-spacing: 8px;" data-action="rate_order">⭐⭐⭐⭐⭐</div>' +
+                '</div>';
+            
+            html += '<div class="buttons">' +
+                '<button class="btn primary" data-action="new_order" style="font-size: 16px;">Order Again 🍕</button>' +
+                '</div>';
+            
+            render(html);
+        }
+        
+        // DEMO: Show broadcast message composer
+        window.showBroadcast = function() {
+            console.log('📢 Opening broadcast message composer...');
+            showBroadcastComposer();
+        };
+        
+        // Broadcast message composer
+        function showBroadcastComposer() {
+            setHeader('📢 Broadcast', 'BC', 'online');
+            
+            // Get all customers
+            var customers = JSON.parse(localStorage.getItem('localfirst_orders') || '[]')
+                .reduce(function(acc, order) {
+                    if (order.customer_phone && !acc.find(function(c) { return c.phone === order.customer_phone; })) {
+                        acc.push({ name: order.customer_name, phone: order.customer_phone });
+                    }
+                    return acc;
+                }, []);
+            
+            var html = '<div style="padding: 10px 0;">';
+            
+            html += '<div style="background: linear-gradient(135deg, #25D366, #128C7E); border-radius: 16px; padding: 20px; margin-bottom: 20px;">' +
+                '<div style="font-size: 14px; font-weight: 600; margin-bottom: 8px;">📢 Weekly Special Broadcast</div>' +
+                '<div style="font-size: 13px; opacity: 0.9;">Send promotions to all customers via WhatsApp</div>' +
+                '</div>';
+            
+            // Stats
+            html += '<div style="background: #202c33; border-radius: 12px; padding: 16px; margin-bottom: 20px;">' +
+                '<div style="font-size: 14px; color: #8696a0; margin-bottom: 8px;">Audience</div>' +
+                '<div style="font-size: 24px; font-weight: 700;">' + customers.length + ' customers</div>' +
+                '<div style="font-size: 12px; color: #8696a0;">with saved phone numbers</div>' +
+                '</div>';
+            
+            // Message templates
+            html += '<div style="font-size: 14px; font-weight: 600; color: #8696a0; margin-bottom: 12px;">📝 MESSAGE TEMPLATES</div>';
+            
+            var templates = [
+                { id: 'weekly', title: '🍕 Weekly Special', preview: 'This week only! Get 20% off all pizzas...' },
+                { id: 'flash', title: '⚡ Flash Sale', preview: 'FREE delivery for the next 2 hours...' },
+                { id: 'loyalty', title: '💚 Loyalty Reward', preview: 'Thanks for being a LocalFirst customer...' },
+                { id: 'new', title: '🆕 New Restaurant', preview: 'We just added a new restaurant...' }
+            ];
+            
+            templates.forEach(function(t) {
+                html += '<div style="background: #202c33; border-radius: 12px; padding: 16px; margin-bottom: 10px; cursor: pointer;" data-action="select_template" data-value="' + t.id + '">' +
+                    '<div style="font-size: 15px; font-weight: 600; margin-bottom: 6px;">' + t.title + '</div>' +
+                    '<div style="font-size: 13px; color: #8696a0;">' + t.preview + '</div>' +
+                    '</div>';
+            });
+            
+            // Custom message
+            html += '<div style="margin-top: 20px;">' +
+                '<div style="font-size: 14px; font-weight: 600; color: #8696a0; margin-bottom: 12px;">✏️ OR WRITE CUSTOM MESSAGE</div>' +
+                '<textarea id="broadcast_message" style="width: 100%; height: 100px; background: #202c33; border: 1px solid #2a3942; border-radius: 12px; padding: 12px; color: #e9edef; font-size: 14px; resize: none;" placeholder="Type your message here..."></textarea>' +
+                '<button class="btn primary" style="width: 100%; margin-top: 12px;" data-action="send_broadcast">📤 Send to All Customers</button>' +
+                '</div>';
+            
+            html += '<div style="margin-top: 20px; text-align: center;">' +
+                '<button class="btn" data-action="back_to_customer" style="background: #2a3942;">← Back</button>' +
+                '</div>';
+            
+            html += '</div>';
+            render(html);
+        }
+        
+        // ============================================
+        // NAVIGATION
+        // ============================================
+        function navigate(page, addToHistory) {
+            if (addToHistory !== false && state.page) {
+                state.history.push(state.page);
+            }
+            state.page = page;
+            header.className = state.history.length > 0 ? 'header has-back' : 'header';
+        }
+        
+        function goBack() {
+            if (state.history.length > 0) {
+                var prevPage = state.history.pop();
+                renderPage(prevPage, false);
+            }
+        }
+        
+        document.getElementById('backBtn').addEventListener('click', goBack);
+        
+        // ============================================
+        // RENDER HELPERS
+        // ============================================
+        function render(html) {
+            content.innerHTML = html;
+            attachListeners();
+            content.scrollTop = 0;
+        }
+        
+        function attachListeners() {
+            content.querySelectorAll('[data-action]').forEach(function(el) {
+                el.addEventListener('click', function() {
+                    handleAction(this.getAttribute('data-action'), this.getAttribute('data-value'));
+                });
+            });
+            
+            content.querySelectorAll('.input-submit').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var inputId = this.getAttribute('data-input');
+                    var action = this.getAttribute('data-action');
+                    var input = document.getElementById(inputId);
+                    if (input && input.value.trim()) {
+                        handleInput(action, input.value.trim());
+                    }
+                });
+            });
+            
+            content.querySelectorAll('input').forEach(function(inp) {
+                inp.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        var btn = content.querySelector('.input-submit');
+                        if (btn) btn.click();
+                    }
+                });
+                setTimeout(function() { inp.focus(); }, 100);
+            });
+        }
+        
+        function updateCart() {
+            var count = state.cart.length;
+            var total = state.cart.reduce(function(s, i) { return s + i.price; }, 0);
+            cartBadge.textContent = '🛒 View Cart (' + count + ') - $' + total.toFixed(2);
+            cartBadge.className = count > 0 ? 'cart-badge show' : 'cart-badge';
+        }
+        
+        // ============================================
+        // PAGES
+        // ============================================
+        function renderPage(page, addToHistory) {
+            navigate(page, addToHistory);
+            
+            switch(page) {
+                case 'welcome': showWelcome(); break;
+                case 'restaurants': showRestaurants(); break;
+                case 'restaurant_home': showRestaurantHome(); break;
+                case 'specials': showSpecials(); break;
+                case 'special_detail': showSpecialDetail(); break;
+                case 'menu': showMenu(); break;
+                case 'category': showCategory(state.currentCategory); break;
+                case 'item_detail': showItemDetail(); break;
+                case 'item_toppings': showToppingsPage(); break;
+                case 'item_added': showItemAdded(); break;
+                case 'cart': showCartPage(); break;
+                case 'tip': showTipPage(); break;
+                case 'payment': showPaymentPage(); break;
+                case 'credit_cards': showCreditCardPage(); break;
+                case 'confirmed': showConfirmedPage(); break;
+                case 'custom_pizza': showCustomPizzaPage(); break;
+                case 'custom_pizza_size': showCustomPizzaSizePage(); break;
+            }
+        }
+        
+        // PAGE: Welcome
+        function showWelcome() {
+            setHeader('LocalFirst YYC', 'LF', 'online');
+            
+            var html = '';
+            var isReturningCustomer = loadCustomer() && state.customer.name;
+            
+            // Debug: Log what's saved
+            console.log('=== Welcome Page Debug ===');
+            console.log('Is returning customer:', isReturningCustomer);
+            console.log('Customer data:', state.customer);
+            console.log('Saved address:', state.customer ? state.customer.address : 'none');
+            console.log('========================');
+            
+            if (isReturningCustomer) {
+                // Returning customer - show their info (from WhatsApp)
+                var savedAddr = state.customer.address || 'Not set yet';
+                var phone = state.customer.phone || state.customer.whatsapp_phone || '';
+                var displayPhone = phone ? formatPhone(phone) : '';
+                
+                html += '<div style="text-align: center; padding: 20px 0;">' +
+                    '<div style="font-size: 50px; margin-bottom: 10px;">👋</div>' +
+                    '<div style="font-size: 24px; font-weight: 700;">Welcome back,</div>' +
+                    '<div style="font-size: 28px; font-weight: 800; color: #25D366;">' + state.customer.name + '!</div>' +
+                    '</div>';
+                
+                // Show their WhatsApp info card
+                html += '<div style="background: #202c33; border-radius: 16px; padding: 16px; margin-bottom: 16px;">' +
+                    '<div style="font-size: 12px; color: #8696a0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">📱 Your WhatsApp Account</div>' +
+                    '<div style="display: flex; align-items: center; gap: 12px;">' +
+                    '<div style="width: 50px; height: 50px; border-radius: 50%; background: linear-gradient(135deg, #25D366, #128C7E); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 700;">' + 
+                    (state.customer.name ? state.customer.name.charAt(0).toUpperCase() : '?') + '</div>' +
+                    '<div style="flex: 1;">' +
+                    '<div style="font-size: 16px; font-weight: 600;">' + state.customer.name + '</div>' +
+                    '<div style="font-size: 14px; color: #25D366;">' + displayPhone + '</div>' +
+                    '</div>' +
+                    '<div style="font-size: 20px;">✓</div>' +
+                    '</div>' +
+                    '</div>';
+                
+                // Delivery address card
+                html += '<div style="background: #202c33; border-radius: 16px; padding: 16px; margin-bottom: 20px;">' +
+                    '<div style="font-size: 12px; color: #8696a0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">📍 Delivery Address</div>' +
+                    '<div style="font-size: 16px; margin-bottom: 16px;">' + savedAddr + '</div>' +
+                    '<div class="buttons">' +
+                    '<button class="btn primary" data-action="use_saved_address">✓ Deliver Here</button>' +
+                    '<button class="btn" data-action="share_location">📍 Update Location</button>' +
+                    '<button class="btn" data-action="type_address">✏️ New Address</button>' +
+                    '</div></div>';
+            } else {
+                // NEW CUSTOMER - Show compelling welcome with discount
+                
+                // Hero section with logo
+                html += '<div style="text-align: center; padding: 10px 0 20px;">' +
+                    '<div style="font-size: 60px; margin-bottom: 10px;">🍕</div>' +
+                    '<div style="font-size: 28px; font-weight: 800; color: #25D366;">LocalFirst YYC</div>' +
+                    '<div style="font-size: 14px; color: #8696a0; margin-top: 4px;">Support Local. Eat Amazing.</div>' +
+                    '</div>';
+                
+                // First order discount banner
+                html += '<div style="background: linear-gradient(135deg, #25D366, #128C7E); border-radius: 16px; padding: 20px; margin-bottom: 20px; text-align: center;">' +
+                    '<div style="font-size: 12px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.9; margin-bottom: 8px;">🎉 First Order Special</div>' +
+                    '<div style="font-size: 32px; font-weight: 800; margin-bottom: 6px;">FREE DELIVERY</div>' +
+                    '<div style="font-size: 16px; opacity: 0.95;">+ 10% OFF your first order!</div>' +
+                    '<div style="font-size: 13px; margin-top: 10px; opacity: 0.8;">Save up to $8.99 today</div>' +
+                    '</div>';
+                
+                // Why LocalFirst
+                html += '<div style="background: #202c33; border-radius: 16px; padding: 18px; margin-bottom: 20px;">' +
+                    '<div style="font-size: 14px; font-weight: 600; color: #25D366; margin-bottom: 14px; text-align: center;">Why Order with LocalFirst?</div>' +
+                    '<div style="display: flex; flex-direction: column; gap: 12px;">' +
+                    '<div style="display: flex; align-items: center; gap: 12px;">' +
+                    '<div style="font-size: 24px;">💚</div>' +
+                    '<div style="font-size: 13px; color: #e9edef;"><b>100% Local</b> — Every dollar stays in Calgary</div>' +
+                    '</div>' +
+                    '<div style="display: flex; align-items: center; gap: 12px;">' +
+                    '<div style="font-size: 24px;">👩‍🍳</div>' +
+                    '<div style="font-size: 13px; color: #e9edef;"><b>Real Stories</b> — Meet the families behind the food</div>' +
+                    '</div>' +
+                    '<div style="display: flex; align-items: center; gap: 12px;">' +
+                    '<div style="font-size: 24px;">🚗</div>' +
+                    '<div style="font-size: 13px; color: #e9edef;"><b>Fair Pay</b> — Drivers keep 100% of tips</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+                
+                // Name input
+                // Name input with WhatsApp note
+                html += '<div style="background: #202c33; border-radius: 16px; padding: 20px;">' +
+                    '<div style="font-size: 15px; color: #e9edef; margin-bottom: 14px; text-align: center;">Let\'s get started! What\'s your name?</div>' +
+                    '<div class="input-bubble" style="margin: 0;">' +
+                    '<input type="text" id="name_input" placeholder="Enter your first name" autocomplete="off" style="font-size: 18px; text-align: center;">' +
+                    '<button class="btn primary input-submit" data-input="name_input" data-action="submit_name" style="font-size: 16px;">Get My Discount →</button>' +
+                    '</div>' +
+                    '<div style="font-size: 11px; color: #8696a0; text-align: center; margin-top: 14px; line-height: 1.5;">' +
+                    '📱 In real WhatsApp, your name & phone are<br>automatically provided from your account' +
+                    '</div>' +
+                    '</div>';
+            }
+            
+            render(html);
+        }
+        
+        // PAGE: Restaurants
+        function showRestaurants() {
+            var restaurants = [
+                { id: '1', icon: '🍕', name: 'AB King Pizza', rating: '4.8', distance: '0.8 km', time: '25 min' },
+                { id: '2', icon: '🍔', name: 'Burger Barn', rating: '4.7', distance: '1.2 km', time: '30 min' },
+                { id: '3', icon: '🍗', name: 'Wing House', rating: '4.6', distance: '1.5 km', time: '35 min' },
+                { id: '4', icon: '🌮', name: 'Taco Fiesta', rating: '4.5', distance: '2.0 km', time: '35 min' },
+                { id: '5', icon: '🍜', name: 'Noodle King', rating: '4.7', distance: '2.2 km', time: '40 min' }
+            ];
+            
+            var html = '<div class="page-title">🍽️ Restaurants Near You</div>';
+            
+            restaurants.forEach(function(r) {
+                html += '<div class="restaurant-btn" data-action="select_restaurant" data-value="' + r.id + '">' +
+                    '<div class="icon">' + r.icon + '</div>' +
+                    '<div class="info">' +
+                    '<div class="name">' + r.name + '</div>' +
+                    '<div class="meta"><span>⭐ ' + r.rating + '</span><span>📍 ' + r.distance + '</span><span>🕐 ' + r.time + '</span></div>' +
+                    '</div>' +
+                    '<div class="arrow">›</div>' +
+                    '</div>';
+            });
+            
+            html += '<div class="disclaimer">*FREE delivery within 3 km. $2.99 for 3-5 km.</div>';
+            
+            render(html);
+        }
+        
+        // PAGE: Restaurant Home (Specials vs Menu)
+        function showRestaurantHome() {
+            setHeader(state.restaurant.name, state.restaurant.name.substring(0,2), 'online');
+            
+            // Get delivery time from restaurant data or default
+            var deliveryTime = state.restaurant.time || '30-40 min';
+            
+            var html = '<div class="bubble" style="text-align: center; margin-bottom: 20px;">' +
+                '👋 Welcome to <b style="font-size: 20px;">' + state.restaurant.name + '</b>!<br>' +
+                '🚗 FREE delivery* • 🕐 ~' + deliveryTime +
+                '</div>';
+            
+            html += '<div class="section-header" style="font-size: 16px;">🔥 TODAY\'S SPECIALS</div>';
+            html += '<div class="category-btn" data-action="show_specials" style="padding: 20px;">' +
+                '<div class="icon" style="font-size: 36px;">⭐</div>' +
+                '<div class="label" style="font-size: 19px;">Special of the Day</div>' +
+                '<div class="arrow">›</div>' +
+                '</div>';
+            
+            html += '<div class="section-header">📋 FULL MENU</div>';
+            html += '<div class="category-btn" data-action="show_menu">' +
+                '<div class="icon">📖</div>' +
+                '<div class="label">Browse Menu</div>' +
+                '<div class="arrow">›</div>' +
+                '</div>';
+            
+            render(html);
+        }
+        
+        // PAGE: Specials
+        function showSpecials() {
+            var html = '<div class="page-title">⭐ Today\'s Specials</div>';
+            
+            // 3 special items with images - using green/teal theme instead of orange
+            var specials = [
+                { 
+                    id: 's1',
+                    tag: '🔥 Most Popular', 
+                    name: 'Family Feast Deal', 
+                    desc: '2 Large Pizzas + Wings + 2L Pop',
+                    oldPrice: 54.99,
+                    newPrice: 39.99,
+                    image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=200&fit=crop'
+                },
+                { 
+                    id: 's2',
+                    tag: '⚡ Limited Time', 
+                    name: 'Lunch Special', 
+                    desc: 'Medium 2-Topping Pizza + Can Pop',
+                    oldPrice: 18.99,
+                    newPrice: 12.99,
+                    image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=200&fit=crop'
+                },
+                { 
+                    id: 's3',
+                    tag: '❤️ Customer Favorite', 
+                    name: 'Wing Wednesday', 
+                    desc: '2 lbs Wings + Fries + Dip',
+                    oldPrice: 28.99,
+                    newPrice: 19.99,
+                    image: 'https://images.unsplash.com/photo-1608039755401-742074f0548d?w=400&h=200&fit=crop'
+                }
+            ];
+            
+            // Store specials in state for later use
+            state.specials = specials;
+            
+            specials.forEach(function(s) {
+                html += '<div class="menu-item" data-action="view_special" data-value="' + s.id + '">' +
+                    '<img src="' + s.image + '" onerror="this.src=\'https://placehold.co/400x160/1a1a2e/25D366?text=' + encodeURIComponent(s.name) + '\'">' +
+                    '<div class="body">' +
+                    '<div style="display: inline-block; background: #25D366; color: white; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 20px; margin-bottom: 8px;">' + s.tag + '</div>' +
+                    '<div class="name">' + s.name + '</div>' +
+                    '<div class="desc">' + s.desc + '</div>' +
+                    '<div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">' +
+                    '<span style="font-size: 14px; text-decoration: line-through; color: #8696a0;">$' + s.oldPrice.toFixed(2) + '</span>' +
+                    '<span style="font-size: 20px; font-weight: 800; color: #25D366;">$' + s.newPrice.toFixed(2) + '</span>' +
+                    '<span style="background: #25D366; color: white; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 10px;">SAVE $' + (s.oldPrice - s.newPrice).toFixed(0) + '</span>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+            });
+            
+            html += '<div class="buttons" style="margin-top: 20px;">' +
+                '<button class="btn" data-action="show_menu">📋 View Full Menu</button>' +
+                '</div>';
+            
+            render(html);
+        }
+        
+        // PAGE: View Special Detail
+        function showSpecialDetail() {
+            var special = state.selectedSpecial;
+            if (!special) {
+                renderPage('specials');
+                return;
+            }
+            
+            var html = '<img class="item-hero" src="' + special.image + '" onerror="this.src=\'https://placehold.co/400x200/1a1a2e/25D366?text=' + encodeURIComponent(special.name) + '\'">' +
+                '<div style="display: inline-block; background: #25D366; color: white; font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 20px; margin-bottom: 12px;">' + special.tag + '</div>' +
+                '<div class="item-title">' + special.name + '</div>' +
+                '<div class="item-desc">' + special.desc + '</div>' +
+                '<div style="background: #202c33; border-radius: 12px; padding: 16px; margin-bottom: 20px;">' +
+                '<div style="display: flex; align-items: center; justify-content: space-between;">' +
+                '<div>' +
+                '<div style="font-size: 14px; text-decoration: line-through; color: #8696a0;">Regular: $' + special.oldPrice.toFixed(2) + '</div>' +
+                '<div style="font-size: 28px; font-weight: 800; color: #25D366;">$' + special.newPrice.toFixed(2) + '</div>' +
+                '</div>' +
+                '<div style="background: #25D366; color: white; padding: 10px 16px; border-radius: 12px; text-align: center;">' +
+                '<div style="font-size: 11px;">YOU SAVE</div>' +
+                '<div style="font-size: 20px; font-weight: 800;">$' + (special.oldPrice - special.newPrice).toFixed(2) + '</div>' +
+                '</div>' +
+                '</div>' +
+                '</div>' +
+                '<div class="buttons">' +
+                '<button class="btn primary" data-action="add_special_to_cart" data-value="' + special.id + '">🛒 Add to Cart - $' + special.newPrice.toFixed(2) + '</button>' +
+                '<button class="btn" data-action="show_specials">← Back to Specials</button>' +
+                '</div>';
+            
+            render(html);
+        }
+        
+        // PAGE: Menu Categories
+        function showMenu() {
+            var html = '<div class="page-title">📋 Menu</div>';
+            
+            var categories = [
+                { id: 'pizza', icon: '🍕', name: 'Pizza' },
+                { id: 'donair', icon: '🌯', name: 'Donair' },
+                { id: 'wings', icon: '🍗', name: 'Wings' },
+                { id: 'salads', icon: '🥗', name: 'Salads' },
+                { id: 'sides', icon: '🍟', name: 'Sides' },
+                { id: 'drinks', icon: '🥤', name: 'Drinks' },
+                { id: 'combos', icon: '🎁', name: 'Combos' }
+            ];
+            
+            categories.forEach(function(cat) {
+                html += '<div class="category-btn" data-action="show_category" data-value="' + cat.id + '">' +
+                    '<div class="icon">' + cat.icon + '</div>' +
+                    '<div class="label">' + cat.name + '</div>' +
+                    '<div class="arrow">›</div>' +
+                    '</div>';
+            });
+            
+            render(html);
+        }
+        
+        // PAGE: Category Items (e.g., Pizza)
+        function showCategory(categoryId) {
+            state.currentCategory = categoryId;
+            
+            var categoryNames = {
+                'pizza': 'Pizza',
+                'donair': 'Donair',
+                'wings': 'Wings',
+                'salads': 'Salads',
+                'sides': 'Sides',
+                'drinks': 'Drinks',
+                'combos': 'Combos'
+            };
+            
+            var html = '<div class="page-title">🍕 ' + (categoryNames[categoryId] || 'Menu') + '</div>';
+            
+            // Custom option for pizza
+            if (categoryId === 'pizza') {
+                html += '<div class="custom-btn" data-action="custom_pizza">' +
+                    '<div class="icon">🎨</div>' +
+                    '<div class="label">Build Your Own Pizza</div>' +
+                    '<div class="sub">Choose your toppings</div>' +
+                    '</div>';
+                
+                html += '<div class="section-header">Signature Pizzas</div>';
+            }
+            
+            // Get items from database or use demo
+            var items = getItemsForCategory(categoryId);
+            
+            items.forEach(function(item) {
+                html += '<div class="menu-item" data-action="select_item" data-value="' + item.id + '">' +
+                    '<img src="' + item.image + '" onerror="this.src=\'https://placehold.co/400x160/1a1a2e/25D366?text=' + encodeURIComponent(item.name) + '\'">' +
+                    '<div class="body">' +
+                    '<div class="name">' + item.name + '</div>' +
+                    '<div class="desc">' + item.desc + '</div>' +
+                    '<div class="price">From $' + item.price.toFixed(2) + ' <b>(S)</b></div>' +
+                    '</div>' +
+                    '</div>';
+            });
+            
+            render(html);
+        }
+        
+        // Demo items for categories
+        function getItemsForCategory(categoryId) {
+            var items = {
+                'pizza': [
+                    { id: 'p1', name: 'Pepperoni Classic', desc: 'Pepperoni, mozzarella, signature sauce', price: 14.99, image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=200&fit=crop' },
+                    { id: 'p2', name: 'Meat Lovers', desc: 'Pepperoni, sausage, bacon, ham, beef', price: 18.99, image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=200&fit=crop' },
+                    { id: 'p3', name: 'Hawaiian', desc: 'Ham, pineapple, mozzarella', price: 15.99, image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=200&fit=crop' },
+                    { id: 'p4', name: 'Veggie Supreme', desc: 'Mushrooms, peppers, onions, olives, tomatoes', price: 16.99, image: 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=200&fit=crop' },
+                    { id: 'p5', name: 'BBQ Chicken', desc: 'Grilled chicken, BBQ sauce, red onions', price: 17.99, image: 'https://images.unsplash.com/photo-1593560708920-61dd98c46a4e?w=400&h=200&fit=crop' },
+                    { id: 'p6', name: 'Canadian', desc: 'Pepperoni, mushrooms, bacon', price: 16.99, image: 'https://images.unsplash.com/photo-1571407970349-bc81e7e96d47?w=400&h=200&fit=crop' }
+                ],
+                'donair': [
+                    { id: 'd1', name: 'Classic Donair', desc: 'Shaved beef, sweet sauce, tomatoes, onions', price: 12.99, image: 'https://images.unsplash.com/photo-1561651823-34feb02250e4?w=400&h=200&fit=crop' },
+                    { id: 'd2', name: 'Chicken Donair', desc: 'Grilled chicken, garlic sauce, veggies', price: 13.99, image: 'https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=400&h=200&fit=crop' }
+                ],
+                'wings': [
+                    { id: 'w1', name: 'Classic Wings', desc: 'Choose your flavor: Hot, Mild, BBQ, Honey Garlic', price: 14.99, image: 'https://images.unsplash.com/photo-1608039755401-742074f0548d?w=400&h=200&fit=crop' },
+                    { id: 'w2', name: 'Boneless Wings', desc: 'Crispy boneless bites with your choice of sauce', price: 13.99, image: 'https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=400&h=200&fit=crop' }
+                ],
+                'salads': [
+                    { id: 's1', name: 'Caesar Salad', desc: 'Romaine, parmesan, croutons, caesar dressing', price: 9.99, image: 'https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400&h=200&fit=crop' },
+                    { id: 's2', name: 'Greek Salad', desc: 'Tomatoes, cucumbers, feta, olives, red onion', price: 10.99, image: 'https://images.unsplash.com/photo-1540189549336-e6e99c3679fe?w=400&h=200&fit=crop' }
+                ],
+                'sides': [
+                    { id: 'si1', name: 'Garlic Bread', desc: 'Toasted with garlic butter', price: 4.99, image: 'https://images.unsplash.com/photo-1619535860434-ba1d8fa12536?w=400&h=200&fit=crop' },
+                    { id: 'si2', name: 'Fries', desc: 'Crispy golden fries', price: 5.99, image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=400&h=200&fit=crop' }
+                ],
+                'drinks': [
+                    { id: 'dr1', name: 'Pop (Can)', desc: 'Coke, Sprite, Fanta, Ginger Ale', price: 1.99, image: 'https://images.unsplash.com/photo-1581636625402-29b2a704ef13?w=400&h=200&fit=crop' },
+                    { id: 'dr2', name: 'Pop (2L)', desc: 'Coke, Sprite, Fanta', price: 3.99, image: 'https://images.unsplash.com/photo-1624552184280-9e9631bbeee9?w=400&h=200&fit=crop' }
+                ],
+                'combos': [
+                    { id: 'c1', name: 'Pizza + Wings Combo', desc: 'Large pizza + 1lb wings + 2L pop', price: 34.99, image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=200&fit=crop' },
+                    { id: 'c2', name: 'Family Pack', desc: '2 Large pizzas + 2lb wings + 2L pop', price: 49.99, image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=200&fit=crop' }
+                ]
+            };
+            
+            return items[categoryId] || [];
+        }
+        
+        // Size pricing (multiplier based on small price)
+        function getSizePrices(basePrice) {
+            return {
+                'S': { label: 'S', name: 'Small (10")', price: basePrice, popular: false },
+                'M': { label: 'M', name: 'Medium (12")', price: basePrice + 3, popular: false },
+                'L': { label: 'L', name: 'Large (14")', price: basePrice + 6, popular: true },
+                'XL': { label: 'XL', name: 'X-Large (16")', price: basePrice + 9, popular: false }
+            };
+        }
+        
+        // PAGE: Item Detail with Size Selection
+        function showItemDetail() {
+            var item = state.selectedItem;
+            if (!item) {
+                renderPage('menu');
+                return;
+            }
+            
+            var sizes = getSizePrices(item.price);
+            
+            var html = '<img class="item-hero" src="' + item.image + '" onerror="this.src=\'https://placehold.co/400x200/1a1a2e/25D366?text=' + encodeURIComponent(item.name) + '\'">' +
+                '<div class="item-title">' + item.name + '</div>' +
+                '<div class="item-desc">' + item.desc + '</div>' +
+                '<div class="section-header">SELECT SIZE</div>';
+            
+            // Size buttons
+            ['S', 'M', 'L', 'XL'].forEach(function(sizeKey) {
+                var size = sizes[sizeKey];
+                var popularClass = size.popular ? ' popular' : '';
+                var popularTag = size.popular ? '<span class="popular-tag">POPULAR</span>' : '';
+                
+                html += '<div class="size-btn' + popularClass + '" data-action="add_with_size" data-value="' + item.id + '_' + sizeKey + '">' +
+                    '<div>' +
+                    '<span class="size-label">' + size.label + '</span>' +
+                    '<span class="size-name">' + size.name + '</span>' +
+                    popularTag +
+                    '</div>' +
+                    '<div class="size-price">$' + size.price.toFixed(2) + '</div>' +
+                    '</div>';
+            });
+            
+            render(html);
+        }
+        
+        // Available toppings
+        function getToppings() {
+            return [
+                { id: 'pepperoni', name: 'Extra Pepperoni', price: 1.50 },
+                { id: 'cheese', name: 'Extra Cheese', price: 1.50 },
+                { id: 'mushrooms', name: 'Mushrooms', price: 1.50 },
+                { id: 'bacon', name: 'Bacon', price: 1.50 },
+                { id: 'sausage', name: 'Italian Sausage', price: 1.50 },
+                { id: 'peppers', name: 'Green Peppers', price: 1.50 },
+                { id: 'onions', name: 'Onions', price: 1.50 },
+                { id: 'olives', name: 'Black Olives', price: 1.50 },
+                { id: 'jalapenos', name: 'Jalapeños', price: 1.50 },
+                { id: 'pineapple', name: 'Pineapple', price: 1.50 }
+            ];
+        }
+        
+        // PAGE: Extra Toppings Selection
+        function showToppingsPage() {
+            var item = state.selectedItem;
+            var sizeKey = state.selectedSize;
+            var sizes = getSizePrices(item.price);
+            var size = sizes[sizeKey];
+            var sizeNames = { 'S': 'Small', 'M': 'Medium', 'L': 'Large', 'XL': 'X-Large' };
+            
+            var toppings = getToppings();
+            var toppingsPrice = state.selectedToppings.length * 1.50;
+            var totalPrice = size.price + toppingsPrice;
+            
+            var html = '<div class="page-title">🍕 Extra Toppings?</div>' +
+                '<div style="background: #202c33; border-radius: 12px; padding: 14px; margin-bottom: 16px;">' +
+                '<div style="font-size: 16px; font-weight: 600;">' + item.name + ' (' + sizeNames[sizeKey] + ')</div>' +
+                '<div style="font-size: 14px; color: #8696a0;">Base: $' + size.price.toFixed(2) + '</div>' +
+                '</div>' +
+                '<div class="section-header">ADD EXTRA TOPPINGS ($1.50 each)</div>';
+            
+            toppings.forEach(function(topping) {
+                var isSelected = state.selectedToppings.indexOf(topping.id) !== -1;
+                var selectedClass = isSelected ? ' selected' : '';
+                var checkMark = isSelected ? '✓' : '';
+                
+                html += '<div class="topping-btn' + selectedClass + '" data-action="toggle_topping" data-value="' + topping.id + '">' +
+                    '<div class="check">' + checkMark + '</div>' +
+                    '<div class="topping-name">' + topping.name + '</div>' +
+                    '<div class="topping-price">+$' + topping.price.toFixed(2) + '</div>' +
+                    '</div>';
+            });
+            
+            // Total and buttons
+            html += '<div style="background: #202c33; border-radius: 12px; padding: 16px; margin-top: 20px;">' +
+                '<div style="display: flex; justify-content: space-between; font-size: 14px; color: #8696a0; margin-bottom: 6px;">' +
+                '<span>Pizza (' + sizeNames[sizeKey] + ')</span><span>$' + size.price.toFixed(2) + '</span></div>';
+            
+            if (state.selectedToppings.length > 0) {
+                html += '<div style="display: flex; justify-content: space-between; font-size: 14px; color: #8696a0; margin-bottom: 6px;">' +
+                    '<span>Toppings (' + state.selectedToppings.length + ')</span><span>$' + toppingsPrice.toFixed(2) + '</span></div>';
+            }
+            
+            html += '<div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; padding-top: 10px; border-top: 1px solid #2a3942;">' +
+                '<span>Total</span><span style="color: #25D366;">$' + totalPrice.toFixed(2) + '</span></div>' +
+                '</div>';
+            
+            html += '<div class="buttons" style="margin-top: 16px;">' +
+                '<button class="btn primary" data-action="confirm_toppings">Add to Cart - $' + totalPrice.toFixed(2) + '</button>' +
+                '<button class="btn" data-action="skip_toppings">No Extra Toppings</button>' +
+                '</div>';
+            
+            render(html);
+        }
+        
+        // ============================================
+        // HEADER
+        // ============================================
+        function setHeader(name, initials, status) {
+            document.getElementById('headerName').textContent = name;
+            document.getElementById('avatar').textContent = initials;
+            document.getElementById('headerStatus').textContent = status;
+        }
+        
+        // ============================================
+        // ACTIONS
+        // ============================================
+        function handleAction(action, value) {
+            console.log('Action:', action, value);
+            
+            switch(action) {
+                case 'share_location':
+                    getLocation();
+                    break;
+                case 'type_address':
+                    showAddressInput();
+                    break;
+                case 'use_saved_address':
+                    // Quick confirmation then go to restaurants
+                    var addr = state.customer ? state.customer.address : 'Your location';
+                    var confirmHtml = '<div class="bubble">✅ <b>Delivering to:</b><br>' + addr + '</div>';
+                    render(confirmHtml);
+                    setTimeout(function() {
+                        renderPage('restaurants');
+                    }, 500);
+                    break;
+                case 'confirm_address':
+                    renderPage('restaurants');
+                    break;
+                case 'select_restaurant':
+                    selectRestaurant(value);
+                    break;
+                case 'continue_to_menu':
+                    renderPage('restaurant_home');
+                    break;
+                case 'show_specials':
+                    renderPage('specials');
+                    break;
+                case 'show_menu':
+                    renderPage('menu');
+                    break;
+                case 'show_category':
+                    state.currentCategory = value;
+                    renderPage('category');
+                    break;
+                case 'select_item':
+                    selectItem(value);
+                    break;
+                case 'add_with_size':
+                    addItemWithSize(value);
+                    break;
+                case 'toggle_topping':
+                    toggleTopping(value);
+                    break;
+                case 'confirm_toppings':
+                    addItemToCartWithToppings();
+                    break;
+                case 'skip_toppings':
+                    state.selectedToppings = [];
+                    addItemToCartWithToppings();
+                    break;
+                case 'add_special':
+                    // Old action - redirect to view
+                    viewSpecial(value);
+                    break;
+                case 'view_special':
+                    viewSpecial(value);
+                    break;
+                case 'add_special_to_cart':
+                    addSpecialToCart(value);
+                    break;
+                case 'custom_pizza':
+                    state.customPizzaToppings = [];
+                    renderPage('custom_pizza');
+                    break;
+                case 'toggle_custom_topping':
+                    toggleCustomTopping(value);
+                    break;
+                case 'custom_pizza_continue':
+                    renderPage('custom_pizza_size');
+                    break;
+                case 'add_custom_pizza':
+                    addCustomPizzaToCart(value);
+                    break;
+                case 'show_cart':
+                    showCartPage();
+                    break;
+                case 'remove_item':
+                    removeCartItem(parseInt(value));
+                    break;
+                case 'checkout':
+                    renderPage('tip');
+                    break;
+                case 'go_checkout':
+                    renderPage('tip');
+                    break;
+                case 'add_more':
+                    renderPage('menu');
+                    break;
+                case 'set_tip':
+                    state.tip = parseFloat(value) || 0;
+                    renderPage('payment');
+                    break;
+                case 'set_tip_percent':
+                    var subtotal = state.cart.reduce(function(s, i) { return s + i.price; }, 0);
+                    state.tip = Math.round(subtotal * parseFloat(value)) / 100;
+                    renderPage('payment');
+                    break;
+                case 'custom_tip':
+                    showCustomTipPage();
+                    break;
+                case 'show_tip_page':
+                    renderPage('tip');
+                    break;
+                case 'pay_card':
+                    state.selectedPaymentMethod = 'card';
+                    processPayment('card');
+                    break;
+                case 'show_credit_cards':
+                    renderPage('credit_cards');
+                    break;
+                case 'pay_credit':
+                    state.selectedPaymentMethod = 'credit_' + value;
+                    processPayment('credit', value);
+                    break;
+                case 'pay_debit':
+                    state.selectedPaymentMethod = 'debit';
+                    processPayment('debit');
+                    break;
+                case 'pay_cash':
+                    state.selectedPaymentMethod = 'cash';
+                    processPayment('cash');
+                    break;
+                case 'go_to_payment':
+                    renderPage('payment');
+                    break;
+                case 'new_order':
+                    startNewOrder();
+                    break;
+                case 'call_driver':
+                    if (state.assignedDriver) {
+                        alert('📞 Calling ' + state.assignedDriver.name + '...\n\n(In production, this would initiate a masked call through the app)');
+                    }
+                    break;
+                case 'message_driver':
+                    if (state.assignedDriver) {
+                        alert('💬 Opening chat with ' + state.assignedDriver.name + '...\n\n(In production, this would open an in-app messaging system)');
+                    }
+                    break;
+                    
+                // Delivery Module Actions
+                case 'switch_to_customer':
+                case 'back_to_customer':
+                    deliveryState.mode = 'customer';
+                    renderPage('welcome');
+                    break;
+                case 'accept_order':
+                    alert('✅ Order #' + value + ' accepted!\n\nNavigating to pickup location...\n\n(In production, this would open maps with directions)');
+                    break;
+                case 'select_template':
+                    var templates = {
+                        'weekly': '🍕 WEEKLY SPECIAL!\n\nThis week only - Get 20% OFF all pizzas from AB King Pizza!\n\nUse code: PIZZA20\n\nOrder now on LocalFirst YYC 💚',
+                        'flash': '⚡ FLASH SALE!\n\nFREE DELIVERY on all orders for the next 2 hours!\n\nNo code needed - discount applied automatically.\n\nOrder now! 🚗',
+                        'loyalty': '💚 Thank you for being a LocalFirst customer!\n\nAs a thank you, here\'s $5 OFF your next order.\n\nUse code: THANKS5\n\nWe appreciate you supporting local! 🙏',
+                        'new': '🆕 NEW RESTAURANT ALERT!\n\nWe just added Taco Fiesta to LocalFirst YYC!\n\n🌮 Authentic Mexican cuisine\n⭐ 4.5 rating\n🚗 FREE delivery under 3km\n\nTry them today!'
+                    };
+                    var msg = templates[value] || '';
+                    document.getElementById('broadcast_message').value = msg;
+                    break;
+                case 'send_broadcast':
+                    var message = document.getElementById('broadcast_message').value;
+                    if (message.trim()) {
+                        alert('📤 Broadcast Sent!\n\nYour message has been sent to all customers via WhatsApp.\n\n(In production, this would use the WhatsApp Business API to send bulk messages)');
+                    } else {
+                        alert('Please enter a message first!');
+                    }
+                    break;
+            }
+        }
+        
+        function handleInput(action, value) {
+            if (action === 'submit_name') {
+                state.customer = state.customer || {};
+                state.customer.name = value;
+                // In real WhatsApp, phone comes automatically from the API
+                // For demo, we simulate it
+                if (!state.customer.phone) {
+                    state.customer.phone = generateDemoPhone();
+                    console.log('📱 Simulated WhatsApp phone:', state.customer.phone);
+                }
+                saveCustomer();
+                showAddressPrompt();
+            }
+            else if (action === 'submit_address') {
+                state.customer = state.customer || {};
+                state.customer.address = value;
+                saveCustomer();
+                showAddressConfirm(value);
+            }
+            else if (action === 'submit_custom_tip') {
+                var tipAmount = parseFloat(value) || 0;
+                state.tip = Math.max(0, tipAmount); // Ensure non-negative
+                renderPage('payment');
+            }
+        }
+        
+        // ============================================
+        // HELPERS
+        // ============================================
+        
+        // Format phone number for display
+        function formatPhone(phone) {
+            if (!phone) return '';
+            // Remove any non-digits
+            var digits = phone.replace(/\D/g, '');
+            // Format as (403) 555-1234
+            if (digits.length === 10) {
+                return '(' + digits.slice(0,3) + ') ' + digits.slice(3,6) + '-' + digits.slice(6);
+            } else if (digits.length === 11 && digits[0] === '1') {
+                return '+1 (' + digits.slice(1,4) + ') ' + digits.slice(4,7) + '-' + digits.slice(7);
+            }
+            return phone;
+        }
+        
+        // Generate demo phone (simulates WhatsApp providing this)
+        function generateDemoPhone() {
+            // Calgary area code 403, random number
+            return '1403' + Math.floor(1000000 + Math.random() * 9000000);
+        }
+        
+        function showAddressPrompt() {
+            // Check if we have a saved address
+            var savedAddress = state.customer ? state.customer.address : null;
+            var firstName = state.customer && state.customer.name ? state.customer.name.split(' ')[0] : '';
+            var phone = state.customer ? state.customer.phone : '';
+            var displayPhone = formatPhone(phone);
+            
+            var html = '<div style="text-align: center; padding: 15px 0;">' +
+                '<div style="font-size: 50px; margin-bottom: 10px;">🎉</div>' +
+                '<div style="font-size: 22px; font-weight: 700;">Hey ' + firstName + '!</div>' +
+                '<div style="font-size: 14px; color: #8696a0; margin-top: 6px;">Your discount is locked in</div>' +
+                '</div>';
+            
+            // Show WhatsApp info card - so they know we have their info
+            html += '<div style="background: #202c33; border-radius: 12px; padding: 14px; margin-bottom: 16px;">' +
+                '<div style="font-size: 11px; color: #8696a0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">📱 Connected via WhatsApp</div>' +
+                '<div style="display: flex; align-items: center; gap: 12px;">' +
+                '<div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #25D366, #128C7E); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700;">' + 
+                (state.customer.name ? state.customer.name.charAt(0).toUpperCase() : '?') + '</div>' +
+                '<div style="flex: 1;">' +
+                '<div style="font-size: 15px; font-weight: 600;">' + state.customer.name + '</div>' +
+                '<div style="font-size: 13px; color: #25D366;">' + displayPhone + '</div>' +
+                '</div>' +
+                '<div style="font-size: 18px; color: #25D366;">✓</div>' +
+                '</div>' +
+                '</div>';
+            
+            // Show discount reminder
+            if (isFirstTimeCustomer) {
+                html += '<div style="background: linear-gradient(135deg, #25D366, #128C7E); border-radius: 12px; padding: 14px; margin-bottom: 16px; text-align: center;">' +
+                    '<div style="font-size: 14px; font-weight: 700;">🎁 FREE Delivery + 10% OFF</div>' +
+                    '<div style="font-size: 12px; opacity: 0.9;">Applied at checkout</div>' +
+                    '</div>';
+            }
+            
+            html += '<div style="background: #202c33; border-radius: 16px; padding: 20px;">' +
+                '<div style="font-size: 15px; color: #e9edef; margin-bottom: 16px; text-align: center;">Where should we deliver your food?</div>';
+            
+            if (savedAddress) {
+                html += '<div class="buttons">' +
+                    '<button class="btn primary" data-action="use_saved_address">📍 ' + savedAddress + '</button>' +
+                    '<button class="btn" data-action="share_location">📍 Use GPS Location</button>' +
+                    '<button class="btn" data-action="type_address">✏️ Type Address</button>' +
+                    '</div>';
+            } else {
+                html += '<div class="buttons">' +
+                    '<button class="btn primary" data-action="share_location" style="font-size: 16px;">📍 Share My Location</button>' +
+                    '<button class="btn" data-action="type_address">✏️ Type Address Instead</button>' +
+                    '</div>';
+            }
+            
+            html += '</div>';
+            render(html);
+        }
+        
+        function showAddressInput() {
+            // Pre-fill with saved address if available
+            var savedAddress = state.customer && state.customer.address ? state.customer.address : '';
+            
+            var html = '<div style="background: #202c33; border-radius: 16px; padding: 20px;">' +
+                '<div style="font-size: 15px; color: #e9edef; margin-bottom: 14px; text-align: center;">📍 Enter your delivery address</div>' +
+                '<div class="input-bubble" style="margin: 0;">' +
+                '<input type="text" id="address_input" placeholder="e.g. 123 Main St NW, Calgary" value="' + savedAddress + '" autocomplete="off" style="font-size: 16px;">' +
+                '<button class="btn primary input-submit" data-input="address_input" data-action="submit_address">Continue</button>' +
+                '</div>' +
+                '</div>';
+            render(html);
+        }
+        
+        function showAddressConfirm(address) {
+            var firstName = state.customer && state.customer.name ? state.customer.name.split(' ')[0] : '';
+            
+            var html = '<div style="text-align: center; padding: 20px 0;">' +
+                '<div style="font-size: 50px; margin-bottom: 10px;">✅</div>' +
+                '<div style="font-size: 22px; font-weight: 700;">Perfect, ' + firstName + '!</div>' +
+                '</div>';
+            
+            html += '<div style="background: #202c33; border-radius: 16px; padding: 20px; margin-bottom: 20px;">' +
+                '<div style="font-size: 13px; color: #8696a0; margin-bottom: 8px;">DELIVERING TO</div>' +
+                '<div style="font-size: 17px; font-weight: 600;">📍 ' + address + '</div>' +
+                '<div style="font-size: 14px; color: #25D366; margin-top: 10px;">🚗 FREE delivery applies!</div>' +
+                '</div>';
+            
+            // Show discount if first time
+            if (isFirstTimeCustomer) {
+                html += '<div style="background: linear-gradient(135deg, #25D366, #128C7E); border-radius: 12px; padding: 16px; margin-bottom: 20px; text-align: center;">' +
+                    '<div style="font-size: 14px; font-weight: 700;">🎁 Your First Order Discount</div>' +
+                    '<div style="font-size: 20px; font-weight: 800; margin: 6px 0;">FREE Delivery + 10% OFF</div>' +
+                    '<div style="font-size: 12px; opacity: 0.9;">Auto-applied at checkout</div>' +
+                    '</div>';
+            }
+            
+            html += '<div class="buttons">' +
+                '<button class="btn primary" data-action="confirm_address" style="font-size: 16px;">🍽️ Let\'s See Restaurants!</button>' +
+                '<button class="btn" data-action="type_address">✏️ Change Address</button>' +
+                '</div>';
+            
+            render(html);
+        }
+        
+        function getLocation() {
+            var html = '<div class="bubble"><span class="spinner"></span> Finding your exact location...</div>';
+            render(html);
+            
+            if (!navigator.geolocation) {
+                setTimeout(function() {
+                    var errorHtml = '<div class="bubble">📍 GPS not available on this device.<br><br>Please type your address:</div>' +
+                        '<div class="input-bubble">' +
+                        '<input type="text" id="address_input" placeholder="e.g. 123 Main St NW, Calgary" autocomplete="off">' +
+                        '<button class="btn primary input-submit" data-input="address_input" data-action="submit_address">Continue</button>' +
+                        '</div>';
+                    render(errorHtml);
+                }, 500);
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                function(pos) {
+                    console.log('GPS Success:', pos.coords.latitude, pos.coords.longitude);
+                    reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+                },
+                function(err) {
+                    console.log('GPS Error:', err.message);
+                    var errorMsg = 'Could not get location.';
+                    if (err.code === 1) {
+                        errorMsg = 'Location permission denied.';
+                    } else if (err.code === 2) {
+                        errorMsg = 'Location unavailable.';
+                    } else if (err.code === 3) {
+                        errorMsg = 'Location request timed out.';
+                    }
+                    
+                    var errorHtml = '<div class="bubble">📍 ' + errorMsg + '<br><br>Please type your address:</div>' +
+                        '<div class="input-bubble">' +
+                        '<input type="text" id="address_input" placeholder="e.g. 123 Main St NW, Calgary" autocomplete="off">' +
+                        '<button class="btn primary input-submit" data-input="address_input" data-action="submit_address">Continue</button>' +
+                        '</div>';
+                    render(errorHtml);
+                },
+                { 
+                    enableHighAccuracy: true, 
+                    timeout: 15000,
+                    maximumAge: 60000
+                }
+            );
+        }
+        
+        function reverseGeocode(lat, lng) {
+            var url = 'https://nominatim.openstreetmap.org/reverse?format=json&lat=' + lat + '&lon=' + lng + '&addressdetails=1';
+            
+            console.log('Fetching address from:', url);
+            
+            fetch(url, {
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'LocalFirstYYC/1.0'
+                }
+            })
+                .then(function(res) { 
+                    if (!res.ok) throw new Error('Network error');
+                    return res.json(); 
+                })
+                .then(function(data) {
+                    console.log('Geocode result:', data);
+                    
+                    var fullAddress = '';
+                    
+                    if (data && data.address) {
+                        var addr = data.address;
+                        var houseNum = addr.house_number || '';
+                        var street = addr.road || addr.street || addr.pedestrian || addr.footway || addr.residential || '';
+                        var city = addr.city || addr.town || addr.village || addr.suburb || addr.municipality || 'Calgary';
+                        
+                        // Build address string
+                        var parts = [];
+                        if (houseNum) parts.push(houseNum);
+                        if (street) parts.push(street);
+                        
+                        if (parts.length > 0) {
+                            fullAddress = parts.join(' ') + ', ' + city;
+                        } else if (data.display_name) {
+                            // Use display_name as fallback
+                            var displayParts = data.display_name.split(',');
+                            fullAddress = displayParts.slice(0, 3).join(',').trim();
+                        }
+                    }
+                    
+                    // If still empty, use display_name
+                    if (!fullAddress && data && data.display_name) {
+                        var displayParts = data.display_name.split(',');
+                        fullAddress = displayParts.slice(0, 3).join(',').trim();
+                    }
+                    
+                    // Final fallback
+                    if (!fullAddress) {
+                        fullAddress = 'Calgary, AB';
+                    }
+                    
+                    console.log('Final address:', fullAddress);
+                    
+                    state.customer = state.customer || {};
+                    state.customer.address = fullAddress;
+                    state.customer.lat = lat;
+                    state.customer.lng = lng;
+                    saveCustomer();
+                    showAddressConfirm(fullAddress);
+                })
+                .catch(function(err) {
+                    console.log('Geocode error:', err);
+                    // Still save the coordinates even if geocoding fails
+                    state.customer = state.customer || {};
+                    state.customer.lat = lat;
+                    state.customer.lng = lng;
+                    
+                    // Ask user to type address
+                    var errorHtml = '<div class="bubble">📍 Found your location but couldn\'t get street address.<br><br>Please type your address:</div>' +
+                        '<div class="input-bubble">' +
+                        '<input type="text" id="address_input" placeholder="e.g. 123 Main St NW, Calgary" autocomplete="off">' +
+                        '<button class="btn primary input-submit" data-input="address_input" data-action="submit_address">Continue</button>' +
+                        '</div>';
+                    render(errorHtml);
+                });
+        }
+        
+        function selectRestaurant(id) {
+            var restaurants = {
+                '1': { 
+                    id: '1', 
+                    name: 'AB King Pizza', 
+                    icon: '🍕', 
+                    time: '25-35 min',
+                    owner: {
+                        name: 'Fatima Al-Rashid',
+                        image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&h=200&fit=crop&crop=face',
+                        story: 'Single mom of 5. Started in my kitchen, now feeding Calgary. Every pizza helps my kids dream bigger.',
+                        tagline: '👩‍👧‍👦 Mom of 5 • 🇨🇦 Calgary Born • 💪 Woman-Owned',
+                        since: 2018
+                    }
+                },
+                '2': { 
+                    id: '2', 
+                    name: 'Burger Barn', 
+                    icon: '🍔', 
+                    time: '30-40 min',
+                    owner: {
+                        name: 'Maria Santos',
+                        image: 'https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?w=200&h=200&fit=crop&crop=face',
+                        story: 'Left my corporate job to follow my dream. Now my daughter works beside me every weekend.',
+                        tagline: '👩‍🍳 Chef & Mom • 🇨🇦 Alberta Beef Only • 💪 Woman-Owned',
+                        since: 2015
+                    }
+                },
+                '3': { 
+                    id: '3', 
+                    name: 'Wing House', 
+                    icon: '🍗', 
+                    time: '35-45 min',
+                    owner: {
+                        name: 'Grace Okonkwo',
+                        image: 'https://images.unsplash.com/photo-1589156280159-27698a70f29e?w=200&h=200&fit=crop&crop=face',
+                        story: 'Came to Canada with $200. Now I employ 12 people from my community. Your order changes lives.',
+                        tagline: '🌍 Nigerian-Canadian • 👨‍👩‍👧‍👦 Employs 12 Locals • 💪 Woman-Owned',
+                        since: 2012
+                    }
+                },
+                '4': { 
+                    id: '4', 
+                    name: 'Taco Fiesta', 
+                    icon: '🌮', 
+                    time: '35-45 min',
+                    owner: {
+                        name: 'Rosa Hernandez',
+                        image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=200&h=200&fit=crop&crop=face',
+                        story: 'My grandmother\'s recipes saved our family. Now they\'re feeding yours. Taste the love in every bite.',
+                        tagline: '👵 3rd Gen Recipes • 🇲🇽 Mexican Heritage • 💪 Woman-Owned',
+                        since: 2018
+                    }
+                },
+                '5': { 
+                    id: '5', 
+                    name: 'Noodle King', 
+                    icon: '🍜', 
+                    time: '40-50 min',
+                    owner: {
+                        name: 'Lin Zhang',
+                        image: 'https://images.unsplash.com/photo-1607631568010-a87245c0daf8?w=200&h=200&fit=crop&crop=face',
+                        story: 'My parents worked 3 jobs so I could go to school. This restaurant is my way of making them proud.',
+                        tagline: '👨‍👩‍👦 Family Business • 🇨🇳 Chinese-Canadian • ❤️ For Mom & Dad',
+                        since: 2016
+                    }
+                }
+            };
+            state.restaurant = restaurants[id] || { id: id, name: 'Restaurant', time: '30-40 min' };
+            
+            // Show owner intro first
+            showOwnerIntro();
+        }
+        
+        // PAGE: Owner Introduction
+        function showOwnerIntro() {
+            var r = state.restaurant;
+            var owner = r.owner;
+            
+            if (!owner) {
+                renderPage('restaurant_home');
+                return;
+            }
+            
+            var yearsInBusiness = new Date().getFullYear() - owner.since;
+            
+            var html = '<div style="text-align: center; padding-top: 10px;">' +
+                '<div style="position: relative; display: inline-block; margin-bottom: 16px;">' +
+                '<img src="' + owner.image + '" style="width: 130px; height: 130px; border-radius: 50%; object-fit: cover; border: 4px solid #25D366;" onerror="this.src=\'https://placehold.co/130x130/202c33/25D366?text=' + encodeURIComponent(owner.name.charAt(0)) + '\'">' +
+                '</div>' +
+                '<div style="font-size: 13px; color: #25D366; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">Meet Your Chef</div>' +
+                '<div style="font-size: 26px; font-weight: 700; margin-bottom: 4px;">' + owner.name + '</div>' +
+                '<div style="font-size: 15px; color: #8696a0; margin-bottom: 12px;">' + r.name + '</div>';
+            
+            // Tagline badges
+            if (owner.tagline) {
+                html += '<div style="font-size: 12px; color: #e9edef; margin-bottom: 16px; line-height: 1.8;">' + owner.tagline + '</div>';
+            }
+            
+            html += '</div>';
+            
+            // Story card - more emotional
+            html += '<div style="background: linear-gradient(135deg, #1a2520, #0d1a15); border: 1px solid #25D366; border-radius: 16px; padding: 24px; margin-bottom: 20px; text-align: center;">' +
+                '<div style="font-size: 50px; margin-bottom: 16px;">' + r.icon + '</div>' +
+                '<div style="font-size: 17px; line-height: 1.7; color: #e9edef; font-style: italic;">"' + owner.story + '"</div>' +
+                '</div>';
+            
+            // Stats row
+            html += '<div style="display: flex; justify-content: center; gap: 16px; margin-bottom: 20px;">' +
+                '<div style="background: #202c33; border-radius: 12px; padding: 14px 20px; text-align: center;">' +
+                '<div style="font-size: 22px; font-weight: 700; color: #25D366;">' + yearsInBusiness + '</div>' +
+                '<div style="font-size: 10px; color: #8696a0; text-transform: uppercase;">Years</div>' +
+                '</div>' +
+                '<div style="background: #202c33; border-radius: 12px; padding: 14px 20px; text-align: center;">' +
+                '<div style="font-size: 22px; font-weight: 700; color: #25D366;">⭐ 4.9</div>' +
+                '<div style="font-size: 10px; color: #8696a0; text-transform: uppercase;">Rating</div>' +
+                '</div>' +
+                '<div style="background: #202c33; border-radius: 12px; padding: 14px 20px; text-align: center;">' +
+                '<div style="font-size: 22px; font-weight: 700; color: #25D366;">2K+</div>' +
+                '<div style="font-size: 10px; color: #8696a0; text-transform: uppercase;">Orders</div>' +
+                '</div>' +
+                '</div>';
+            
+            // LocalFirst impact badge
+            html += '<div style="background: #202c33; border-radius: 12px; padding: 16px; margin-bottom: 20px; display: flex; align-items: center; gap: 14px;">' +
+                '<div style="font-size: 36px;">💚</div>' +
+                '<div>' +
+                '<div style="font-size: 14px; font-weight: 600; color: #25D366;">Your Order Matters</div>' +
+                '<div style="font-size: 12px; color: #8696a0; line-height: 1.5;">100% goes to ' + owner.name.split(' ')[0] + '\'s family — not corporate headquarters</div>' +
+                '</div>' +
+                '</div>';
+            
+            html += '<div class="buttons">' +
+                '<button class="btn primary" data-action="continue_to_menu" style="font-size: 17px; padding: 16px;">Support ' + owner.name.split(' ')[0] + ' — Let\'s Order! 🍽️</button>' +
+                '</div>';
+            
+            render(html);
+            setHeader(r.name, r.name.substring(0,2), 'online');
+        }
+        
+        function selectItem(itemId) {
+            // Find item in all categories
+            var allItems = [];
+            ['pizza', 'donair', 'wings', 'salads', 'sides', 'drinks', 'combos'].forEach(function(cat) {
+                allItems = allItems.concat(getItemsForCategory(cat));
+            });
+            
+            var item = allItems.find(function(i) { return i.id === itemId; });
+            if (item) {
+                state.selectedItem = item;
+                renderPage('item_detail');
+            }
+        }
+        
+        function addItemWithSize(value) {
+            // value is "itemId_size" like "p1_L"
+            var parts = value.split('_');
+            var itemId = parts[0];
+            var sizeKey = parts[1];
+            
+            // Find item
+            var allItems = [];
+            ['pizza', 'donair', 'wings', 'salads', 'sides', 'drinks', 'combos'].forEach(function(cat) {
+                allItems = allItems.concat(getItemsForCategory(cat));
+            });
+            
+            var item = allItems.find(function(i) { return i.id === itemId; });
+            if (item) {
+                state.selectedItem = item;
+                state.selectedSize = sizeKey;
+                state.selectedToppings = [];
+                
+                // Check if this is a pizza - if so, show toppings
+                if (itemId.startsWith('p')) {
+                    renderPage('item_toppings');
+                } else {
+                    // Not pizza, add directly to cart
+                    addItemToCartWithToppings();
+                }
+            }
+        }
+        
+        // Add item to cart with selected toppings
+        function addItemToCartWithToppings() {
+            var item = state.selectedItem;
+            var sizeKey = state.selectedSize;
+            var toppings = state.selectedToppings;
+            
+            var sizes = getSizePrices(item.price);
+            var size = sizes[sizeKey];
+            var sizeNames = { 'S': 'Small', 'M': 'Medium', 'L': 'Large', 'XL': 'X-Large' };
+            
+            // Calculate toppings cost
+            var toppingsPrice = toppings.length * 1.50; // $1.50 per topping
+            var totalPrice = size.price + toppingsPrice;
+            
+            // Build name with toppings
+            var name = item.name + ' (' + sizeNames[sizeKey] + ')';
+            if (toppings.length > 0) {
+                name += ' + ' + toppings.length + ' topping' + (toppings.length > 1 ? 's' : '');
+            }
+            
+            state.cart.push({ 
+                id: item.id + '_' + sizeKey + '_' + Date.now(), 
+                name: name,
+                toppings: toppings,
+                price: totalPrice 
+            });
+            updateCart();
+            
+            renderPage('item_added');
+        }
+        
+        // Toggle topping selection
+        function toggleTopping(toppingId) {
+            var index = state.selectedToppings.indexOf(toppingId);
+            if (index === -1) {
+                state.selectedToppings.push(toppingId);
+            } else {
+                state.selectedToppings.splice(index, 1);
+            }
+            // Re-render toppings page to show updated selection
+            showToppingsPage();
+        }
+        
+        // Remove item from cart
+        function removeCartItem(index) {
+            if (index >= 0 && index < state.cart.length) {
+                state.cart.splice(index, 1);
+                updateCart();
+                showCartPage();
+            }
+        }
+        
+        // Get custom pizza ingredients with images
+        function getCustomPizzaIngredients() {
+            return {
+                cheese: [
+                    { id: 'mozzarella', name: 'Mozzarella', image: 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=100&h=100&fit=crop', price: 0, included: true },
+                    { id: 'extra_cheese', name: 'Extra Cheese', image: 'https://images.unsplash.com/photo-1552767059-ce182ead6c1b?w=100&h=100&fit=crop', price: 2.00 },
+                    { id: 'feta', name: 'Feta', image: 'https://images.unsplash.com/photo-1626957341926-98752fc2ba90?w=100&h=100&fit=crop', price: 1.50 },
+                    { id: 'parmesan', name: 'Parmesan', image: 'https://images.unsplash.com/photo-1621996346565-e3dbc646d9a9?w=100&h=100&fit=crop', price: 1.50 }
+                ],
+                meats: [
+                    { id: 'pepperoni', name: 'Pepperoni', image: 'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=100&h=100&fit=crop', price: 1.50 },
+                    { id: 'bacon', name: 'Bacon', image: 'https://images.unsplash.com/photo-1606851091851-e8c8c0fca5ba?w=100&h=100&fit=crop', price: 1.50 },
+                    { id: 'sausage', name: 'Italian Sausage', image: 'https://images.unsplash.com/photo-1565299507177-b0ac66763828?w=100&h=100&fit=crop', price: 1.50 },
+                    { id: 'ham', name: 'Ham', image: 'https://images.unsplash.com/photo-1524438418049-ab2acb7aa48f?w=100&h=100&fit=crop', price: 1.50 },
+                    { id: 'chicken', name: 'Grilled Chicken', image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d?w=100&h=100&fit=crop', price: 2.00 },
+                    { id: 'beef', name: 'Ground Beef', image: 'https://images.unsplash.com/photo-1588168333986-5078d3ae3976?w=100&h=100&fit=crop', price: 1.50 }
+                ],
+                veggies: [
+                    { id: 'mushrooms', name: 'Mushrooms', image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=100&h=100&fit=crop', price: 1.00 },
+                    { id: 'peppers', name: 'Green Peppers', image: 'https://images.unsplash.com/photo-1563565375-f3fdfdbefa83?w=100&h=100&fit=crop', price: 1.00 },
+                    { id: 'onions', name: 'Onions', image: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=100&h=100&fit=crop', price: 1.00 },
+                    { id: 'olives', name: 'Black Olives', image: 'https://images.unsplash.com/photo-1593030103066-0093718e75f1?w=100&h=100&fit=crop', price: 1.00 },
+                    { id: 'tomatoes', name: 'Tomatoes', image: 'https://images.unsplash.com/photo-1546470427-0d4db154cca8?w=100&h=100&fit=crop', price: 1.00 },
+                    { id: 'pineapple', name: 'Pineapple', image: 'https://images.unsplash.com/photo-1550258987-190a2d41a8ba?w=100&h=100&fit=crop', price: 1.00 },
+                    { id: 'jalapenos', name: 'Jalapeños', image: 'https://images.unsplash.com/photo-1583119022894-919a68a3d0e3?w=100&h=100&fit=crop', price: 1.00 },
+                    { id: 'spinach', name: 'Spinach', image: 'https://images.unsplash.com/photo-1576045057995-568f588f82fb?w=100&h=100&fit=crop', price: 1.00 }
+                ]
+            };
+        }
+        
+        // PAGE: Custom Pizza Builder
+        function showCustomPizzaPage() {
+            var ingredients = getCustomPizzaIngredients();
+            var toppingsPrice = calculateCustomPizzaPrice();
+            
+            var html = '<div class="page-title">🎨 Build Your Pizza</div>';
+            
+            // Selected toppings preview
+            if (state.customPizzaToppings.length > 0) {
+                html += '<div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; padding: 12px; background: #202c33; border-radius: 12px;">';
+                var allIngredients = [].concat(ingredients.cheese, ingredients.meats, ingredients.veggies);
+                state.customPizzaToppings.forEach(function(tid) {
+                    var ing = allIngredients.find(function(i) { return i.id === tid; });
+                    if (ing) {
+                        html += '<div style="display: flex; align-items: center; gap: 6px; background: #25D366; padding: 4px 10px; border-radius: 20px; font-size: 12px;">' +
+                            '<img src="' + ing.image + '" style="width: 20px; height: 20px; border-radius: 50%; object-fit: cover;">' +
+                            ing.name + '</div>';
+                    }
+                });
+                html += '</div>';
+            }
+            
+            // Cheese section
+            html += '<div class="section-header">🧀 CHEESE (Mozzarella included)</div>';
+            html += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">';
+            ingredients.cheese.forEach(function(ing) {
+                var isSelected = state.customPizzaToppings.indexOf(ing.id) !== -1 || ing.included;
+                html += buildIngredientCard(ing, isSelected);
+            });
+            html += '</div>';
+            
+            // Meats section
+            html += '<div class="section-header">🥓 MEATS (+$1.50 - $2.00)</div>';
+            html += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">';
+            ingredients.meats.forEach(function(ing) {
+                var isSelected = state.customPizzaToppings.indexOf(ing.id) !== -1;
+                html += buildIngredientCard(ing, isSelected);
+            });
+            html += '</div>';
+            
+            // Veggies section
+            html += '<div class="section-header">🥬 VEGGIES (+$1.00)</div>';
+            html += '<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px;">';
+            ingredients.veggies.forEach(function(ing) {
+                var isSelected = state.customPizzaToppings.indexOf(ing.id) !== -1;
+                html += buildIngredientCard(ing, isSelected);
+            });
+            html += '</div>';
+            
+            // Price summary
+            var basePrice = 12.99;
+            var totalPrice = basePrice + toppingsPrice;
+            html += '<div style="background: #202c33; border-radius: 12px; padding: 16px; margin-bottom: 16px;">' +
+                '<div style="display: flex; justify-content: space-between; font-size: 14px; color: #8696a0; margin-bottom: 6px;">' +
+                '<span>Base Pizza</span><span>$' + basePrice.toFixed(2) + '</span></div>' +
+                '<div style="display: flex; justify-content: space-between; font-size: 14px; color: #8696a0; margin-bottom: 6px;">' +
+                '<span>Toppings (' + state.customPizzaToppings.length + ')</span><span>$' + toppingsPrice.toFixed(2) + '</span></div>' +
+                '<div style="display: flex; justify-content: space-between; font-size: 18px; font-weight: 700; padding-top: 10px; border-top: 1px solid #2a3942;">' +
+                '<span>Small Pizza</span><span style="color: #25D366;">$' + totalPrice.toFixed(2) + '</span></div>' +
+                '</div>';
+            
+            html += '<div class="buttons">' +
+                '<button class="btn primary" data-action="custom_pizza_continue">Continue - Choose Size</button>' +
+                '<button class="btn" data-action="show_category" data-value="pizza">← Back to Pizzas</button>' +
+                '</div>';
+            
+            render(html);
+        }
+        
+        function buildIngredientCard(ing, isSelected) {
+            var selectedStyle = isSelected ? 'border: 2px solid #25D366; background: rgba(37,211,102,0.1);' : 'border: 2px solid #2a3942;';
+            var checkMark = isSelected ? '<div style="position: absolute; top: 5px; right: 5px; background: #25D366; color: white; width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px;">✓</div>' : '';
+            var priceTag = ing.included ? '<span style="color: #25D366; font-size: 11px;">Included</span>' : '<span style="color: #8696a0; font-size: 11px;">+$' + ing.price.toFixed(2) + '</span>';
+            
+            return '<div data-action="toggle_custom_topping" data-value="' + ing.id + '" style="position: relative; ' + selectedStyle + ' border-radius: 12px; padding: 10px; cursor: pointer; text-align: center;">' +
+                checkMark +
+                '<img src="' + ing.image + '" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; margin-bottom: 6px;" onerror="this.src=\'https://placehold.co/60x60/333/888?text=' + encodeURIComponent(ing.name.charAt(0)) + '\'">' +
+                '<div style="font-size: 13px; font-weight: 600;">' + ing.name + '</div>' +
+                priceTag +
+                '</div>';
+        }
+        
+        function toggleCustomTopping(toppingId) {
+            // Don't allow removing mozzarella (it's included)
+            if (toppingId === 'mozzarella') return;
+            
+            var index = state.customPizzaToppings.indexOf(toppingId);
+            if (index === -1) {
+                state.customPizzaToppings.push(toppingId);
+            } else {
+                state.customPizzaToppings.splice(index, 1);
+            }
+            showCustomPizzaPage();
+        }
+        
+        function calculateCustomPizzaPrice() {
+            var ingredients = getCustomPizzaIngredients();
+            var allIngredients = [].concat(ingredients.cheese, ingredients.meats, ingredients.veggies);
+            var total = 0;
+            state.customPizzaToppings.forEach(function(tid) {
+                var ing = allIngredients.find(function(i) { return i.id === tid; });
+                if (ing && !ing.included) {
+                    total += ing.price;
+                }
+            });
+            return total;
+        }
+        
+        // PAGE: Custom Pizza Size Selection
+        function showCustomPizzaSizePage() {
+            var basePrice = 12.99 + calculateCustomPizzaPrice();
+            var sizes = getSizePrices(basePrice);
+            
+            // Show selected toppings
+            var ingredients = getCustomPizzaIngredients();
+            var allIngredients = [].concat(ingredients.cheese, ingredients.meats, ingredients.veggies);
+            
+            var html = '<div class="page-title">🍕 Choose Size</div>';
+            
+            // Show pizza preview with toppings
+            html += '<div style="background: #202c33; border-radius: 12px; padding: 16px; margin-bottom: 20px;">' +
+                '<div style="font-size: 16px; font-weight: 600; margin-bottom: 12px;">Your Custom Pizza</div>' +
+                '<div style="display: flex; flex-wrap: wrap; gap: 8px;">';
+            
+            // Always show mozzarella
+            html += '<div style="display: flex; align-items: center; gap: 4px; background: #2a3942; padding: 4px 10px; border-radius: 20px; font-size: 12px;">🧀 Mozzarella</div>';
+            
+            state.customPizzaToppings.forEach(function(tid) {
+                var ing = allIngredients.find(function(i) { return i.id === tid; });
+                if (ing) {
+                    var emoji = ingredients.meats.find(function(i) { return i.id === tid; }) ? '🥓' : 
+                               ingredients.veggies.find(function(i) { return i.id === tid; }) ? '🥬' : '🧀';
+                    html += '<div style="display: flex; align-items: center; gap: 4px; background: #2a3942; padding: 4px 10px; border-radius: 20px; font-size: 12px;">' + emoji + ' ' + ing.name + '</div>';
+                }
+            });
+            html += '</div></div>';
+            
+            html += '<div class="section-header">SELECT SIZE</div>';
+            
+            // Size buttons
+            ['S', 'M', 'L', 'XL'].forEach(function(sizeKey) {
+                var size = sizes[sizeKey];
+                var popularClass = size.popular ? ' popular' : '';
+                var popularTag = size.popular ? '<span class="popular-tag">POPULAR</span>' : '';
+                
+                html += '<div class="size-btn' + popularClass + '" data-action="add_custom_pizza" data-value="' + sizeKey + '">' +
+                    '<div>' +
+                    '<span class="size-label">' + size.label + '</span>' +
+                    '<span class="size-name">' + size.name + '</span>' +
+                    popularTag +
+                    '</div>' +
+                    '<div class="size-price">$' + size.price.toFixed(2) + '</div>' +
+                    '</div>';
+            });
+            
+            html += '<div class="buttons" style="margin-top: 20px;">' +
+                '<button class="btn" data-action="custom_pizza">← Back to Toppings</button>' +
+                '</div>';
+            
+            render(html);
+        }
+        
+        function addCustomPizzaToCart(sizeKey) {
+            var basePrice = 12.99 + calculateCustomPizzaPrice();
+            var sizes = getSizePrices(basePrice);
+            var size = sizes[sizeKey];
+            var sizeNames = { 'S': 'Small', 'M': 'Medium', 'L': 'Large', 'XL': 'X-Large' };
+            
+            // Get topping names
+            var ingredients = getCustomPizzaIngredients();
+            var allIngredients = [].concat(ingredients.cheese, ingredients.meats, ingredients.veggies);
+            var toppingNames = state.customPizzaToppings.map(function(tid) {
+                var ing = allIngredients.find(function(i) { return i.id === tid; });
+                return ing ? ing.name : '';
+            }).filter(Boolean);
+            
+            var name = 'Custom Pizza (' + sizeNames[sizeKey] + ')';
+            
+            state.cart.push({
+                id: 'custom_' + sizeKey + '_' + Date.now(),
+                name: name,
+                toppings: ['Mozzarella'].concat(toppingNames),
+                price: size.price,
+                isCustom: true
+            });
+            
+            updateCart();
+            state.customPizzaToppings = []; // Reset for next time
+            renderPage('item_added');
+        }
+        
+        // PAGE: Item Added Confirmation
+        function showItemAdded() {
+            var lastItem = state.cart[state.cart.length - 1];
+            var total = state.cart.reduce(function(s, i) { return s + i.price; }, 0);
+            
+            // Get topping names if any
+            var toppingNames = '';
+            if (lastItem.toppings && lastItem.toppings.length > 0) {
+                if (lastItem.isCustom) {
+                    // Custom pizza - show all toppings
+                    toppingNames = '<div style="font-size: 14px; color: #8696a0; margin-top: 8px; line-height: 1.6;">' + lastItem.toppings.join(', ') + '</div>';
+                } else {
+                    // Regular pizza with extra toppings
+                    var allToppings = getToppings();
+                    var names = lastItem.toppings.map(function(tid) {
+                        var t = allToppings.find(function(x) { return x.id === tid; });
+                        return t ? t.name : tid;
+                    });
+                    toppingNames = '<div style="font-size: 14px; color: #8696a0; margin-top: 6px;">+ ' + names.join(', ') + '</div>';
+                }
+            }
+            
+            var html = '<div style="text-align: center; padding-top: 40px;">' +
+                '<div style="font-size: 60px; margin-bottom: 20px;">✅</div>' +
+                '<div style="font-size: 24px; font-weight: 700; margin-bottom: 10px;">Added to Cart!</div>' +
+                '<div style="font-size: 18px; margin-bottom: 8px;">' + lastItem.name + '</div>' +
+                toppingNames +
+                '<div style="font-size: 28px; font-weight: 700; color: #25D366; margin: 20px 0 30px;">$' + lastItem.price.toFixed(2) + '</div>' +
+                '<div style="background: #202c33; border-radius: 12px; padding: 16px; margin-bottom: 30px;">' +
+                '<div style="font-size: 14px; color: #8696a0;">Cart Total: ' + state.cart.length + ' item(s)</div>' +
+                '<div style="font-size: 22px; font-weight: 700; color: #25D366;">$' + total.toFixed(2) + '</div>' +
+                '</div>' +
+                '<div class="buttons">' +
+                '<button class="btn primary" data-action="go_checkout">✅ Checkout</button>' +
+                '<button class="btn" data-action="add_more">➕ Add More Items</button>' +
+                '</div>' +
+                '</div>';
+            
+            render(html);
+        }
+        
+        function addToCart(itemId) {
+            // Find item and add to cart
+            var allItems = [];
+            ['pizza', 'donair', 'wings', 'salads', 'sides', 'drinks', 'combos'].forEach(function(cat) {
+                allItems = allItems.concat(getItemsForCategory(cat));
+            });
+            
+            var item = allItems.find(function(i) { return i.id === itemId; });
+            if (item) {
+                state.cart.push({ id: item.id, name: item.name, price: item.price });
+                updateCart();
+                alert('✅ Added to cart!\n\n' + item.name + ' - $' + item.price.toFixed(2));
+            }
+        }
+        
+        function viewSpecial(specialId) {
+            var special = state.specials.find(function(s) { return s.id === specialId; });
+            if (!special) {
+                // Fallback specials data
+                var fallbackSpecials = {
+                    's1': { id: 's1', tag: '🔥 Most Popular', name: 'Family Feast Deal', desc: '2 Large Pizzas + Wings + 2L Pop', oldPrice: 54.99, newPrice: 39.99, image: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=200&fit=crop' },
+                    's2': { id: 's2', tag: '⚡ Limited Time', name: 'Lunch Special', desc: 'Medium 2-Topping Pizza + Can Pop', oldPrice: 18.99, newPrice: 12.99, image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=200&fit=crop' },
+                    's3': { id: 's3', tag: '❤️ Customer Favorite', name: 'Wing Wednesday', desc: '2 lbs Wings + Fries + Dip', oldPrice: 28.99, newPrice: 19.99, image: 'https://images.unsplash.com/photo-1608039755401-742074f0548d?w=400&h=200&fit=crop' }
+                };
+                special = fallbackSpecials[specialId];
+            }
+            
+            if (special) {
+                state.selectedSpecial = special;
+                renderPage('special_detail');
+            }
+        }
+        
+        function addSpecialToCart(specialId) {
+            var special = state.selectedSpecial || state.specials.find(function(s) { return s.id === specialId; });
+            if (!special) {
+                var fallbackSpecials = {
+                    's1': { name: 'Family Feast Deal', newPrice: 39.99 },
+                    's2': { name: 'Lunch Special', newPrice: 12.99 },
+                    's3': { name: 'Wing Wednesday', newPrice: 19.99 }
+                };
+                special = fallbackSpecials[specialId];
+                special.id = specialId;
+            }
+            
+            if (special) {
+                state.cart.push({ id: special.id + '_' + Date.now(), name: special.name, price: special.newPrice });
+                updateCart();
+                renderPage('item_added');
+            }
+        }
+        
+        function showCartPage() {
+            if (state.cart.length === 0) {
+                var emptyHtml = '<div class="page-title">🛒 Your Cart</div>' +
+                    '<div style="text-align: center; padding: 40px 20px;">' +
+                    '<div style="font-size: 60px; margin-bottom: 20px;">🛒</div>' +
+                    '<div style="font-size: 20px; font-weight: 600; margin-bottom: 10px;">Your cart is empty</div>' +
+                    '<div style="font-size: 14px; color: #8696a0; margin-bottom: 30px;">Add some delicious items!</div>' +
+                    '<div class="buttons"><button class="btn primary" data-action="show_menu">📋 Browse Menu</button></div>' +
+                    '</div>';
+                render(emptyHtml);
+                return;
+            }
+            
+            var total = state.cart.reduce(function(s, i) { return s + i.price; }, 0);
+            
+            var html = '<div class="page-title">🛒 Your Cart</div>';
+            
+            // Cart items with remove button
+            state.cart.forEach(function(item, index) {
+                html += '<div style="background: #202c33; border-radius: 12px; padding: 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px;">' +
+                    '<div style="flex: 1;">' +
+                    '<div style="font-size: 15px; font-weight: 600;">' + item.name + '</div>' +
+                    '<div style="font-size: 16px; font-weight: 700; color: #25D366; margin-top: 4px;">$' + item.price.toFixed(2) + '</div>' +
+                    '</div>' +
+                    '<div class="remove-btn" data-action="remove_item" data-value="' + index + '" style="background: #ff4444; color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 18px;">×</div>' +
+                    '</div>';
+            });
+            
+            // Add more items button
+            html += '<button class="btn" data-action="show_menu" style="margin-top: 10px; margin-bottom: 20px;">➕ Add More Items</button>';
+            
+            // Order summary
+            html += '<div style="background: #202c33; border-radius: 12px; padding: 16px; margin-bottom: 20px;">' +
+                '<div style="display: flex; justify-content: space-between; font-size: 14px; color: #8696a0; margin-bottom: 8px;">' +
+                '<span>Subtotal (' + state.cart.length + ' item' + (state.cart.length > 1 ? 's' : '') + ')</span><span>$' + total.toFixed(2) + '</span></div>' +
+                '<div style="display: flex; justify-content: space-between; font-size: 14px; color: #8696a0; margin-bottom: 8px;">' +
+                '<span>Delivery</span><span style="color: #25D366;">FREE</span></div>' +
+                '<div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; padding-top: 12px; border-top: 1px solid #2a3942;">' +
+                '<span>Total</span><span style="color: #25D366;">$' + total.toFixed(2) + '</span></div>' +
+                '</div>';
+            
+            html += '<div class="buttons">' +
+                '<button class="btn primary" data-action="checkout">✅ Proceed to Checkout</button>' +
+                '</div>';
+            
+            render(html);
+        }
+        
+        // PAGE: Tip Selection
+        function showTipPage() {
+            var subtotal = state.cart.reduce(function(s, i) { return s + i.price; }, 0);
+            
+            var html = '<div class="page-title">🚗 Add a Tip?</div>' +
+                '<div style="background: linear-gradient(135deg, #1a2530, #0d1820); border: 1px solid #25D366; border-radius: 16px; padding: 20px; margin-bottom: 20px; text-align: center;">' +
+                '<div style="font-size: 40px; margin-bottom: 12px;">💚</div>' +
+                '<div style="font-size: 15px; color: #e9edef; line-height: 1.7;">' +
+                'Your driver keeps <b style="color: #25D366;">100%</b> of tips.<br>' +
+                '<span style="font-size: 13px; color: #8696a0;">Many are newcomers to Canada, working hard to build a better life for their families.</span>' +
+                '</div>' +
+                '</div>';
+            
+            // Percentage-based tip options
+            var tipOptions = [
+                { percent: 0, label: 'No Tip', emoji: '' },
+                { percent: 15, label: '15%', emoji: '👍' },
+                { percent: 18, label: '18%', emoji: '🙏' },
+                { percent: 20, label: '20%', emoji: '⭐' },
+                { percent: 25, label: '25%', emoji: '🌟' }
+            ];
+            
+            tipOptions.forEach(function(tip) {
+                var tipAmount = Math.round(subtotal * tip.percent) / 100;
+                var total = subtotal + tipAmount;
+                var btnClass = tip.percent === 18 ? 'btn primary' : 'btn';
+                var tipDisplay = tip.percent > 0 ? '$' + tipAmount.toFixed(2) : '';
+                
+                html += '<button class="' + btnClass + '" style="margin-bottom: 10px; display: flex; justify-content: space-between; width: 100%;" data-action="set_tip_percent" data-value="' + tip.percent + '">' +
+                    '<span>' + tip.emoji + ' ' + tip.label + (tipDisplay ? ' (' + tipDisplay + ')' : '') + '</span>' +
+                    '<span style="color: ' + (tip.percent === 0 ? '#8696a0' : '#25D366') + ';">Total: $' + total.toFixed(2) + '</span>' +
+                    '</button>';
+            });
+            
+            // Custom tip button
+            html += '<button class="btn" style="margin-bottom: 10px; margin-top: 10px;" data-action="custom_tip">✏️ Custom Amount</button>';
+            
+            render(html);
+        }
+        
+        // PAGE: Custom Tip Input
+        function showCustomTipPage() {
+            var subtotal = state.cart.reduce(function(s, i) { return s + i.price; }, 0);
+            
+            var html = '<div class="page-title">✏️ Custom Tip</div>' +
+                '<div style="background: #202c33; border-radius: 12px; padding: 16px; margin-bottom: 20px;">' +
+                '<div style="font-size: 14px; color: #8696a0; margin-bottom: 8px;">Order Subtotal</div>' +
+                '<div style="font-size: 24px; font-weight: 700;">$' + subtotal.toFixed(2) + '</div>' +
+                '</div>' +
+                '<div class="section-header">ENTER TIP AMOUNT</div>' +
+                '<div class="input-bubble">' +
+                '<input type="number" id="custom_tip_input" placeholder="Enter tip amount (e.g. 5.00)" style="font-size: 20px; text-align: center;" min="0" step="0.50">' +
+                '<button class="btn primary input-submit" data-input="custom_tip_input" data-action="submit_custom_tip">Continue</button>' +
+                '</div>' +
+                '<div style="text-align: center; margin-top: 16px;">' +
+                '<button class="btn" data-action="show_tip_page" style="width: auto; padding: 12px 24px;">← Back to Tip Options</button>' +
+                '</div>';
+            
+            render(html);
+        }
+        
+        // PAGE: Payment Selection
+        function showPaymentPage() {
+            var subtotal = state.cart.reduce(function(s, i) { return s + i.price; }, 0);
+            
+            // Calculate discount for first time customers
+            var discount = 0;
+            var deliveryFee = 0;
+            if (state.firstOrderDiscount) {
+                discount = Math.round(subtotal * state.discountPercent) / 100;
+                deliveryFee = 0; // Free delivery
+            }
+            
+            var total = subtotal - discount + deliveryFee + state.tip;
+            
+            var html = '<div class="page-title">💳 Payment</div>';
+            
+            // If single item, show image
+            if (state.cart.length === 1) {
+                var item = state.cart[0];
+                var itemImage = getItemImage(item);
+                if (itemImage) {
+                    html += '<img src="' + itemImage + '" style="width: 100%; height: 150px; object-fit: cover; border-radius: 12px; margin-bottom: 16px;" onerror="this.style.display=\'none\'">';
+                }
+            }
+            
+            // First order discount banner
+            if (state.firstOrderDiscount) {
+                html += '<div style="background: linear-gradient(135deg, #25D366, #128C7E); border-radius: 12px; padding: 14px; margin-bottom: 16px; text-align: center;">' +
+                    '<div style="font-size: 14px; font-weight: 700;">🎉 First Order Discount Applied!</div>' +
+                    '<div style="font-size: 13px; opacity: 0.95;">FREE Delivery + 10% OFF = You save $' + (discount + 6.99).toFixed(2) + '</div>' +
+                    '</div>';
+            }
+            
+            // Order summary
+            html += '<div style="background: #202c33; border-radius: 12px; padding: 16px; margin-bottom: 20px;">' +
+                '<div style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: #8696a0;">ORDER SUMMARY</div>';
+            
+            state.cart.forEach(function(item) {
+                html += '<div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 6px;">' +
+                    '<span>' + item.name + '</span>' +
+                    '<span>$' + item.price.toFixed(2) + '</span></div>';
+            });
+            
+            html += '<div style="border-top: 1px solid #2a3942; margin-top: 12px; padding-top: 12px;">' +
+                '<div style="display: flex; justify-content: space-between; font-size: 14px; color: #8696a0; margin-bottom: 6px;">' +
+                '<span>Subtotal</span><span>$' + subtotal.toFixed(2) + '</span></div>';
+            
+            // Show discount if applicable
+            if (state.firstOrderDiscount && discount > 0) {
+                html += '<div style="display: flex; justify-content: space-between; font-size: 14px; color: #25D366; margin-bottom: 6px;">' +
+                    '<span>🎁 First Order (10% OFF)</span><span>-$' + discount.toFixed(2) + '</span></div>';
+            }
+            
+            // Delivery
+            html += '<div style="display: flex; justify-content: space-between; font-size: 14px; color: #8696a0; margin-bottom: 6px;">' +
+                '<span>Delivery</span>';
+            if (state.firstOrderDiscount) {
+                html += '<span><span style="text-decoration: line-through; margin-right: 8px;">$6.99</span><span style="color: #25D366;">FREE</span></span>';
+            } else {
+                html += '<span style="color: #25D366;">FREE</span>';
+            }
+            html += '</div>';
+            
+            if (state.tip > 0) {
+                var tipPercent = Math.round((state.tip / subtotal) * 100);
+                html += '<div style="display: flex; justify-content: space-between; font-size: 14px; color: #8696a0; margin-bottom: 6px;">' +
+                    '<span>Driver Tip (' + tipPercent + '%)</span><span>$' + state.tip.toFixed(2) + '</span></div>';
+            }
+            
+            html += '<div style="display: flex; justify-content: space-between; font-size: 20px; font-weight: 700; margin-top: 12px;">' +
+                '<span>Total</span><span style="color: #25D366;">$' + total.toFixed(2) + '</span></div>';
+            
+            // Show savings
+            if (state.firstOrderDiscount) {
+                html += '<div style="text-align: center; margin-top: 10px; font-size: 13px; color: #25D366; font-weight: 600;">' +
+                    '💚 You\'re saving $' + (discount + 6.99).toFixed(2) + ' on this order!' +
+                    '</div>';
+            }
+            
+            html += '</div></div>';
+            
+            // Customer & Delivery info
+            var customerAddress = state.customer && state.customer.address ? state.customer.address : 'Your location';
+            var customerName = state.customer && state.customer.name ? state.customer.name : 'Guest';
+            var customerPhone = state.customer && state.customer.phone ? formatPhone(state.customer.phone) : '';
+            var deliveryTime = state.restaurant && state.restaurant.time ? state.restaurant.time : '30-40 min';
+            
+            html += '<div style="background: #202c33; border-radius: 12px; padding: 16px; margin-bottom: 20px;">' +
+                '<div style="font-size: 12px; font-weight: 600; margin-bottom: 12px; color: #8696a0; text-transform: uppercase; letter-spacing: 1px;">📋 CONTACT & DELIVERY</div>' +
+                '<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #2a3942;">' +
+                '<div style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #25D366, #128C7E); display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700;">' + 
+                customerName.charAt(0).toUpperCase() + '</div>' +
+                '<div style="flex: 1;">' +
+                '<div style="font-size: 15px; font-weight: 600;">' + customerName + '</div>' +
+                '<div style="font-size: 13px; color: #25D366;">' + customerPhone + '</div>' +
+                '</div>' +
+                '</div>' +
+                '<div style="font-size: 15px; margin-bottom: 6px;">📍 ' + customerAddress + '</div>' +
+                '<div style="font-size: 14px; color: #8696a0;">🕐 Est. ' + deliveryTime + '</div>' +
+                '</div>';
+            
+            // Payment methods section
+            html += '<div class="section-header">SELECT PAYMENT METHOD</div>';
+            
+            // Credit Card option
+            html += '<div class="payment-option" data-action="show_credit_cards" style="background: #202c33; border: 2px solid #2a3942; border-radius: 12px; padding: 16px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 14px;">' +
+                '<div style="font-size: 28px;">💳</div>' +
+                '<div style="flex: 1;">' +
+                '<div style="font-size: 16px; font-weight: 600;">Credit Card</div>' +
+                '<div style="font-size: 12px; color: #8696a0;">Visa, Mastercard, Amex</div>' +
+                '</div>' +
+                '<div style="font-size: 20px; color: #8696a0;">›</div>' +
+                '</div>';
+            
+            // Debit Card option
+            html += '<div class="payment-option" data-action="pay_debit" style="background: #202c33; border: 2px solid #2a3942; border-radius: 12px; padding: 16px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 14px;">' +
+                '<div style="font-size: 28px;">🏦</div>' +
+                '<div style="flex: 1;">' +
+                '<div style="font-size: 16px; font-weight: 600;">Debit Card</div>' +
+                '<div style="font-size: 12px; color: #8696a0;">Interac, Bank Card</div>' +
+                '</div>' +
+                '<div style="font-size: 20px; color: #8696a0;">›</div>' +
+                '</div>';
+            
+            // Cash on Delivery option
+            if (state.codAllowed) {
+                html += '<div class="payment-option" data-action="pay_cash" style="background: #202c33; border: 2px solid #2a3942; border-radius: 12px; padding: 16px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 14px;">' +
+                    '<div style="font-size: 28px;">💵</div>' +
+                    '<div style="flex: 1;">' +
+                    '<div style="font-size: 16px; font-weight: 600;">Cash on Delivery</div>' +
+                    '<div style="font-size: 12px; color: #8696a0;">Pay when order arrives</div>' +
+                    '</div>' +
+                    '<div style="font-size: 20px; color: #8696a0;">›</div>' +
+                    '</div>';
+            } else {
+                html += '<div style="background: #2a2a2a; border: 2px solid #3a3a3a; border-radius: 12px; padding: 16px; margin-bottom: 10px; opacity: 0.6;">' +
+                    '<div style="display: flex; align-items: center; gap: 14px;">' +
+                    '<div style="font-size: 28px;">💵</div>' +
+                    '<div style="flex: 1;">' +
+                    '<div style="font-size: 16px; font-weight: 600; color: #666;">Cash on Delivery</div>' +
+                    '<div style="font-size: 12px; color: #ff6b6b;">⚠️ ' + (state.codBlockReason || 'Not available') + '</div>' +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+            }
+            
+            // Show last order info if returning customer
+            if (state.lastOrders && state.lastOrders.length > 0) {
+                var lastOrder = state.lastOrders[0];
+                html += '<div style="background: #1a2a1a; border: 1px solid #25D366; border-radius: 12px; padding: 14px; margin-top: 16px;">' +
+                    '<div style="font-size: 12px; color: #25D366; margin-bottom: 6px;">🔄 RETURNING CUSTOMER</div>' +
+                    '<div style="font-size: 13px; color: #8696a0;">Last order: ' + (lastOrder.restaurant_name || 'Previous restaurant') + '</div>' +
+                    '<div style="font-size: 13px; color: #8696a0;">Payment: ' + (lastOrder.payment_method === 'cash' ? '💵 Cash' : '💳 Card') + '</div>' +
+                    '</div>';
+            }
+            
+            render(html);
+        }
+        
+        // PAGE: Credit Card Selection
+        function showCreditCardPage() {
+            var subtotal = state.cart.reduce(function(s, i) { return s + i.price; }, 0);
+            var total = subtotal + state.tip;
+            
+            var html = '<div class="page-title">💳 Select Card</div>';
+            
+            // Card options
+            var cards = [
+                { id: 'visa', name: 'Visa', icon: '💳', color: '#1a1f71' },
+                { id: 'mastercard', name: 'Mastercard', icon: '💳', color: '#eb001b' },
+                { id: 'amex', name: 'American Express', icon: '💳', color: '#006fcf' },
+                { id: 'discover', name: 'Discover', icon: '💳', color: '#ff6000' }
+            ];
+            
+            cards.forEach(function(card) {
+                html += '<div class="payment-option" data-action="pay_credit" data-value="' + card.id + '" style="background: #202c33; border: 2px solid #2a3942; border-radius: 12px; padding: 16px; margin-bottom: 10px; cursor: pointer; display: flex; align-items: center; gap: 14px;">' +
+                    '<div style="width: 50px; height: 32px; background: ' + card.color + '; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 20px;">💳</div>' +
+                    '<div style="flex: 1;">' +
+                    '<div style="font-size: 16px; font-weight: 600;">' + card.name + '</div>' +
+                    '</div>' +
+                    '<div style="font-size: 16px; font-weight: 700; color: #25D366;">$' + total.toFixed(2) + '</div>' +
+                    '</div>';
+            });
+            
+            html += '<div class="buttons" style="margin-top: 20px;">' +
+                '<button class="btn" data-action="go_to_payment">← Back to Payment Options</button>' +
+                '</div>';
+            
+            render(html);
+        }
+        
+        // Helper to get item image
+        function getItemImage(cartItem) {
+            // Custom pizza
+            if (cartItem.isCustom) {
+                return 'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=200&fit=crop';
+            }
+            
+            // Check if it's a special
+            if (cartItem.id && cartItem.id.startsWith('s')) {
+                var specialImages = {
+                    's1': 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=200&fit=crop',
+                    's2': 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=200&fit=crop',
+                    's3': 'https://images.unsplash.com/photo-1608039755401-742074f0548d?w=400&h=200&fit=crop'
+                };
+                var specialId = cartItem.id.split('_')[0];
+                return specialImages[specialId];
+            }
+            
+            // Check menu items
+            var itemId = cartItem.id ? cartItem.id.split('_')[0] : '';
+            var allItems = [];
+            ['pizza', 'donair', 'wings', 'salads', 'sides', 'drinks', 'combos'].forEach(function(cat) {
+                allItems = allItems.concat(getItemsForCategory(cat));
+            });
+            var found = allItems.find(function(i) { return i.id === itemId; });
+            return found ? found.image : null;
+        }
+        
+        // Process Payment
+        function processPayment(method, cardType) {
+            var subtotal = state.cart.reduce(function(s, i) { return s + i.price; }, 0);
+            
+            // Calculate discount for first time customers
+            var discount = 0;
+            if (state.firstOrderDiscount) {
+                discount = Math.round(subtotal * state.discountPercent) / 100;
+            }
+            
+            var total = subtotal - discount + state.tip;
+            
+            state.paymentMethod = method;
+            state.orderNumber = 'LF-' + Math.floor(Math.random() * 9000 + 1000);
+            state.orderTotal = total;
+            state.orderDiscount = discount;
+            
+            // Determine display method
+            var displayMethod = method;
+            if (method === 'credit' && cardType) {
+                displayMethod = cardType;
+            }
+            state.displayPaymentMethod = displayMethod;
+            
+            if (method !== 'cash') {
+                // Show processing for card payments
+                var cardName = {
+                    'debit': 'Debit Card',
+                    'visa': 'Visa',
+                    'mastercard': 'Mastercard',
+                    'amex': 'American Express',
+                    'discover': 'Discover',
+                    'card': 'Card',
+                    'credit': 'Credit Card'
+                };
+                
+                var html = '<div style="text-align: center; padding-top: 60px;">' +
+                    '<div class="spinner" style="width: 50px; height: 50px; border-width: 4px; margin: 0 auto 20px;"></div>' +
+                    '<div style="font-size: 20px; font-weight: 600;">Processing ' + (cardName[displayMethod] || 'Payment') + '...</div>' +
+                    '<div style="font-size: 14px; color: #8696a0; margin-top: 10px;">Please wait</div>' +
+                    '</div>';
+                render(html);
+                
+                // Simulate payment processing then save order
+                setTimeout(function() {
+                    // Save order to database
+                    saveOrderToDatabase({
+                        orderNumber: state.orderNumber,
+                        total: total,
+                        discount: discount,
+                        paymentMethod: displayMethod
+                    });
+                    
+                    // Mark first order discount as used
+                    if (state.firstOrderDiscount) {
+                        localStorage.setItem('localfirst_first_order_used', 'true');
+                    }
+                    
+                    renderPage('confirmed');
+                }, 2000);
+            } else {
+                // Cash on delivery - save order and go to confirmation
+                saveOrderToDatabase({
+                    orderNumber: state.orderNumber,
+                    total: total,
+                    discount: discount,
+                    paymentMethod: 'cash'
+                });
+                
+                // Mark first order discount as used
+                if (state.firstOrderDiscount) {
+                    localStorage.setItem('localfirst_first_order_used', 'true');
+                }
+                
+                renderPage('confirmed');
+            }
+        }
+        
+        // PAGE: Order Confirmed
+        function showConfirmedPage() {
+            var total = state.orderTotal || state.cart.reduce(function(s, i) { return s + i.price; }, 0) + state.tip;
+            var isCash = state.paymentMethod === 'cash';
+            var deliveryTime = state.restaurant && state.restaurant.time ? state.restaurant.time : '30-40 min';
+            
+            // Parse delivery time to get end time for timeline
+            var timeMatch = deliveryTime.match(/(\d+)-(\d+)/);
+            var prepTime = timeMatch ? Math.round(parseInt(timeMatch[1]) * 0.4) : 15;
+            var pickupTime = timeMatch ? Math.round(parseInt(timeMatch[1]) * 0.7) : 25;
+            var deliverTime = timeMatch ? timeMatch[2] : 40;
+            
+            // Assign a driver
+            var drivers = [
+                {
+                    name: 'Ahmed Hassan',
+                    image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200&h=200&fit=crop&crop=face',
+                    vehicle: 'Honda Civic',
+                    rating: 4.9,
+                    deliveries: 1247,
+                    story: 'Came from Syria 3 years ago. Engineering degree back home, delivering pizza to feed my 3 kids here. Your tip = their school supplies.',
+                    flag: '🇸🇾'
+                },
+                {
+                    name: 'Priya Patel',
+                    image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop&crop=face',
+                    vehicle: 'Toyota Corolla',
+                    rating: 4.8,
+                    deliveries: 892,
+                    story: 'Single mom, new to Canada. Working nights so I can be home when my son wakes up. Every delivery brings us closer to our dreams.',
+                    flag: '🇮🇳'
+                },
+                {
+                    name: 'Emmanuel Osei',
+                    image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=face',
+                    vehicle: 'Ford Focus',
+                    rating: 4.9,
+                    deliveries: 2103,
+                    story: 'Studying nursing by day, driving by night. Sent my first paycheck home to Ghana — mom cried. 2 more years until I graduate.',
+                    flag: '🇬🇭'
+                },
+                {
+                    name: 'Maria Rodriguez',
+                    image: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop&crop=face',
+                    vehicle: 'Hyundai Elantra',
+                    rating: 4.7,
+                    deliveries: 567,
+                    story: 'Fled Venezuela with nothing. Canada gave us safety, now I\'m working for our future. My daughter starts school next month!',
+                    flag: '🇻🇪'
+                },
+                {
+                    name: 'Yusuf Ibrahim',
+                    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=200&h=200&fit=crop&crop=face',
+                    vehicle: 'Mazda 3',
+                    rating: 4.9,
+                    deliveries: 1834,
+                    story: 'Former teacher in Somalia. Here I deliver food, but I also deliver hope to my family. Thank you for being part of our journey.',
+                    flag: '🇸🇴'
+                }
+            ];
+            var driver = drivers[Math.floor(Math.random() * drivers.length)];
+            state.assignedDriver = driver;
+            
+            var html = '<div style="text-align: center; padding-top: 20px;">' +
+                '<div style="font-size: 60px; margin-bottom: 10px;">🎉</div>' +
+                '<div style="font-size: 24px; font-weight: 800; margin-bottom: 5px;">Order Confirmed!</div>' +
+                '<div style="font-size: 14px; color: #8696a0; margin-bottom: 20px;">Order #' + (state.orderNumber || 'LF-0000') + '</div>' +
+                '</div>';
+            
+            // Driver card
+            html += '<div style="background: linear-gradient(135deg, #1a2530, #0d1820); border: 2px solid #25D366; border-radius: 16px; padding: 20px; margin-bottom: 20px;">' +
+                '<div style="font-size: 12px; color: #25D366; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; text-align: center;">🚗 YOUR DRIVER IS ON THE WAY</div>' +
+                '<div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px;">' +
+                '<div style="position: relative;">' +
+                '<img src="' + driver.image + '" style="width: 75px; height: 75px; border-radius: 50%; object-fit: cover; border: 3px solid #25D366;" onerror="this.src=\'https://placehold.co/75x75/202c33/25D366?text=' + encodeURIComponent(driver.name.charAt(0)) + '\'">' +
+                '<div style="position: absolute; bottom: -4px; right: -4px; font-size: 22px;">' + (driver.flag || '🚗') + '</div>' +
+                '</div>' +
+                '<div style="flex: 1;">' +
+                '<div style="font-size: 18px; font-weight: 700;">' + driver.name + '</div>' +
+                '<div style="font-size: 12px; color: #8696a0;">🚗 ' + driver.vehicle + ' • ⭐ ' + driver.rating + '</div>' +
+                '<div style="font-size: 12px; color: #25D366;">' + driver.deliveries.toLocaleString() + ' deliveries completed</div>' +
+                '</div>' +
+                '</div>' +
+                '<div style="background: #202c33; border-radius: 12px; padding: 14px; font-size: 14px; color: #e9edef; line-height: 1.6; text-align: center;">' +
+                '"' + driver.story + '"' +
+                '</div>' +
+                '</div>';
+            
+            // Restaurant owner preparing
+            var owner = state.restaurant && state.restaurant.owner ? state.restaurant.owner : null;
+            html += '<div style="background: #202c33; border-radius: 16px; padding: 20px; margin-bottom: 20px;">' +
+                '<div style="display: flex; align-items: center; gap: 15px; margin-bottom: 16px;">';
+            
+            if (owner) {
+                html += '<img src="' + owner.image + '" style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover;" onerror="this.src=\'https://placehold.co/50x50/202c33/25D366?text=👨‍🍳\'">';
+            } else {
+                html += '<div style="font-size: 40px;">👨‍🍳</div>';
+            }
+            
+            html += '<div>' +
+                '<div style="font-size: 16px; font-weight: 600;">Preparing your order</div>' +
+                '<div style="font-size: 14px; color: #8696a0;">' + (owner ? owner.name + ' at ' : '') + (state.restaurant ? state.restaurant.name : 'Restaurant') + '</div>' +
+                '</div></div>';
+            
+            // Timeline
+            html += '<div style="border-left: 2px solid #25D366; margin-left: 20px; padding-left: 20px;">' +
+                '<div style="margin-bottom: 15px;">' +
+                '<div style="font-size: 14px; font-weight: 600; color: #25D366;">✓ Order Received</div>' +
+                '<div style="font-size: 12px; color: #8696a0;">Just now</div>' +
+                '</div>' +
+                '<div style="margin-bottom: 15px;">' +
+                '<div style="font-size: 14px; font-weight: 600;">🍕 Preparing</div>' +
+                '<div style="font-size: 12px; color: #8696a0;">~' + prepTime + ' min</div>' +
+                '</div>' +
+                '<div style="margin-bottom: 15px;">' +
+                '<div style="font-size: 14px; font-weight: 600; color: #8696a0;">🚗 ' + driver.name.split(' ')[0] + ' picks up</div>' +
+                '<div style="font-size: 12px; color: #8696a0;">~' + pickupTime + ' min</div>' +
+                '</div>' +
+                '<div>' +
+                '<div style="font-size: 14px; font-weight: 600; color: #8696a0;">📍 Delivery</div>' +
+                '<div style="font-size: 12px; color: #8696a0;">~' + deliverTime + ' min</div>' +
+                '</div>' +
+                '</div></div>';
+            
+            // Payment info
+            var paymentDisplay = '💳 Paid';
+            if (isCash) {
+                paymentDisplay = '💵 Cash on Delivery';
+            } else if (state.displayPaymentMethod) {
+                var methodNames = {
+                    'debit': '🏦 Debit Card',
+                    'visa': '💳 Visa',
+                    'mastercard': '💳 Mastercard',
+                    'amex': '💳 Amex',
+                    'discover': '💳 Discover'
+                };
+                paymentDisplay = (methodNames[state.displayPaymentMethod] || '💳 Card') + ' - Paid';
+            }
+            
+            html += '<div style="background: #202c33; border-radius: 16px; padding: 20px; margin-bottom: 20px;">' +
+                '<div style="display: flex; justify-content: space-between; margin-bottom: 10px;">' +
+                '<span style="color: #8696a0;">Payment</span>' +
+                '<span>' + paymentDisplay + '</span>' +
+                '</div>' +
+                '<div style="display: flex; justify-content: space-between;">' +
+                '<span style="color: #8696a0;">Total</span>' +
+                '<span style="font-size: 20px; font-weight: 700; color: #25D366;">$' + total.toFixed(2) + '</span>' +
+                '</div>';
+            
+            // Show savings if first order discount was applied
+            if (state.orderDiscount && state.orderDiscount > 0) {
+                html += '<div style="background: linear-gradient(135deg, #25D366, #128C7E); border-radius: 8px; padding: 12px; margin-top: 12px; text-align: center;">' +
+                    '<div style="font-size: 13px; font-weight: 700;">🎉 You saved $' + (state.orderDiscount + 6.99).toFixed(2) + ' on this order!</div>' +
+                    '</div>';
+            }
+            
+            // COD warning if applicable
+            if (isCash) {
+                html += '<div style="background: #3a2a1a; border-radius: 8px; padding: 10px; margin-top: 12px; font-size: 12px; color: #ffaa00;">' +
+                    '⚠️ Please have exact change ready. Driver cannot make change for large bills.' +
+                    '</div>';
+            }
+            html += '</div>';
+            
+            // Customer contact info card
+            var confirmedAddress = state.customer && state.customer.address ? state.customer.address : 'Your location';
+            var customerPhone = state.customer && state.customer.phone ? formatPhone(state.customer.phone) : '';
+            var customerName = state.customer && state.customer.name ? state.customer.name : 'Guest';
+            
+            html += '<div style="background: #202c33; border-radius: 16px; padding: 20px; margin-bottom: 20px;">' +
+                '<div style="font-size: 12px; color: #8696a0; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px;">📋 Order Contact Info</div>' +
+                '<div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid #2a3942;">' +
+                '<div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #25D366, #128C7E); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700;">' + 
+                customerName.charAt(0).toUpperCase() + '</div>' +
+                '<div style="flex: 1;">' +
+                '<div style="font-size: 16px; font-weight: 600;">' + customerName + '</div>' +
+                '<div style="font-size: 14px; color: #25D366;">' + customerPhone + '</div>' +
+                '</div>' +
+                '</div>' +
+                '<div style="font-size: 14px; color: #8696a0; margin-bottom: 6px;">Delivering to</div>' +
+                '<div style="font-size: 16px;">📍 ' + confirmedAddress + '</div>' +
+                '</div>';
+            
+            // Contact driver buttons
+            html += '<div style="display: flex; gap: 10px; margin-bottom: 20px;">' +
+                '<button class="btn" style="flex: 1; background: #202c33;" data-action="call_driver">📞 Call ' + driver.name.split(' ')[0] + '</button>' +
+                '<button class="btn" style="flex: 1; background: #202c33;" data-action="message_driver">💬 Message</button>' +
+                '</div>';
+            
+            // Support info
+            html += '<div style="text-align: center; margin-bottom: 20px;">' +
+                '<div style="font-size: 13px; color: #8696a0;">Need help? Contact LocalFirst YYC</div>' +
+                '<div style="font-size: 14px; color: #25D366;">📞 (403) 826-5529</div>' +
+                '</div>';
+            
+            // Community impact message
+            var ownerFirst = owner ? owner.name.split(' ')[0] : 'a local family';
+            var driverFirst = driver.name.split(' ')[0];
+            
+            html += '<div style="background: linear-gradient(135deg, #1a3020, #0d2010); border: 1px solid #25D366; border-radius: 16px; padding: 20px; margin-bottom: 20px; text-align: center;">' +
+                '<div style="font-size: 28px; margin-bottom: 10px;">💚</div>' +
+                '<div style="font-size: 16px; font-weight: 700; color: #25D366; margin-bottom: 10px;">You Just Made a Difference</div>' +
+                '<div style="font-size: 13px; color: #e9edef; line-height: 1.7;">' +
+                ownerFirst + ' can keep her family\'s dream alive.<br>' +
+                driverFirst + ' is one delivery closer to their goals.<br>' +
+                '<span style="color: #25D366; font-weight: 600;">Thank you for choosing local. 🇨🇦</span>' +
+                '</div>' +
+                '</div>';
+            
+            // New order button
+            html += '<div class="buttons">' +
+                '<button class="btn" data-action="new_order">🔄 Start New Order</button>' +
+                '</div>';
+            
+            render(html);
+            
+            // Hide cart badge
+            cartBadge.className = 'cart-badge';
+        }
+        
+        // Start New Order
+        function startNewOrder() {
+            state.cart = [];
+            state.tip = 0;
+            state.selectedItem = null;
+            state.selectedSize = null;
+            state.selectedToppings = [];
+            state.selectedSpecial = null;
+            state.specials = [];
+            state.customPizzaToppings = [];
+            state.orderNumber = null;
+            state.orderTotal = null;
+            state.orderDiscount = 0;
+            state.paymentMethod = null;
+            state.selectedPaymentMethod = null;
+            state.displayPaymentMethod = null;
+            state.assignedDriver = null;
+            state.history = [];
+            updateCart();
+            
+            if (state.restaurant) {
+                renderPage('restaurant_home', false);
+            } else {
+                renderPage('restaurants', false);
+            }
+        }
+        
+        // Cart badge click
+        cartBadge.addEventListener('click', function() {
+            showCartPage();
+        });
+        
+        // ============================================
+        // INIT
+        // ============================================
+        function init() {
+            // Always start at welcome page
+            // For returning customers, welcome page shows "Welcome back" with saved address
+            // For new customers, welcome page shows discount offer
+            if (loadCustomer()) {
+                console.log('Welcome back:', state.customer.name);
+                console.log('Saved address:', state.customer.address);
+                // Load order history for COD checking
+                loadCustomerHistory();
+            }
+            // Always start at welcome - it handles both new and returning customers
+            renderPage('welcome', false);
+        }
+        
+        init();
+    </script>
+</body>
+</html>
