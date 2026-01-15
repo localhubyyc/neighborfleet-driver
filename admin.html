@@ -1,0 +1,2685 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YYC LocalFirst - Admin Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Mono:wght@700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="auth-guard.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12131a;
+            --bg-card-hover: #1a1b24;
+            --border: #2a2b35;
+            --text-primary: #ffffff;
+            --text-secondary: #8b8d9a;
+            --text-muted: #5a5c6a;
+            --accent-green: #00d26a;
+            --accent-green-dim: rgba(0, 210, 106, 0.15);
+            --accent-orange: #ff9f43;
+            --accent-orange-dim: rgba(255, 159, 67, 0.15);
+            --accent-red: #ff6b6b;
+            --accent-blue: #4da6ff;
+            --accent-blue-dim: rgba(77, 166, 255, 0.15);
+            --accent-purple: #a78bfa;
+            --accent-purple-dim: rgba(167, 139, 250, 0.15);
+        }
+        body {
+            font-family: 'DM Sans', -apple-system, sans-serif;
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(180deg, var(--bg-card) 0%, transparent 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .header-content {
+            max-width: 1600px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--accent-green) 0%, #00a854 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+        }
+        .logo-text {
+            font-family: 'Space Mono', monospace;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+        .logo-badge {
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--accent-green);
+        }
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--accent-green);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        /* User Menu Styles */
+        .user-menu {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-left: 1rem;
+            padding-left: 1rem;
+            border-left: 1px solid var(--border);
+        }
+        .notification-bell {
+            position: relative;
+            font-size: 1.25rem;
+            cursor: pointer;
+            padding: 0.5rem;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+        .notification-bell:hover {
+            background: var(--bg-card-hover);
+        }
+        .notification-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--accent-red);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 700;
+            min-width: 18px;
+            height: 18px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: pulse 2s infinite;
+        }
+        .notification-panel {
+            display: none;
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            width: 420px;
+            max-height: 80vh;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            z-index: 1000;
+            overflow: hidden;
+        }
+        .notification-panel.visible {
+            display: block;
+        }
+        .notification-panel-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .notification-panel-title {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        .notification-tabs {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .notification-tab {
+            padding: 0.35rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            cursor: pointer;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        .notification-tab.active {
+            background: var(--accent-orange);
+            border-color: var(--accent-orange);
+            color: #000;
+        }
+        .notification-list {
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+        .notification-item {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .notification-item:hover {
+            background: var(--bg-card-hover);
+        }
+        .notification-item.unread {
+            background: var(--accent-orange-dim);
+            border-left: 3px solid var(--accent-orange);
+        }
+        .notification-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+        .notification-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        .notification-time {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+        .notification-message {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+        .notification-store {
+            font-size: 0.75rem;
+            color: var(--accent-blue);
+        }
+        .notification-status {
+            display: inline-block;
+            padding: 0.2rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            margin-top: 0.5rem;
+        }
+        .notification-status.pending {
+            background: var(--accent-orange-dim);
+            color: var(--accent-orange);
+        }
+        .notification-status.approved {
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+        }
+        .notification-status.rejected {
+            background: rgba(255, 107, 107, 0.15);
+            color: var(--accent-red);
+        }
+        .notification-actions {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+        }
+        .notification-actions button {
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+        }
+        .approve-btn {
+            background: var(--accent-green);
+            color: #000;
+        }
+        .reject-btn {
+            background: rgba(255, 107, 107, 0.15);
+            border: 1px solid var(--accent-red) !important;
+            color: var(--accent-red);
+        }
+        .view-btn {
+            background: var(--bg-dark);
+            border: 1px solid var(--border) !important;
+            color: var(--text-secondary);
+        }
+        .notification-empty {
+            padding: 3rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        .notification-empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.4rem 0.75rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-green), #00a854);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #000;
+        }
+        .user-details {
+            display: flex;
+            flex-direction: column;
+        }
+        .user-name {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        .user-role {
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: capitalize;
+        }
+        .logout-btn {
+            padding: 0.5rem 0.75rem;
+            background: rgba(255, 107, 107, 0.1);
+            border: 1px solid var(--accent-red);
+            border-radius: 8px;
+            color: var(--accent-red);
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: all 0.2s;
+        }
+        .logout-btn:hover {
+            background: var(--accent-red);
+            color: white;
+        }
+        .date-filters {
+            display: flex;
+            gap: 0.35rem;
+            background: var(--bg-dark);
+            padding: 0.35rem;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+        .date-btn {
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            cursor: pointer;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+        .date-btn:hover {
+            background: var(--bg-card-hover);
+            color: var(--text-primary);
+        }
+        .date-btn.active {
+            background: var(--accent-green);
+            color: #000;
+        }
+        .date-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            z-index: 1000;
+            min-width: 320px;
+        }
+        .date-modal.active { display: block; }
+        .date-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            z-index: 999;
+        }
+        .date-modal-overlay.active { display: block; }
+        .date-modal h3 {
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+        .date-input-group {
+            margin-bottom: 1rem;
+        }
+        .date-input-group label {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.35rem;
+        }
+        .date-input-group input {
+            width: 100%;
+            padding: 0.6rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+        }
+        .date-modal-btns {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 1rem;
+        }
+        .date-modal-btns button {
+            flex: 1;
+            padding: 0.6rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .date-modal-btns .apply-btn {
+            background: var(--accent-green);
+            border-color: var(--accent-green);
+            color: #000;
+        }
+        .date-modal-btns .cancel-btn {
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+        }
+        .quick-ranges {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .quick-range-btn {
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .quick-range-btn:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+        .settings-btn {
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .settings-btn:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+        .commission-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            z-index: 1001;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .commission-modal.active { display: block; }
+        .commission-modal h3 {
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+        .commission-modal-subtitle {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            margin-bottom: 1.5rem;
+        }
+        .default-commission {
+            background: var(--bg-dark);
+            border-radius: 12px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .default-commission-label {
+            font-weight: 600;
+        }
+        .default-commission-input {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .default-commission-input input {
+            width: 70px;
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        .store-commission-list {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .store-commission-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .store-commission-item:last-child { border-bottom: none; }
+        .store-commission-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--accent-orange-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        .store-commission-info { flex: 1; }
+        .store-commission-name { font-weight: 600; }
+        .store-commission-status {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+        .store-commission-status.promo { color: var(--accent-orange); }
+        .store-commission-controls {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .commission-input-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .commission-input-wrapper input {
+            width: 55px;
+            padding: 0.4rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        .promo-toggle {
+            padding: 0.35rem 0.6rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .promo-toggle.active {
+            background: var(--accent-orange-dim);
+            border-color: var(--accent-orange);
+            color: var(--accent-orange);
+        }
+        .commission-earnings {
+            text-align: right;
+            min-width: 80px;
+        }
+        .commission-earnings-value {
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+        .commission-earnings-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+        }
+        .commission-summary {
+            background: linear-gradient(135deg, var(--accent-green-dim), var(--accent-blue-dim));
+            border-radius: 12px;
+            padding: 1rem;
+            margin-top: 1.5rem;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            text-align: center;
+        }
+        .commission-summary-item h4 {
+            font-size: 1.25rem;
+            color: var(--accent-green);
+        }
+        .commission-summary-item p {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+        .store-tabs {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .store-tab {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .store-tab:hover {
+            border-color: var(--accent-green);
+        }
+        .store-tab.active {
+            background: var(--accent-green-dim);
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+        .store-tab-icon {
+            font-size: 1rem;
+        }
+        .commission-periods-container {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        .commission-periods-header {
+            padding: 0.75rem 1rem;
+            background: var(--bg-dark);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .commission-periods-header span {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        .add-period-btn {
+            padding: 0.4rem 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--accent-green);
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .commission-periods-list {
+            max-height: 250px;
+            overflow-y: auto;
+        }
+        .commission-period-item {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            display: grid;
+            grid-template-columns: 1fr 1fr 80px 60px 40px;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        .commission-period-item:last-child {
+            border-bottom: none;
+        }
+        .commission-period-item.current {
+            background: var(--accent-green-dim);
+        }
+        .period-input-group label {
+            display: block;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+        }
+        .period-input-group input[type="date"] {
+            width: 100%;
+            padding: 0.5rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            font-size: 0.85rem;
+            cursor: pointer;
+        }
+        .period-input-group input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(1);
+            cursor: pointer;
+        }
+        .period-rate {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .period-rate input {
+            width: 50px;
+            padding: 0.4rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-primary);
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        .period-earnings {
+            text-align: right;
+            font-size: 0.8rem;
+        }
+        .period-earnings-value {
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+        .period-delete {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--bg-dark);
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        .period-delete:hover {
+            border-color: var(--accent-red);
+            color: var(--accent-red);
+            background: rgba(255,107,107,0.1);
+        }
+        .no-periods {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        .period-current-badge {
+            background: var(--accent-green);
+            color: #000;
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.6rem;
+            font-weight: 600;
+        }
+        .main {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 1.5rem;
+        }
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.25rem;
+            border-top: 3px solid var(--accent-green);
+        }
+        .stat-card.orange { border-top-color: var(--accent-orange); }
+        .stat-card.blue { border-top-color: var(--accent-blue); }
+        .stat-card.purple { border-top-color: var(--accent-purple); }
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+        .stat-sub {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-top: 0.25rem;
+        }
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+        }
+        .section-header {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .section-title {
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .order-tabs {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .order-tab {
+            padding: 0.4rem 0.75rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+        }
+        .order-tab:hover { background: var(--bg-card-hover); }
+        .order-tab.active {
+            background: var(--accent-green-dim);
+            color: var(--accent-green);
+            border-color: var(--accent-green);
+        }
+        .order-tab .count {
+            background: var(--bg-dark);
+            padding: 0.15rem 0.4rem;
+            border-radius: 4px;
+            margin-left: 0.35rem;
+            font-size: 0.7rem;
+        }
+        .order-tab.active .count {
+            background: var(--accent-green);
+            color: #000;
+        }
+        .orders-list {
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        .order-item {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            cursor: pointer;
+        }
+        .order-item:hover { background: var(--bg-card-hover); }
+        .order-status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+        .order-status-dot.pending { background: var(--accent-orange); }
+        .order-status-dot.confirmed { background: var(--accent-blue); }
+        .order-status-dot.preparing { background: var(--accent-blue); }
+        .order-status-dot.ready { background: var(--accent-purple); }
+        .order-status-dot.delivering { background: var(--accent-green); }
+        .order-info { flex: 1; }
+        .order-top {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+        }
+        .order-number { font-weight: 600; }
+        .order-restaurant {
+            color: var(--text-secondary);
+            font-size: 0.75rem;
+            background: var(--bg-dark);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+        }
+        .order-customer {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+        .order-meta { text-align: right; }
+        .order-total {
+            font-weight: 600;
+            color: var(--accent-green);
+        }
+        .order-time {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+        .empty-state {
+            padding: 2rem;
+            text-align: center;
+            color: var(--text-muted);
+        }
+        
+        /* Store Performance */
+        .store-item {
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        .store-item:last-child { border-bottom: none; }
+        .store-rank {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--bg-dark);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+        .store-rank.gold { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; }
+        .store-rank.silver { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); color: #000; }
+        .store-rank.bronze { background: linear-gradient(135deg, #cd7f32, #b87333); color: #000; }
+        .store-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: var(--accent-orange-dim);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+        }
+        .store-info { flex: 1; }
+        .store-name { font-weight: 600; font-size: 0.95rem; }
+        .store-stats {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.25rem;
+            flex-wrap: wrap;
+        }
+        .store-stat {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+        .store-stat span { color: var(--text-primary); font-weight: 600; }
+        .store-revenue {
+            text-align: right;
+        }
+        .store-revenue-value {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--accent-green);
+        }
+        .store-revenue-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+        .progress-bar {
+            height: 4px;
+            background: var(--bg-dark);
+            border-radius: 2px;
+            margin-top: 0.5rem;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: var(--accent-green);
+            border-radius: 2px;
+        }
+
+        /* Driver section */
+        .driver-item {
+            padding: 0.75rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        .driver-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.75rem;
+        }
+        .driver-info { flex: 1; }
+        .driver-name { font-weight: 500; font-size: 0.9rem; }
+        .driver-status {
+            font-size: 0.7rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+        .driver-status.online { color: var(--accent-green); }
+        .driver-status.offline { color: var(--text-muted); }
+        .status-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+        
+        .quick-actions {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+            padding: 1rem;
+        }
+        .quick-action-btn {
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 0.7rem;
+        }
+        .quick-action-btn:hover {
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+        }
+        #map {
+            width: 100%;
+            height: 180px;
+        }
+        .map-overlay {
+            position: absolute;
+            top: 0.75rem;
+            left: 0.75rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+        .map-stat {
+            background: rgba(10, 10, 15, 0.9);
+            padding: 0.4rem 0.6rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            border: 1px solid var(--border);
+        }
+        .right-column {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        
+        /* Summary cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.75rem;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .summary-item {
+            text-align: center;
+            padding: 0.5rem;
+            background: var(--bg-dark);
+            border-radius: 8px;
+        }
+        .summary-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--accent-green);
+        }
+        .summary-label {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 0.15rem;
+        }
+        
+        @media (max-width: 1100px) {
+            .main { grid-template-columns: 1fr; }
+            .stats-row { grid-template-columns: repeat(2, 1fr); }
+            .user-menu { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">🚀</div>
+                <span class="logo-text">YYC LocalFirst</span>
+                <span class="logo-badge">ADMIN</span>
+            </div>
+            <div class="header-right">
+                <div class="date-filters">
+                    <button class="date-btn active" data-range="today">Today</button>
+                    <button class="date-btn" data-range="yesterday">Yesterday</button>
+                    <button class="date-btn" data-range="week">7 Days</button>
+                    <button class="date-btn" data-range="biweek">14 Days</button>
+                    <button class="date-btn" data-range="month">30 Days</button>
+                    <button class="date-btn" data-range="quarter">90 Days</button>
+                    <button class="date-btn" data-range="half">6 Months</button>
+                    <button class="date-btn" data-range="year">1 Year</button>
+                    <button class="date-btn" data-range="all">All</button>
+                    <button class="date-btn" data-range="custom">📅 Custom</button>
+                </div>
+                <div class="live-indicator">
+                    <div class="live-dot"></div>
+                    <span>Live</span>
+                </div>
+                <!-- Notification Bell -->
+                <div class="notification-bell" onclick="toggleNotificationPanel()">
+                    🔔
+                    <span class="notification-badge" id="notificationBadge" style="display: none;">0</span>
+                </div>
+                <!-- User Menu -->
+                <div class="user-menu">
+                    <div class="user-info">
+                        <div class="user-avatar" id="userAvatar">👤</div>
+                        <div class="user-details">
+                            <div class="user-name" id="userName">Loading...</div>
+                            <div class="user-role" id="userRole">-</div>
+                        </div>
+                    </div>
+                    <button class="logout-btn" onclick="handleLogout()">
+                        🚪 Logout
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Notification Panel -->
+    <div class="notification-panel" id="notificationPanel">
+        <div class="notification-panel-header">
+            <div class="notification-panel-title">🔔 Notifications</div>
+            <div class="notification-tabs">
+                <div class="notification-tab active" data-filter="pending" onclick="filterNotifications('pending')">Pending</div>
+                <div class="notification-tab" data-filter="all" onclick="filterNotifications('all')">All</div>
+            </div>
+        </div>
+        <div class="notification-list" id="notificationList">
+            <div class="notification-empty">
+                <div class="notification-empty-icon">🔔</div>
+                <div>No notifications</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Detail Modal -->
+    <div class="date-modal-overlay" id="notificationModalOverlay" onclick="closeNotificationModal()"></div>
+    <div class="date-modal" id="notificationModal" style="max-width: 500px;">
+        <h3 id="notificationModalTitle">📋 Notification Details</h3>
+        <div id="notificationModalContent" style="margin: 1rem 0;"></div>
+        <div class="date-modal-btns" id="notificationModalActions">
+            <button class="cancel-btn" onclick="closeNotificationModal()">Close</button>
+        </div>
+    </div>
+
+    <!-- Order Detail Modal -->
+    <div class="date-modal-overlay" id="orderModalOverlay" onclick="closeOrderModal()"></div>
+    <div class="date-modal" id="orderModal" style="max-width: 500px;">
+        <h3 id="orderModalTitle">📋 Order Details</h3>
+        <div id="orderModalContent" style="margin: 1rem 0;"></div>
+        <div class="date-modal-btns" style="flex-wrap: wrap; gap: 0.5rem;">
+            <button class="apply-btn" onclick="printCustomerReceipt()" style="flex: 1; min-width: 120px;">🧾 Customer Receipt</button>
+            <button class="apply-btn" onclick="printKitchenReceipt()" style="flex: 1; min-width: 120px;">👨‍🍳 Kitchen Ticket</button>
+            <button class="cancel-btn" onclick="closeOrderModal()" style="width: 100%;">Close</button>
+        </div>
+    </div>
+
+    <div class="date-modal-overlay" id="dateModalOverlay"></div>
+    <div class="date-modal" id="dateModal">
+        <h3>📅 Custom Date Range</h3>
+        <div class="quick-ranges">
+            <button class="quick-range-btn" onclick="setQuickRange(7)">Last 7 Days</button>
+            <button class="quick-range-btn" onclick="setQuickRange(14)">Last 14 Days</button>
+            <button class="quick-range-btn" onclick="setQuickRange(30)">Last 30 Days</button>
+            <button class="quick-range-btn" onclick="setQuickRange(60)">Last 60 Days</button>
+            <button class="quick-range-btn" onclick="setQuickRange(90)">Last 90 Days</button>
+            <button class="quick-range-btn" onclick="setQuickRange(180)">Last 6 Months</button>
+            <button class="quick-range-btn" onclick="setQuickRange(365)">Last 1 Year</button>
+            <button class="quick-range-btn" onclick="setQuickRange('ytd')">Year to Date</button>
+        </div>
+        <div class="date-input-group">
+            <label>Start Date</label>
+            <input type="date" id="startDate">
+        </div>
+        <div class="date-input-group">
+            <label>End Date</label>
+            <input type="date" id="endDate">
+        </div>
+        <div class="date-modal-btns">
+            <button class="cancel-btn" onclick="closeDateModal()">Cancel</button>
+            <button class="apply-btn" onclick="applyCustomRange()">Apply</button>
+        </div>
+    </div>
+
+    <!-- Commission Settings Modal -->
+    <div class="date-modal-overlay" id="commissionModalOverlay"></div>
+    <div class="commission-modal" id="commissionModal">
+        <h3>⚙️ Commission Settings</h3>
+        <p class="commission-modal-subtitle">Set commission rates with effective dates. Historical rates are preserved for accurate calculations.</p>
+        
+        <div class="default-commission">
+            <div>
+                <div class="default-commission-label">Default Rate for New Stores</div>
+                <div style="font-size: 0.75rem; color: var(--text-secondary);">Applied when no period is set</div>
+            </div>
+            <div class="default-commission-input">
+                <input type="number" id="defaultCommission" value="15" min="0" max="50" onchange="saveDefaultCommission()">
+                <span>%</span>
+            </div>
+        </div>
+
+        <div class="store-tabs" id="storeTabs">
+            <!-- Store tabs populated by JS -->
+        </div>
+        
+        <div class="commission-periods-container">
+            <div class="commission-periods-header">
+                <span>Commission Periods for: <strong id="selectedStoreName">Select a store</strong></span>
+                <button class="add-period-btn" onclick="addCommissionPeriod()">+ Add Period</button>
+            </div>
+            <div class="commission-periods-list" id="commissionPeriodsList">
+                <!-- Periods populated by JS -->
+            </div>
+        </div>
+        
+        <div class="commission-summary">
+            <div class="commission-summary-item">
+                <h4 id="summaryTotalRevenue">$0</h4>
+                <p>Total Revenue</p>
+            </div>
+            <div class="commission-summary-item">
+                <h4 id="summaryYourEarnings">$0</h4>
+                <p>Your Earnings</p>
+            </div>
+            <div class="commission-summary-item">
+                <h4 id="summaryEffectiveRate">0%</h4>
+                <p>Effective Rate</p>
+            </div>
+        </div>
+        
+        <div class="date-modal-btns" style="margin-top: 1.5rem;">
+            <button class="cancel-btn" onclick="closeCommissionModal()">Close</button>
+            <button class="apply-btn" onclick="saveAllCommissions()">💾 Save All</button>
+        </div>
+    </div>
+
+    <main class="main">
+        <div class="left-column">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">Orders <span id="dateRangeLabel" style="text-transform: capitalize; color: var(--accent-green);">(Today)</span></div>
+                    <div class="stat-value" id="statOrders">0</div>
+                    <div class="stat-sub" id="statOrdersSub">Loading...</div>
+                </div>
+                <div class="stat-card orange">
+                    <div class="stat-label">Revenue</div>
+                    <div class="stat-value" id="statRevenue">$0</div>
+                    <div class="stat-sub" id="statRevenueSub">Today's total</div>
+                </div>
+                <div class="stat-card blue">
+                    <div class="stat-label">Active Drivers</div>
+                    <div class="stat-value" id="statDrivers">0</div>
+                    <div class="stat-sub" id="statDriversSub">Online now</div>
+                </div>
+                <div class="stat-card purple">
+                    <div class="stat-label">Top Store</div>
+                    <div class="stat-value" id="statTopStore">--</div>
+                    <div class="stat-sub" id="statTopStoreSub">Best performer</div>
+                </div>
+            </div>
+
+            <!-- Store Performance Leaderboard -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">🏆 Store Performance</div>
+                    <button class="settings-btn" onclick="openCommissionModal()">⚙️ Commission Settings</button>
+                </div>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-value" id="totalStores">0</div>
+                        <div class="summary-label">Active Stores</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="avgOrderValue">$0</div>
+                        <div class="summary-label">Avg Order</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="platformFees">$0</div>
+                        <div class="summary-label">Your Fees (15%)</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="deliveryCount">0</div>
+                        <div class="summary-label">🚗 Delivery</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="pickupCount">0</div>
+                        <div class="summary-label">🏃 Pickup</div>
+                    </div>
+                    <div class="summary-item">
+                        <div class="summary-value" id="deliveryPct">0%</div>
+                        <div class="summary-label">Delivery Rate</div>
+                    </div>
+                </div>
+                <div id="storeLeaderboard"></div>
+            </div>
+
+            <!-- Orders Section -->
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">📋 Orders</div>
+                    <div class="order-tabs">
+                        <div class="order-tab active" data-status="all">All<span class="count" id="countAll">0</span></div>
+                        <div class="order-tab" data-status="pending">New<span class="count" id="countPending">0</span></div>
+                        <div class="order-tab" data-status="preparing">Cooking<span class="count" id="countPreparing">0</span></div>
+                        <div class="order-tab" data-status="ready">Ready<span class="count" id="countReady">0</span></div>
+                        <div class="order-tab" data-status="delivering">Delivering<span class="count" id="countDelivering">0</span></div>
+                    </div>
+                </div>
+                <div class="orders-list" id="ordersList">
+                    <div class="empty-state">📭 No orders yet today</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-column">
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">🗺️ Live Map</div>
+                </div>
+                <div style="position: relative;">
+                    <div class="map-overlay">
+                        <div class="map-stat"><span class="status-dot" style="background: var(--accent-green);"></span> <span id="mapOnline">0</span> Online</div>
+                        <div class="map-stat"><span class="status-dot" style="background: var(--accent-orange);"></span> <span id="mapBusy">0</span> Busy</div>
+                    </div>
+                    <div id="map"></div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">🚗 Drivers (<span id="driverCount">0</span>)</div>
+                </div>
+                <div id="driversList" style="max-height: 200px; overflow-y: auto;">
+                    <div class="empty-state" style="padding: 1rem;">No drivers</div>
+                </div>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">⚡ Quick Actions</div>
+                </div>
+                <div class="quick-actions">
+                    <button class="quick-action-btn" onclick="createTestOrder()">➕ Test Order</button>
+                    <button class="quick-action-btn" onclick="refreshData()">🔄 Refresh</button>
+                    <button class="quick-action-btn" onclick="window.open('index.html', '_blank')">📱 Driver App</button>
+                    <button class="quick-action-btn" onclick="window.open('https://supabase.com/dashboard/project/htzozoordnftgkjyadsf', '_blank')">🗄️ Database</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MzM3MDUsImV4cCI6MjA4MzQwOTcwNX0.zWDiVBwgeRDlnvb2FQxAnU-VDX6Yee4EiLmyWHRYYjM';
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        let orders = [];
+        let drivers = [];
+        let restaurants = [];
+        let currentFilter = 'all';
+        let currentDateRange = 'today';
+
+        // ============================================
+        // USER INFO & LOGOUT
+        // ============================================
+        function loadUserInfo() {
+            const userJson = localStorage.getItem('user');
+            if (userJson) {
+                try {
+                    const user = JSON.parse(userJson);
+                    document.getElementById('userName').textContent = user.name || user.email || 'User';
+                    document.getElementById('userRole').textContent = (user.role || 'user').replace('_', ' ');
+                    
+                    const initials = (user.name || user.email || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+                    document.getElementById('userAvatar').textContent = initials;
+                } catch (e) {
+                    console.error('Error loading user info:', e);
+                }
+            }
+        }
+
+        function handleLogout() {
+            if (confirm('Are you sure you want to logout?')) {
+                localStorage.removeItem('user');
+                localStorage.removeItem('sessionToken');
+                sessionStorage.removeItem('user');
+                sessionStorage.removeItem('sessionToken');
+                window.location.href = 'login.html';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadUserInfo();
+            loadData();
+            setupTabs();
+            setupDateFilters();
+            setupRealtime();
+            loadNotifications();
+            setupNotificationRealtime();
+        });
+
+        function setupDateFilters() {
+            document.querySelectorAll('.date-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    if (btn.dataset.range === 'custom') {
+                        openDateModal();
+                        return;
+                    }
+                    document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentDateRange = btn.dataset.range;
+                    loadOrders().then(() => { updateStats(); renderStoreLeaderboard(); });
+                });
+            });
+            
+            document.getElementById('dateModalOverlay').addEventListener('click', closeDateModal);
+            document.getElementById('commissionModalOverlay').addEventListener('click', closeCommissionModal);
+        }
+
+        function getDateRange() {
+            const now = new Date();
+            let start = new Date();
+            
+            switch(currentDateRange) {
+                case 'today':
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'yesterday':
+                    start.setDate(start.getDate() - 1);
+                    start.setHours(0, 0, 0, 0);
+                    const endYesterday = new Date(start);
+                    endYesterday.setHours(23, 59, 59, 999);
+                    return { start, end: endYesterday };
+                case 'week':
+                    start.setDate(start.getDate() - 7);
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'biweek':
+                    start.setDate(start.getDate() - 14);
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'month':
+                    start.setDate(start.getDate() - 30);
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'quarter':
+                    start.setDate(start.getDate() - 90);
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'half':
+                    start.setMonth(start.getMonth() - 6);
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'year':
+                    start.setFullYear(start.getFullYear() - 1);
+                    start.setHours(0, 0, 0, 0);
+                    break;
+                case 'all':
+                    start = new Date('2020-01-01');
+                    break;
+                case 'custom':
+                    return { start: customStartDate, end: customEndDate };
+            }
+            return { start, end: now };
+        }
+        
+        let customStartDate = null;
+        let customEndDate = null;
+        
+        function openDateModal() {
+            document.getElementById('dateModalOverlay').classList.add('active');
+            document.getElementById('dateModal').classList.add('active');
+            const today = new Date().toISOString().split('T')[0];
+            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            document.getElementById('endDate').value = today;
+            document.getElementById('startDate').value = weekAgo;
+        }
+        
+        function closeDateModal() {
+            document.getElementById('dateModalOverlay').classList.remove('active');
+            document.getElementById('dateModal').classList.remove('active');
+        }
+        
+        function setQuickRange(days) {
+            const end = new Date();
+            let start = new Date();
+            
+            if (days === 'ytd') {
+                start = new Date(end.getFullYear(), 0, 1);
+            } else {
+                start.setDate(start.getDate() - days);
+            }
+            
+            document.getElementById('startDate').value = start.toISOString().split('T')[0];
+            document.getElementById('endDate').value = end.toISOString().split('T')[0];
+        }
+        
+        function applyCustomRange() {
+            const startVal = document.getElementById('startDate').value;
+            const endVal = document.getElementById('endDate').value;
+            
+            if (!startVal || !endVal) {
+                alert('Please select both start and end dates');
+                return;
+            }
+            
+            customStartDate = new Date(startVal);
+            customEndDate = new Date(endVal);
+            customEndDate.setHours(23, 59, 59, 999);
+            
+            currentDateRange = 'custom';
+            
+            document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+            document.querySelector('[data-range="custom"]').classList.add('active');
+            
+            closeDateModal();
+            loadOrders().then(() => { updateStats(); renderStoreLeaderboard(); });
+        }
+        
+        // Commission Management
+        let storeCommissions = {};
+        let defaultCommissionRate = 15;
+        let selectedStoreId = null;
+        
+        function loadCommissionSettings() {
+            const saved = localStorage.getItem('yycLocalFirst_commissions_v2');
+            if (saved) {
+                const data = JSON.parse(saved);
+                storeCommissions = data.stores || {};
+                defaultCommissionRate = data.defaultRate || 15;
+            }
+            document.getElementById('defaultCommission').value = defaultCommissionRate;
+        }
+        
+        function saveCommissionSettings() {
+            localStorage.setItem('yycLocalFirst_commissions_v2', JSON.stringify({
+                defaultRate: defaultCommissionRate,
+                stores: storeCommissions
+            }));
+        }
+        
+        function getCommissionForOrder(storeId, orderDate) {
+            const orderTime = new Date(orderDate).getTime();
+            
+            if (storeCommissions[storeId] && storeCommissions[storeId].periods) {
+                const periods = storeCommissions[storeId].periods;
+                
+                for (const period of periods) {
+                    const startTime = new Date(period.startDate).getTime();
+                    const endTime = period.endDate ? new Date(period.endDate).setHours(23,59,59,999) : Infinity;
+                    
+                    if (orderTime >= startTime && orderTime <= endTime) {
+                        return period.rate;
+                    }
+                }
+            }
+            
+            return defaultCommissionRate;
+        }
+        
+        function calculateStoreCommission(storeId, storeOrders) {
+            let totalCommission = 0;
+            
+            storeOrders.forEach(order => {
+                const rate = getCommissionForOrder(storeId, order.created_at);
+                totalCommission += (order.total || 0) * (rate / 100);
+            });
+            
+            return totalCommission;
+        }
+        
+        function openCommissionModal() {
+            document.getElementById('commissionModalOverlay').classList.add('active');
+            document.getElementById('commissionModal').classList.add('active');
+            renderStoreTabs();
+            if (restaurants.length > 0) {
+                selectStore(restaurants[0].id);
+            }
+            updateCommissionSummary();
+        }
+        
+        function closeCommissionModal() {
+            document.getElementById('commissionModalOverlay').classList.remove('active');
+            document.getElementById('commissionModal').classList.remove('active');
+        }
+        
+        function renderStoreTabs() {
+            const container = document.getElementById('storeTabs');
+            const icons = ['🍕', '🍔', '🌮', '🍣', '🍗'];
+            
+            container.innerHTML = restaurants.map((store, i) => {
+                const storeOrders = orders.filter(o => o.restaurant_id === store.id);
+                const revenue = storeOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+                
+                return `
+                    <div class="store-tab ${selectedStoreId === store.id ? 'active' : ''}" onclick="selectStore('${store.id}')">
+                        <span class="store-tab-icon">${icons[i] || '🏪'}</span>
+                        <span>${store.name}</span>
+                        <span style="color: var(--accent-green); font-size: 0.7rem;">$${revenue.toFixed(0)}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function selectStore(storeId) {
+            selectedStoreId = storeId;
+            const store = restaurants.find(r => r.id === storeId);
+            document.getElementById('selectedStoreName').textContent = store ? store.name : 'Unknown';
+            
+            document.querySelectorAll('.store-tab').forEach(tab => {
+                tab.classList.remove('active');
+                if (tab.onclick.toString().includes(storeId)) {
+                    tab.classList.add('active');
+                }
+            });
+            
+            renderCommissionPeriods();
+            renderStoreTabs();
+        }
+        
+        function renderCommissionPeriods() {
+            const container = document.getElementById('commissionPeriodsList');
+            
+            if (!selectedStoreId) {
+                container.innerHTML = '<div class="no-periods">Select a store to manage commission periods</div>';
+                return;
+            }
+            
+            const periods = (storeCommissions[selectedStoreId] && storeCommissions[selectedStoreId].periods) || [];
+            
+            if (periods.length === 0) {
+                container.innerHTML = `
+                    <div class="no-periods">
+                        No commission periods set.<br>
+                        Using default rate: <strong>${defaultCommissionRate}%</strong><br><br>
+                        Click "+ Add Period" to set custom rates for date ranges.
+                    </div>
+                `;
+                return;
+            }
+            
+            const periodsWithIndex = periods.map((p, i) => ({ ...p, originalIndex: i }));
+            periodsWithIndex.sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+            
+            const now = new Date();
+            
+            container.innerHTML = periodsWithIndex.map((period) => {
+                const index = period.originalIndex;
+                const startDate = new Date(period.startDate);
+                const endDate = period.endDate ? new Date(period.endDate) : null;
+                const isCurrent = now >= startDate && (!endDate || now <= endDate);
+                
+                const storeOrders = orders.filter(o => {
+                    if (o.restaurant_id !== selectedStoreId) return false;
+                    const orderDate = new Date(o.created_at);
+                    return orderDate >= startDate && (!endDate || orderDate <= endDate);
+                });
+                const periodRevenue = storeOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+                const periodEarnings = periodRevenue * (period.rate / 100);
+                
+                return `
+                    <div class="commission-period-item ${isCurrent ? 'current' : ''}">
+                        <div class="period-input-group">
+                            <label>Start Date ${isCurrent ? '<span class="period-current-badge">CURRENT</span>' : ''}</label>
+                            <input type="date" 
+                                   value="${period.startDate}" 
+                                   id="period_start_${index}"
+                                   min="2025-09-01"
+                                   max="2030-12-31"
+                                   onchange="updatePeriod(${index}, 'startDate', this.value)">
+                        </div>
+                        <div class="period-input-group">
+                            <label>End Date (blank = ongoing)</label>
+                            <input type="date" 
+                                   value="${period.endDate || ''}" 
+                                   id="period_end_${index}"
+                                   min="2025-09-01"
+                                   max="2030-12-31"
+                                   onchange="updatePeriod(${index}, 'endDate', this.value)"
+                                   placeholder="Ongoing">
+                        </div>
+                        <div class="period-rate">
+                            <input type="number" 
+                                   value="${period.rate}" 
+                                   min="0" 
+                                   max="50" 
+                                   id="period_rate_${index}"
+                                   onchange="updatePeriod(${index}, 'rate', this.value)">
+                            <span>%</span>
+                        </div>
+                        <div class="period-earnings">
+                            <div class="period-earnings-value">$${periodEarnings.toFixed(0)}</div>
+                            <div style="font-size: 0.6rem; color: var(--text-muted);">${storeOrders.length} orders</div>
+                        </div>
+                        <button class="period-delete" onclick="deletePeriod(${index})" title="Delete period">×</button>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function addCommissionPeriod() {
+            if (!selectedStoreId) {
+                alert('Please select a store first');
+                return;
+            }
+            
+            if (!storeCommissions[selectedStoreId]) {
+                storeCommissions[selectedStoreId] = { periods: [] };
+            }
+            
+            storeCommissions[selectedStoreId].periods.push({
+                startDate: '2025-09-01',
+                endDate: '',
+                rate: defaultCommissionRate
+            });
+            
+            renderCommissionPeriods();
+        }
+        
+        function updatePeriod(index, field, value) {
+            if (!selectedStoreId || !storeCommissions[selectedStoreId]) return;
+            
+            const periods = storeCommissions[selectedStoreId].periods;
+            if (periods[index]) {
+                if (field === 'rate') {
+                    periods[index][field] = parseFloat(value) || 0;
+                } else {
+                    periods[index][field] = value;
+                }
+            }
+            
+            renderCommissionPeriods();
+            updateCommissionSummary();
+        }
+        
+        function deletePeriod(index) {
+            if (!selectedStoreId || !storeCommissions[selectedStoreId]) return;
+            
+            if (confirm('Delete this commission period?')) {
+                storeCommissions[selectedStoreId].periods.splice(index, 1);
+                renderCommissionPeriods();
+                updateCommissionSummary();
+            }
+        }
+        
+        function updateCommissionSummary() {
+            let totalRevenue = 0;
+            let totalEarnings = 0;
+            
+            restaurants.forEach(store => {
+                const storeOrders = orders.filter(o => o.restaurant_id === store.id);
+                const revenue = storeOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+                const earnings = calculateStoreCommission(store.id, storeOrders);
+                
+                totalRevenue += revenue;
+                totalEarnings += earnings;
+            });
+            
+            document.getElementById('summaryTotalRevenue').textContent = '$' + totalRevenue.toFixed(0);
+            document.getElementById('summaryYourEarnings').textContent = '$' + totalEarnings.toFixed(0);
+            const effectiveRate = totalRevenue > 0 ? (totalEarnings / totalRevenue * 100) : 0;
+            document.getElementById('summaryEffectiveRate').textContent = effectiveRate.toFixed(1) + '%';
+        }
+        
+        function saveDefaultCommission() {
+            defaultCommissionRate = parseFloat(document.getElementById('defaultCommission').value) || 15;
+            saveCommissionSettings();
+        }
+        
+        function saveAllCommissions() {
+            saveCommissionSettings();
+            closeCommissionModal();
+            updateStats();
+            renderStoreLeaderboard();
+            alert('Commission settings saved!');
+        }
+        
+        function getStoreCommission(storeId) {
+            const now = new Date();
+            return getCommissionForOrder(storeId, now);
+        }
+
+        async function loadData() {
+            loadCommissionSettings();
+            await Promise.all([loadOrders(), loadDrivers(), loadRestaurants()]);
+            updateStats();
+            renderStoreLeaderboard();
+        }
+
+        async function loadOrders() {
+            const { start, end } = getDateRange();
+            
+            let query = supabaseClient
+                .from('orders')
+                .select('*')
+                .gte('created_at', start.toISOString())
+                .order('created_at', { ascending: false });
+            
+            if (end) {
+                query = query.lte('created_at', end.toISOString());
+            }
+
+            const { data, error } = await query;
+
+            if (!error) {
+                orders = data || [];
+                renderOrders();
+                updateOrderCounts();
+            }
+        }
+
+        async function loadDrivers() {
+            const { data, error } = await supabaseClient
+                .from('drivers')
+                .select('*')
+                .order('is_online', { ascending: false });
+
+            if (!error) {
+                drivers = data || [];
+                renderDrivers();
+            }
+        }
+
+        async function loadRestaurants() {
+            const { data, error } = await supabaseClient
+                .from('restaurants')
+                .select('*')
+                .eq('is_active', true);
+
+            if (!error) {
+                restaurants = data || [];
+            }
+        }
+
+        function renderOrders() {
+            const container = document.getElementById('ordersList');
+            const filtered = currentFilter === 'all' ? orders : orders.filter(o => o.status === currentFilter);
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-state">📭 No orders</div>';
+                return;
+            }
+
+            container.innerHTML = filtered.map(order => `
+                <div class="order-item" onclick="openOrderModal('${order.id}')" style="cursor: pointer;">
+                    <div class="order-status-dot ${order.status}"></div>
+                    <div class="order-info">
+                        <div class="order-top">
+                            <span class="order-number">#${order.order_number || order.id.slice(0,6)}</span>
+                            <span class="order-restaurant">${getRestaurantName(order.restaurant_id)}</span>
+                        </div>
+                        <div class="order-customer">${order.customer_name || 'Customer'} • ${order.customer_address || ''}</div>
+                    </div>
+                    <div class="order-meta">
+                        <div class="order-total">$${(order.total || 0).toFixed(2)}</div>
+                        <div class="order-time">${formatTime(order.created_at)}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderDrivers() {
+            const container = document.getElementById('driversList');
+            document.getElementById('driverCount').textContent = drivers.length;
+            
+            if (drivers.length === 0) {
+                container.innerHTML = '<div class="empty-state" style="padding: 1rem;">No drivers</div>';
+                return;
+            }
+
+            container.innerHTML = drivers.map(driver => {
+                const statusClass = driver.is_online ? 'online' : 'offline';
+                const statusText = driver.is_online ? 'Online' : 'Offline';
+                const initials = (driver.name || 'D').split(' ').map(n => n[0]).join('').toUpperCase();
+                
+                return `
+                    <div class="driver-item">
+                        <div class="driver-avatar">${initials}</div>
+                        <div class="driver-info">
+                            <div class="driver-name">${driver.name}</div>
+                            <div class="driver-status ${statusClass}">
+                                <span class="status-dot"></span>
+                                ${statusText}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('mapOnline').textContent = drivers.filter(d => d.is_online).length;
+            document.getElementById('mapBusy').textContent = drivers.filter(d => d.is_online && d.current_delivery_id).length;
+        }
+
+        function renderStoreLeaderboard() {
+            const container = document.getElementById('storeLeaderboard');
+            
+            const storeStats = restaurants.map(r => {
+                const storeOrders = orders.filter(o => o.restaurant_id === r.id);
+                const revenue = storeOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+                const deliveryOrders = storeOrders.filter(o => o.order_type === 'delivery' || !o.order_type).length;
+                const pickupOrders = storeOrders.filter(o => o.order_type === 'pickup').length;
+                
+                const commissionEarnings = calculateStoreCommission(r.id, storeOrders);
+                const effectiveRate = revenue > 0 ? (commissionEarnings / revenue * 100) : 0;
+                const currentRate = getStoreCommission(r.id);
+                
+                return {
+                    ...r,
+                    orderCount: storeOrders.length,
+                    revenue: revenue,
+                    delivery: deliveryOrders,
+                    pickup: pickupOrders,
+                    commissionRate: currentRate,
+                    effectiveRate: effectiveRate,
+                    commissionEarnings: commissionEarnings,
+                    pending: storeOrders.filter(o => o.status === 'pending').length,
+                    preparing: storeOrders.filter(o => o.status === 'preparing' || o.status === 'confirmed').length,
+                    ready: storeOrders.filter(o => o.status === 'ready').length,
+                    delivering: storeOrders.filter(o => o.status === 'delivering').length
+                };
+            }).sort((a, b) => b.revenue - a.revenue);
+
+            const maxRevenue = Math.max(...storeStats.map(s => s.revenue), 1);
+            const icons = ['🍕', '🍔', '🌮', '🍣', '🍗'];
+
+            container.innerHTML = storeStats.map((store, i) => {
+                const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+                const pct = (store.revenue / maxRevenue * 100).toFixed(0);
+                const rateDisplay = store.effectiveRate !== store.commissionRate 
+                    ? `<span title="Effective rate for period">${store.effectiveRate.toFixed(1)}%</span>` 
+                    : `${store.commissionRate}%`;
+                
+                return `
+                    <div class="store-item">
+                        <div class="store-rank ${rankClass}">${i + 1}</div>
+                        <div class="store-icon">${icons[i] || '🏪'}</div>
+                        <div class="store-info">
+                            <div class="store-name">${store.name}</div>
+                            <div class="store-stats">
+                                <div class="store-stat">📦 <span>${store.orderCount}</span></div>
+                                <div class="store-stat">🚗 <span>${store.delivery}</span></div>
+                                <div class="store-stat">🏃 <span>${store.pickup}</span></div>
+                                <div class="store-stat" style="color: var(--accent-green);">💰 ${rateDisplay}</div>
+                            </div>
+                            <div class="progress-bar"><div class="progress-fill" style="width: ${pct}%"></div></div>
+                        </div>
+                        <div class="store-revenue">
+                            <div class="store-revenue-value">$${store.revenue.toFixed(0)}</div>
+                            <div class="store-revenue-label">revenue</div>
+                            <div style="font-size: 0.7rem; color: var(--accent-green); margin-top: 0.25rem;">+$${store.commissionEarnings.toFixed(0)} yours</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            const totalRevenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+            const totalCommission = storeStats.reduce((sum, s) => sum + s.commissionEarnings, 0);
+            const avgOrder = orders.length > 0 ? totalRevenue / orders.length : 0;
+            
+            document.getElementById('totalStores').textContent = restaurants.length;
+            document.getElementById('avgOrderValue').textContent = '$' + avgOrder.toFixed(0);
+            document.getElementById('platformFees').textContent = '$' + totalCommission.toFixed(0);
+            
+            const deliveryTotal = orders.filter(o => o.order_type === 'delivery' || !o.order_type).length;
+            const pickupTotal = orders.filter(o => o.order_type === 'pickup').length;
+            document.getElementById('deliveryCount').textContent = deliveryTotal;
+            document.getElementById('pickupCount').textContent = pickupTotal;
+            const deliveryPct = orders.length > 0 ? (deliveryTotal / orders.length * 100).toFixed(0) : 0;
+            document.getElementById('deliveryPct').textContent = deliveryPct + '%';
+        }
+
+        function updateStats() {
+            const rangeLabels = {
+                'today': 'Today',
+                'yesterday': 'Yesterday', 
+                'week': '7 Days',
+                'biweek': '14 Days',
+                'month': '30 Days',
+                'quarter': '90 Days',
+                'half': '6 Months',
+                'year': '1 Year',
+                'all': 'All Time',
+                'custom': customStartDate ? 
+                    customStartDate.toLocaleDateString() + ' - ' + customEndDate.toLocaleDateString() : 
+                    'Custom'
+            };
+            document.getElementById('dateRangeLabel').textContent = '(' + rangeLabels[currentDateRange] + ')';
+            
+            document.getElementById('statOrders').textContent = orders.length;
+            document.getElementById('statOrdersSub').textContent = orders.filter(o => o.status === 'pending').length + ' pending';
+            
+            const revenue = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+            document.getElementById('statRevenue').textContent = '$' + revenue.toFixed(0);
+            
+            let totalCommission = 0;
+            restaurants.forEach(r => {
+                const storeOrders = orders.filter(o => o.restaurant_id === r.id);
+                totalCommission += calculateStoreCommission(r.id, storeOrders);
+            });
+            document.getElementById('statRevenueSub').textContent = 'You earn: $' + totalCommission.toFixed(0);
+            
+            document.getElementById('statDrivers').textContent = drivers.filter(d => d.is_online).length;
+            document.getElementById('statDriversSub').textContent = drivers.length + ' total';
+
+            const storeRevenues = restaurants.map(r => ({
+                name: r.name,
+                revenue: orders.filter(o => o.restaurant_id === r.id).reduce((sum, o) => sum + (o.total || 0), 0)
+            })).sort((a, b) => b.revenue - a.revenue);
+
+            if (storeRevenues.length > 0 && storeRevenues[0].revenue > 0) {
+                document.getElementById('statTopStore').textContent = storeRevenues[0].name.split(' ')[0];
+                document.getElementById('statTopStoreSub').textContent = '$' + storeRevenues[0].revenue.toFixed(0);
+            }
+        }
+
+        function updateOrderCounts() {
+            document.getElementById('countAll').textContent = orders.length;
+            document.getElementById('countPending').textContent = orders.filter(o => o.status === 'pending').length;
+            document.getElementById('countPreparing').textContent = orders.filter(o => o.status === 'preparing' || o.status === 'confirmed').length;
+            document.getElementById('countReady').textContent = orders.filter(o => o.status === 'ready').length;
+            document.getElementById('countDelivering').textContent = orders.filter(o => o.status === 'delivering').length;
+        }
+
+        function getRestaurantName(id) {
+            const r = restaurants.find(r => r.id === id);
+            return r ? r.name : 'Unknown';
+        }
+
+        function formatTime(dateString) {
+            if (!dateString) return '';
+            return new Date(dateString).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        function setupTabs() {
+            document.querySelectorAll('.order-tab').forEach(tab => {
+                tab.addEventListener('click', () => {
+                    document.querySelectorAll('.order-tab').forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    currentFilter = tab.dataset.status;
+                    renderOrders();
+                });
+            });
+        }
+
+        function setupRealtime() {
+            supabaseClient
+                .channel('admin-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+                    loadOrders().then(() => { updateStats(); renderStoreLeaderboard(); });
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'drivers' }, () => loadDrivers())
+                .subscribe();
+        }
+
+        async function createTestOrder() {
+            if (restaurants.length === 0) return alert('No restaurants');
+            const r = restaurants[Math.floor(Math.random() * restaurants.length)];
+            await supabaseClient.from('orders').insert([{
+                restaurant_id: r.id,
+                customer_name: 'Test Customer',
+                customer_phone: '+14035551234',
+                customer_address: '123 Test St, Calgary',
+                total: parseFloat((Math.random() * 50 + 20).toFixed(2)),
+                status: 'pending'
+            }]);
+            loadOrders().then(() => { updateStats(); renderStoreLeaderboard(); });
+        }
+
+        function refreshData() { loadData(); }
+
+        setTimeout(() => {
+            const map = document.getElementById('map');
+            map.style.background = 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)';
+            map.style.display = 'flex';
+            map.style.alignItems = 'center';
+            map.style.justifyContent = 'center';
+            map.style.color = '#5a5c6a';
+            map.innerHTML = '🗺️ Calgary - ' + drivers.filter(d => d.is_online).length + ' drivers online';
+        }, 1000);
+
+        // ========== NOTIFICATIONS SYSTEM ==========
+        let notifications = [];
+        let currentNotificationFilter = 'pending';
+        let currentNotification = null;
+
+        async function loadNotifications() {
+            try {
+                const { data, error } = await supabaseClient
+                    .from('notifications')
+                    .select('*')
+                    .order('created_at', { ascending: false })
+                    .limit(100);
+
+                if (!error && data) {
+                    notifications = data;
+                    updateNotificationBadge();
+                    renderNotifications();
+                }
+            } catch (err) {
+                console.error('Error loading notifications:', err);
+            }
+        }
+
+        function setupNotificationRealtime() {
+            supabaseClient
+                .channel('admin-notifications')
+                .on('postgres_changes', { 
+                    event: '*', 
+                    schema: 'public', 
+                    table: 'notifications' 
+                }, (payload) => {
+                    console.log('Notification change:', payload);
+                    loadNotifications();
+                    // Play sound for new notifications
+                    if (payload.eventType === 'INSERT') {
+                        playNotificationSound();
+                    }
+                })
+                .subscribe();
+        }
+
+        function playNotificationSound() {
+            // Simple beep using Web Audio API
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioCtx.createOscillator();
+                const gainNode = audioCtx.createGain();
+                oscillator.connect(gainNode);
+                gainNode.connect(audioCtx.destination);
+                oscillator.frequency.value = 800;
+                oscillator.type = 'sine';
+                gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                oscillator.start(audioCtx.currentTime);
+                oscillator.stop(audioCtx.currentTime + 0.3);
+            } catch (e) {}
+        }
+
+        function updateNotificationBadge() {
+            const pending = notifications.filter(n => n.status === 'pending').length;
+            const badge = document.getElementById('notificationBadge');
+            if (pending > 0) {
+                badge.textContent = pending > 99 ? '99+' : pending;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+
+        function toggleNotificationPanel() {
+            const panel = document.getElementById('notificationPanel');
+            panel.classList.toggle('visible');
+            
+            // Close when clicking outside
+            if (panel.classList.contains('visible')) {
+                setTimeout(() => {
+                    document.addEventListener('click', closeNotificationPanelOutside);
+                }, 100);
+            }
+        }
+
+        function closeNotificationPanelOutside(e) {
+            const panel = document.getElementById('notificationPanel');
+            const bell = document.querySelector('.notification-bell');
+            if (!panel.contains(e.target) && !bell.contains(e.target)) {
+                panel.classList.remove('visible');
+                document.removeEventListener('click', closeNotificationPanelOutside);
+            }
+        }
+
+        function filterNotifications(filter) {
+            currentNotificationFilter = filter;
+            document.querySelectorAll('.notification-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.filter === filter);
+            });
+            renderNotifications();
+        }
+
+        function renderNotifications() {
+            const container = document.getElementById('notificationList');
+            let filtered = notifications;
+            
+            if (currentNotificationFilter === 'pending') {
+                filtered = notifications.filter(n => n.status === 'pending');
+            }
+            
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="notification-empty">
+                        <div class="notification-empty-icon">✅</div>
+                        <div>${currentNotificationFilter === 'pending' ? 'No pending approvals' : 'No notifications'}</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = filtered.map(n => {
+                const details = n.details || {};
+                const imageUrl = details.item?.image_url || details.new?.image_url || null;
+                return `
+                <div class="notification-item ${n.status === 'pending' ? 'unread' : ''}" onclick="openNotificationDetail('${n.id}')">
+                    <div style="display: flex; gap: 1rem;">
+                        ${imageUrl ? `<img src="${imageUrl}" alt="" style="width: 60px; height: 60px; object-fit: cover; border-radius: 8px; flex-shrink: 0;">` : ''}
+                        <div style="flex: 1; min-width: 0;">
+                            <div class="notification-header">
+                                <div class="notification-title">${n.title || 'Notification'}</div>
+                                <div class="notification-time">${formatNotificationTime(n.created_at)}</div>
+                            </div>
+                            <div class="notification-message">${n.message || ''}</div>
+                            <div class="notification-store">🏪 ${n.store_name || 'Unknown Store'}</div>
+                            <span class="notification-status ${n.status}">${n.status.toUpperCase()}</span>
+                        </div>
+                    </div>
+                    ${n.status === 'pending' ? `
+                        <div class="notification-actions" onclick="event.stopPropagation()">
+                            <button class="approve-btn" onclick="approveNotification('${n.id}')">✅ Approve</button>
+                            <button class="reject-btn" onclick="rejectNotification('${n.id}')">❌ Reject</button>
+                            <button class="view-btn" onclick="openNotificationDetail('${n.id}')">👁️ Details</button>
+                        </div>
+                    ` : ''}
+                </div>
+            `}).join('');
+        }
+
+        function formatNotificationTime(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            const now = new Date();
+            const diff = now - date;
+            
+            if (diff < 60000) return 'Just now';
+            if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago';
+            if (diff < 86400000) return Math.floor(diff / 3600000) + 'h ago';
+            if (diff < 604800000) return Math.floor(diff / 86400000) + 'd ago';
+            return date.toLocaleDateString();
+        }
+
+        function openNotificationDetail(id) {
+            currentNotification = notifications.find(n => n.id === id);
+            if (!currentNotification) return;
+            
+            const details = currentNotification.details || {};
+            let detailsHtml = '';
+            
+            // Helper function to render item image
+            const renderImage = (item) => {
+                if (item?.image_url) {
+                    return `<div style="margin: 0.75rem 0;"><img src="${item.image_url}" alt="${item.name}" style="width: 100%; max-width: 200px; height: 150px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border);"></div>`;
+                }
+                return '';
+            };
+            
+            if (details.action === 'create' && details.item) {
+                detailsHtml = `
+                    <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <h4 style="color: var(--accent-green); margin-bottom: 0.75rem;">🆕 New Item Added</h4>
+                        ${renderImage(details.item)}
+                        <p><strong>Name:</strong> ${details.item.name}</p>
+                        <p><strong>Price:</strong> $${parseFloat(details.item.base_price || 0).toFixed(2)}</p>
+                        <p><strong>Category:</strong> ${details.item.category || 'N/A'}</p>
+                        <p><strong>Description:</strong> ${details.item.description || 'N/A'}</p>
+                        <p><strong>Available:</strong> ${details.item.is_available ? '✅ Yes' : '❌ No'}</p>
+                    </div>
+                `;
+            } else if (details.action === 'update' && details.changes) {
+                const newItem = details.new || {};
+                const oldItem = details.old || {};
+                detailsHtml = `
+                    <div style="background: var(--bg-dark); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <h4 style="color: var(--accent-orange); margin-bottom: 0.75rem;">✏️ Changes Made</h4>
+                        ${renderImage(newItem)}
+                        <ul style="list-style: none; padding: 0;">
+                            ${details.changes.map(c => `<li style="padding: 0.25rem 0; color: var(--text-secondary);">• ${c}</li>`).join('')}
+                        </ul>
+                        ${newItem.image_url !== oldItem.image_url ? '<p style="color: var(--accent-blue);">📷 Image was updated</p>' : ''}
+                    </div>
+                `;
+            } else if (details.action === 'delete' && details.item) {
+                detailsHtml = `
+                    <div style="background: rgba(255,107,107,0.1); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <h4 style="color: var(--accent-red); margin-bottom: 0.75rem;">🗑️ Item Deleted</h4>
+                        ${renderImage(details.item)}
+                        <p><strong>Name:</strong> ${details.item.name}</p>
+                        <p><strong>Price:</strong> $${parseFloat(details.item.base_price || 0).toFixed(2)}</p>
+                    </div>
+                `;
+            } else if (details.promotion) {
+                detailsHtml = `
+                    <div style="background: var(--accent-purple-dim); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                        <h4 style="color: var(--accent-purple); margin-bottom: 0.75rem;">🎁 Promotion</h4>
+                        <p><strong>Name:</strong> ${details.promotion.name}</p>
+                        <p><strong>Type:</strong> ${details.promotion.type}</p>
+                        ${details.promotion.discount_percent ? `<p><strong>Discount:</strong> ${details.promotion.discount_percent}%</p>` : ''}
+                        ${details.promotion.description ? `<p><strong>Description:</strong> ${details.promotion.description}</p>` : ''}
+                    </div>
+                `;
+            }
+            
+            document.getElementById('notificationModalTitle').textContent = currentNotification.title || 'Notification Details';
+            document.getElementById('notificationModalContent').innerHTML = `
+                <div style="margin-bottom: 1rem;">
+                    <p style="color: var(--text-secondary); margin-bottom: 0.5rem;">${currentNotification.message}</p>
+                    <p style="font-size: 0.8rem; color: var(--text-muted);">
+                        🏪 ${currentNotification.store_name} • 👤 ${currentNotification.user_name || 'Unknown'} • 🕐 ${formatNotificationTime(currentNotification.created_at)}
+                    </p>
+                </div>
+                ${detailsHtml}
+                <div style="padding: 0.75rem; background: var(--bg-dark); border-radius: 8px;">
+                    <strong>Status:</strong> <span class="notification-status ${currentNotification.status}">${currentNotification.status.toUpperCase()}</span>
+                    ${currentNotification.review_notes ? `<p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-secondary);">Notes: ${currentNotification.review_notes}</p>` : ''}
+                </div>
+            `;
+            
+            // Update action buttons based on status
+            const actionsDiv = document.getElementById('notificationModalActions');
+            if (currentNotification.status === 'pending') {
+                actionsDiv.innerHTML = `
+                    <button class="cancel-btn" onclick="closeNotificationModal()">Close</button>
+                    <button class="reject-btn" onclick="rejectNotification('${currentNotification.id}'); closeNotificationModal();">❌ Reject</button>
+                    <button class="apply-btn" onclick="approveNotification('${currentNotification.id}'); closeNotificationModal();">✅ Approve</button>
+                `;
+            } else {
+                actionsDiv.innerHTML = `<button class="cancel-btn" onclick="closeNotificationModal()">Close</button>`;
+            }
+            
+            document.getElementById('notificationModalOverlay').style.display = 'block';
+            document.getElementById('notificationModal').style.display = 'block';
+        }
+
+        function closeNotificationModal() {
+            document.getElementById('notificationModalOverlay').style.display = 'none';
+            document.getElementById('notificationModal').style.display = 'none';
+            currentNotification = null;
+        }
+
+        async function approveNotification(id) {
+            try {
+                const notification = notifications.find(n => n.id === id);
+                
+                const { error } = await supabaseClient
+                    .from('notifications')
+                    .update({ 
+                        status: 'approved',
+                        reviewed_at: new Date().toISOString(),
+                        reviewed_by: currentUser?.id
+                    })
+                    .eq('id', id);
+
+                if (!error) {
+                    // Create response notification for store owner
+                    if (notification) {
+                        await supabaseClient.from('notifications').insert([{
+                            type: 'approval_response',
+                            store_id: notification.store_id,
+                            store_name: notification.store_name,
+                            user_id: notification.user_id,
+                            user_name: 'Admin',
+                            title: '✅ Approved: ' + notification.title,
+                            message: `Your change "${notification.message}" has been approved by admin.`,
+                            details: { 
+                                original_notification_id: id, 
+                                response: 'approved',
+                                original_details: notification.details 
+                            },
+                            status: 'info'
+                        }]);
+                        
+                        notification.status = 'approved';
+                    }
+                    updateNotificationBadge();
+                    renderNotifications();
+                    console.log('Approved notification:', id);
+                }
+            } catch (err) {
+                console.error('Error approving notification:', err);
+            }
+        }
+
+        async function rejectNotification(id) {
+            const notes = prompt('Reason for rejection (optional):');
+            
+            try {
+                const notification = notifications.find(n => n.id === id);
+                
+                const { error } = await supabaseClient
+                    .from('notifications')
+                    .update({ 
+                        status: 'rejected',
+                        reviewed_at: new Date().toISOString(),
+                        reviewed_by: currentUser?.id,
+                        review_notes: notes || null
+                    })
+                    .eq('id', id);
+
+                if (!error) {
+                    // Create response notification for store owner
+                    if (notification) {
+                        await supabaseClient.from('notifications').insert([{
+                            type: 'approval_response',
+                            store_id: notification.store_id,
+                            store_name: notification.store_name,
+                            user_id: notification.user_id,
+                            user_name: 'Admin',
+                            title: '❌ Rejected: ' + notification.title,
+                            message: `Your change "${notification.message}" was rejected.${notes ? ' Reason: ' + notes : ''}`,
+                            details: { 
+                                original_notification_id: id, 
+                                response: 'rejected',
+                                reason: notes,
+                                original_details: notification.details 
+                            },
+                            status: 'info'
+                        }]);
+                        
+                        notification.status = 'rejected';
+                        notification.review_notes = notes;
+                    }
+                    updateNotificationBadge();
+                    renderNotifications();
+                    
+                    console.log('Rejected notification:', id);
+                }
+            } catch (err) {
+                console.error('Error rejecting notification:', err);
+            }
+        }
+
+        // Close notification panel when clicking outside
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('notificationPanel');
+            const bell = document.querySelector('.notification-bell');
+            if (panel.classList.contains('visible') && !panel.contains(e.target) && !bell.contains(e.target)) {
+                panel.classList.remove('visible');
+            }
+        });
+
+        // ========== ORDER MODAL & RECEIPT PRINTING ==========
+        let currentOrderForPrint = null;
+        
+        // Owner info - Fatima from AB King Pizza
+        const ownerInfo = {
+            name: 'Fatima',
+            image: 'data:image/jpeg;base64,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',
+            story: "I put my heart into every pizza I make. When you order from me, you're supporting a local Calgary family, not a corporation. Thank you for believing in local! 🙏"
+        };
+        
+        // Driver info - Ahmed
+        const driverInfo = {
+            name: 'Ahmed',
+            image: 'data:image/jpeg;base64,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',
+            story: "Proud to deliver for LocalFirst YYC! Your order supports local Calgary families — thank you for choosing us. 💚"
+        };
+
+        function openOrderModal(orderId) {
+            const order = orders.find(o => o.id === orderId);
+            if (!order) return;
+            currentOrderForPrint = order;
+            
+            document.getElementById('orderModalTitle').textContent = '📋 Order #' + (order.order_number || order.id.slice(0,6));
+            document.getElementById('orderModalContent').innerHTML = `
+                <div style="margin-bottom: 1rem;">
+                    <strong>Customer:</strong> ${order.customer_name || 'N/A'}<br>
+                    <strong>Phone:</strong> ${order.customer_phone || 'N/A'}<br>
+                    <strong>Address:</strong> ${order.customer_address || 'N/A'}
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem;">
+                    <div style="background: rgba(77, 166, 255, 0.15); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Total</div>
+                        <div style="font-size: 1.25rem; font-weight: 700; color: #4da6ff;">$${(order.total || 0).toFixed(2)}</div>
+                    </div>
+                    <div style="background: rgba(0, 210, 106, 0.15); padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="font-size: 0.8rem; color: var(--text-secondary);">Status</div>
+                        <div style="font-size: 1rem; font-weight: 600; color: #00d26a;">${order.status || 'pending'}</div>
+                    </div>
+                </div>
+                <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                    <strong>Restaurant:</strong> ${getRestaurantName(order.restaurant_id)}<br>
+                    <strong>Payment:</strong> ${order.payment_method === 'cash' ? '💵 Cash on Delivery' : '💳 Paid'}<br>
+                    <strong>Type:</strong> ${order.order_type === 'pickup' ? '🏃 Pickup' : '🚗 Delivery'}<br>
+                    <strong>Created:</strong> ${new Date(order.created_at).toLocaleString()}
+                </div>
+            `;
+            document.getElementById('orderModalOverlay').classList.add('active');
+            document.getElementById('orderModal').classList.add('active');
+        }
+
+        function closeOrderModal() {
+            document.getElementById('orderModalOverlay').classList.remove('active');
+            document.getElementById('orderModal').classList.remove('active');
+            currentOrderForPrint = null;
+        }
+        
+        function printCustomerReceipt() {
+            if (!currentOrderForPrint) return;
+            const order = currentOrderForPrint;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            let y = 20;
+            const margin = 20;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const contentWidth = pageWidth - (margin * 2);
+            
+            // Header
+            doc.setFontSize(24);
+            doc.setTextColor(37, 211, 102);
+            doc.text('LocalFirst YYC', pageWidth / 2, y, { align: 'center' });
+            y += 8;
+            doc.setFontSize(10);
+            doc.setTextColor(128, 128, 128);
+            doc.text('Support Local. Eat Amazing.', pageWidth / 2, y, { align: 'center' });
+            y += 12;
+            
+            // Order info
+            doc.setFontSize(14);
+            doc.setTextColor(0, 0, 0);
+            doc.text('Order #' + (order.order_number || order.id.slice(0,6)), margin, y);
+            y += 6;
+            doc.setFontSize(10);
+            doc.setTextColor(128, 128, 128);
+            doc.text(new Date(order.created_at).toLocaleString(), margin, y);
+            y += 12;
+            
+            // Customer info
+            doc.setFontSize(11);
+            doc.setTextColor(0, 0, 0);
+            doc.text('Customer: ' + (order.customer_name || 'N/A'), margin, y);
+            y += 6;
+            doc.text('Phone: ' + (order.customer_phone || 'N/A'), margin, y);
+            y += 6;
+            doc.text('Address: ' + (order.customer_address || 'N/A'), margin, y);
+            y += 6;
+            doc.text('Restaurant: ' + getRestaurantName(order.restaurant_id), margin, y);
+            y += 10;
+            
+            // Line
+            doc.setDrawColor(200, 200, 200);
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 10;
+            
+            // Totals
+            doc.setFontSize(14);
+            doc.setTextColor(37, 211, 102);
+            doc.text('Total:', margin, y);
+            doc.text('$' + (order.total || 0).toFixed(2), pageWidth - margin, y, { align: 'right' });
+            y += 8;
+            
+            // Payment method
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            const paymentMethod = order.payment_method === 'cash' ? 'Cash on Delivery' : 'Paid';
+            doc.text('Payment: ' + paymentMethod, margin, y);
+            y += 15;
+            
+            // Owner section
+            doc.setFillColor(245, 245, 245);
+            doc.roundedRect(margin, y, contentWidth, 35, 3, 3, 'F');
+            y += 8;
+            doc.setFontSize(11);
+            doc.setTextColor(37, 211, 102);
+            doc.text('Meet ' + ownerInfo.name, margin + 5, y);
+            y += 8;
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80);
+            const storyLines = doc.splitTextToSize('"' + ownerInfo.story + '"', contentWidth - 10);
+            doc.text(storyLines, margin + 5, y);
+            y += storyLines.length * 4 + 15;
+            
+            // Footer
+            doc.setFontSize(10);
+            doc.setTextColor(37, 211, 102);
+            doc.text('Thank you for supporting local!', pageWidth / 2, y, { align: 'center' });
+            y += 6;
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.text('LocalFirst YYC - (403) 826-5529 - localhubyyc@gmail.com', pageWidth / 2, y, { align: 'center' });
+            
+            // Save
+            doc.save('LocalFirst-Receipt-' + (order.order_number || order.id.slice(0,6)) + '.pdf');
+        }
+        
+        function printKitchenReceipt() {
+            if (!currentOrderForPrint) return;
+            const order = currentOrderForPrint;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ format: [80, 150], unit: 'mm' });
+            
+            let y = 5;
+            const margin = 3;
+            const pageWidth = 80;
+            
+            // Header
+            doc.setFontSize(14);
+            doc.setTextColor(0, 0, 0);
+            doc.text('KITCHEN ORDER', pageWidth / 2, y, { align: 'center' });
+            y += 6;
+            
+            // Order number - BIG
+            doc.setFontSize(20);
+            doc.text('#' + (order.order_number || order.id.slice(0,6)), pageWidth / 2, y, { align: 'center' });
+            y += 8;
+            
+            // Time
+            doc.setFontSize(10);
+            doc.text(new Date(order.created_at).toLocaleTimeString(), pageWidth / 2, y, { align: 'center' });
+            y += 5;
+            
+            // Restaurant
+            doc.setFontSize(9);
+            doc.text(getRestaurantName(order.restaurant_id), pageWidth / 2, y, { align: 'center' });
+            y += 5;
+            
+            // Order type
+            const orderType = order.order_type === 'pickup' ? 'PICKUP' : 'DELIVERY';
+            doc.setFontSize(12);
+            doc.text(orderType, pageWidth / 2, y, { align: 'center' });
+            y += 6;
+            
+            // Line
+            doc.setDrawColor(0, 0, 0);
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 5;
+            
+            // Customer
+            doc.setFontSize(10);
+            doc.text('Customer: ' + (order.customer_name || 'N/A'), margin, y);
+            y += 4;
+            doc.text('Phone: ' + (order.customer_phone || 'N/A'), margin, y);
+            y += 4;
+            if (order.order_type !== 'pickup') {
+                doc.setFontSize(8);
+                const addrLines = doc.splitTextToSize(order.customer_address || '', pageWidth - (margin * 2));
+                doc.text(addrLines, margin, y);
+                y += addrLines.length * 3 + 2;
+            }
+            
+            y += 3;
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 5;
+            
+            // Payment warning for COD
+            if (order.payment_method === 'cash') {
+                doc.setFontSize(12);
+                doc.text('CASH ON DELIVERY', pageWidth / 2, y, { align: 'center' });
+                y += 5;
+                doc.setFontSize(10);
+                doc.text('$' + (order.total || 0).toFixed(2) + ' DUE', pageWidth / 2, y, { align: 'center' });
+            } else {
+                doc.setFontSize(10);
+                doc.text('PAID', pageWidth / 2, y, { align: 'center' });
+            }
+            
+            // Save
+            doc.save('Kitchen-' + (order.order_number || order.id.slice(0,6)) + '.pdf');
+        }
+    </script>
+</body>
+</html>

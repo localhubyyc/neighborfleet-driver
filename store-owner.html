@@ -1,0 +1,1987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Store Owner Dashboard - YYC LocalFirst</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="auth-guard.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg-dark: #0a0a0f;
+            --bg-card: #12131a;
+            --bg-card-hover: #1a1b24;
+            --bg-input: #1a1b24;
+            --border: #2a2b35;
+            --text-primary: #ffffff;
+            --text-secondary: #8b8d9a;
+            --text-muted: #5a5c6a;
+            --accent-green: #00d26a;
+            --accent-green-dim: rgba(0, 210, 106, 0.15);
+            --accent-orange: #ff9f43;
+            --accent-orange-dim: rgba(255, 159, 67, 0.15);
+            --accent-red: #ff6b6b;
+            --accent-red-dim: rgba(255, 107, 107, 0.15);
+            --accent-blue: #4da6ff;
+            --accent-blue-dim: rgba(77, 166, 255, 0.15);
+            --accent-purple: #a78bfa;
+            --accent-purple-dim: rgba(167, 139, 250, 0.15);
+        }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-dark); color: var(--text-primary); min-height: 100vh; }
+        .header { background: var(--bg-card); border-bottom: 1px solid var(--border); padding: 1rem 2rem; position: sticky; top: 0; z-index: 100; }
+        .header-content { max-width: 1400px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
+        .logo { display: flex; align-items: center; gap: 0.75rem; }
+        .logo-icon { font-size: 1.5rem; }
+        .logo-text { font-size: 1.25rem; font-weight: 700; color: var(--accent-green); }
+        .logo-badge { background: var(--accent-orange-dim); color: var(--accent-orange); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.65rem; font-weight: 600; }
+        .header-right { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .date-filters { display: flex; gap: 0.35rem; background: var(--bg-dark); padding: 0.35rem; border-radius: 10px; border: 1px solid var(--border); flex-wrap: wrap; }
+        .date-btn { padding: 0.4rem 0.75rem; border-radius: 6px; font-size: 0.75rem; font-weight: 500; cursor: pointer; background: transparent; border: none; color: var(--text-secondary); transition: all 0.2s; }
+        .date-btn:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+        .date-btn.active { background: var(--accent-green); color: #000; }
+        .user-menu { display: flex; align-items: center; gap: 0.75rem; padding-left: 1rem; border-left: 1px solid var(--border); }
+        .user-info { display: flex; align-items: center; gap: 0.5rem; padding: 0.4rem 0.75rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; position: relative; }
+        .user-avatar { width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, var(--accent-orange), #ff7b00); display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 600; color: #000; overflow: hidden; }
+        .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .user-name { font-size: 0.8rem; font-weight: 600; }
+        .user-role { font-size: 0.65rem; color: var(--text-secondary); }
+        .logout-btn { padding: 0.5rem 0.75rem; background: var(--accent-red-dim); border: 1px solid var(--accent-red); border-radius: 8px; color: var(--accent-red); font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+        .logout-btn:hover { background: var(--accent-red); color: white; }
+        .profile-dropdown { display: none; position: absolute; top: 100%; right: 0; margin-top: 0.5rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 0.5rem; min-width: 200px; z-index: 1000; }
+        .profile-dropdown.visible { display: block; }
+        .profile-dropdown-item { padding: 0.75rem 1rem; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--text-secondary); }
+        .profile-dropdown-item:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+        .main { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; background: var(--bg-card); padding: 0.5rem; border-radius: 12px; border: 1px solid var(--border); flex-wrap: wrap; }
+        .tab { padding: 0.75rem 1.25rem; border-radius: 8px; border: none; background: transparent; color: var(--text-secondary); font-size: 0.85rem; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 0.5rem; transition: all 0.2s; }
+        .tab:hover { background: var(--bg-card-hover); color: var(--text-primary); }
+        .tab.active { background: var(--accent-green); color: #000; }
+        .tab-count { background: rgba(0,0,0,0.2); padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.75rem; }
+        .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 1.25rem; }
+        .stat-card.highlight { border-color: var(--accent-green); background: linear-gradient(135deg, var(--bg-card), var(--accent-green-dim)); }
+        .stat-card.warning { border-color: var(--accent-orange); background: linear-gradient(135deg, var(--bg-card), var(--accent-orange-dim)); }
+        .stat-card.purple { border-color: var(--accent-purple); background: linear-gradient(135deg, var(--bg-card), var(--accent-purple-dim)); }
+        .stat-label { color: var(--text-secondary); font-size: 0.8rem; margin-bottom: 0.5rem; }
+        .stat-value { font-size: 1.75rem; font-weight: 700; }
+        .stat-value.green { color: var(--accent-green); }
+        .stat-value.blue { color: var(--accent-blue); }
+        .stat-value.orange { color: var(--accent-orange); }
+        .stat-value.purple { color: var(--accent-purple); }
+        .stat-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+        .section-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 1.5rem; }
+        .section-header { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; }
+        .section-title { font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+        .btn { padding: 0.6rem 1rem; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; border: none; display: inline-flex; align-items: center; gap: 0.4rem; transition: all 0.2s; }
+        .btn-primary { background: var(--accent-green); color: #000; }
+        .btn-primary:hover { background: #00b85c; }
+        .btn-secondary { background: var(--bg-input); border: 1px solid var(--border); color: var(--text-secondary); }
+        .btn-secondary:hover { border-color: var(--accent-green); color: var(--accent-green); }
+        .btn-danger { background: var(--accent-red-dim); border: 1px solid var(--accent-red); color: var(--accent-red); }
+        .btn-danger:hover { background: var(--accent-red); color: white; }
+        .btn-purple { background: var(--accent-purple); color: #000; }
+        .btn-purple:hover { background: #9171f8; }
+        .btn-sm { padding: 0.4rem 0.75rem; font-size: 0.75rem; }
+        .pending-badge { background: var(--accent-orange-dim); color: var(--accent-orange); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.65rem; font-weight: 600; margin-left: 0.5rem; }
+        .approved-badge { background: var(--accent-green-dim); color: var(--accent-green); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.65rem; font-weight: 600; margin-left: 0.5rem; }
+        .rejected-badge { background: var(--accent-red-dim); color: var(--accent-red); padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.65rem; font-weight: 600; margin-left: 0.5rem; }
+        .pending-notice { background: var(--accent-orange-dim); border: 1px solid var(--accent-orange); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--accent-orange); }
+        .notification-bell { position: relative; font-size: 1.25rem; cursor: pointer; padding: 0.5rem; border-radius: 8px; transition: background 0.2s; }
+        .notification-bell:hover { background: var(--bg-card-hover); }
+        .notification-badge { position: absolute; top: 0; right: 0; background: var(--accent-red); color: white; font-size: 0.6rem; font-weight: 700; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+        .store-notif-panel { display: none; position: fixed; top: 70px; right: 20px; width: 380px; max-height: 70vh; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); z-index: 1000; overflow: hidden; }
+        .store-notif-panel.visible { display: block; }
+        .store-notif-header { padding: 1rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; font-weight: 600; }
+        .store-notif-list { max-height: 55vh; overflow-y: auto; }
+        .store-notif-item { padding: 1rem; border-bottom: 1px solid var(--border); }
+        .store-notif-item.approved { border-left: 3px solid var(--accent-green); }
+        .store-notif-item.rejected { border-left: 3px solid var(--accent-red); }
+        .store-notif-item.info { border-left: 3px solid var(--accent-blue); }
+        .store-notif-title { font-weight: 600; margin-bottom: 0.25rem; }
+        .store-notif-message { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.25rem; }
+        .store-notif-time { font-size: 0.75rem; color: var(--text-muted); }
+        .store-notif-empty { padding: 2rem; text-align: center; color: var(--text-muted); }
+        .orders-list { max-height: 400px; overflow-y: auto; }
+        .order-item { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; cursor: pointer; transition: background 0.2s; }
+        .order-item:hover { background: var(--bg-card-hover); }
+        .order-status { width: 10px; height: 10px; border-radius: 50%; }
+        .order-status.pending { background: var(--accent-orange); }
+        .order-status.confirmed, .order-status.preparing { background: var(--accent-blue); }
+        .order-status.ready { background: var(--accent-green); }
+        .order-status.completed { background: var(--text-muted); }
+        .order-info { flex: 1; }
+        .order-number { font-weight: 600; margin-bottom: 0.25rem; }
+        .order-customer { font-size: 0.85rem; color: var(--text-secondary); }
+        .order-meta { text-align: right; }
+        .order-total { font-weight: 700; color: var(--accent-green); }
+        .order-time { font-size: 0.75rem; color: var(--text-muted); }
+        .order-type { font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 4px; margin-top: 0.35rem; display: inline-block; }
+        .order-type.delivery { background: var(--accent-blue-dim); color: var(--accent-blue); }
+        .order-type.pickup { background: var(--accent-orange-dim); color: var(--accent-orange); }
+        .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; padding: 1rem; }
+        .menu-item-card { background: var(--bg-dark); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: all 0.2s; }
+        .menu-item-card:hover { border-color: var(--accent-green); }
+        .menu-item-card.unavailable { opacity: 0.6; }
+        .menu-item-image { width: 100%; height: 140px; background: var(--bg-card-hover); display: flex; align-items: center; justify-content: center; font-size: 3rem; position: relative; }
+        .menu-item-image img { width: 100%; height: 100%; object-fit: cover; }
+        .unavailable-badge { position: absolute; top: 0.5rem; right: 0.5rem; background: var(--accent-red); color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.65rem; font-weight: 600; }
+        .menu-item-content { padding: 1rem; }
+        .menu-item-name { font-weight: 600; margin-bottom: 0.25rem; }
+        .menu-item-category { font-size: 0.75rem; color: var(--accent-orange); margin-bottom: 0.5rem; }
+        .menu-item-description { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .menu-item-footer { display: flex; justify-content: space-between; align-items: center; }
+        .menu-item-price { font-size: 1.1rem; font-weight: 700; color: var(--accent-green); }
+        .menu-item-actions { display: flex; gap: 0.35rem; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center; }
+        .modal-overlay.visible { display: flex; }
+        .modal { background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+        .modal.wide { max-width: 600px; }
+        .modal-header { padding: 1.25rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .modal-title { font-size: 1.1rem; font-weight: 600; }
+        .modal-close { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; }
+        .modal-body { padding: 1.25rem; }
+        .modal-footer { padding: 1.25rem; border-top: 1px solid var(--border); display: flex; gap: 0.75rem; justify-content: flex-end; }
+        .form-group { margin-bottom: 1rem; }
+        .form-label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.5rem; color: var(--text-secondary); }
+        .form-input, .form-select, .form-textarea { width: 100%; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); font-size: 0.9rem; }
+        .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--accent-green); }
+        .form-textarea { min-height: 80px; resize: vertical; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+        .form-checkbox { display: flex; align-items: center; gap: 0.5rem; }
+        .form-checkbox input { width: 18px; height: 18px; accent-color: var(--accent-green); }
+        .empty-state { padding: 3rem; text-align: center; color: var(--text-muted); }
+        .empty-state-icon { font-size: 3rem; margin-bottom: 1rem; }
+        .order-status-buttons { display: flex; gap: 0.5rem; margin-top: 1rem; flex-wrap: wrap; }
+        .status-btn { padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-secondary); cursor: pointer; font-size: 0.8rem; }
+        .status-btn:hover { border-color: var(--accent-green); color: var(--accent-green); }
+        .status-btn.active { background: var(--accent-green); border-color: var(--accent-green); color: #000; }
+        .alert { padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1rem; display: none; }
+        .alert.visible { display: block; }
+        .alert.success { background: var(--accent-green-dim); border: 1px solid var(--accent-green); color: var(--accent-green); }
+        .alert.error { background: var(--accent-red-dim); border: 1px solid var(--accent-red); color: var(--accent-red); }
+        .search-bar { display: flex; gap: 0.75rem; margin-bottom: 1rem; padding: 0 1rem; }
+        .search-input { flex: 1; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); font-size: 0.9rem; }
+        
+        /* Analytics Styles */
+        .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        .item-rank { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+        .item-rank:last-child { border-bottom: none; }
+        .rank-number { width: 28px; height: 28px; border-radius: 50%; background: var(--bg-dark); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; }
+        .rank-number.gold { background: linear-gradient(135deg, #ffd700, #ffaa00); color: #000; }
+        .rank-number.silver { background: linear-gradient(135deg, #c0c0c0, #a0a0a0); color: #000; }
+        .rank-number.bronze { background: linear-gradient(135deg, #cd7f32, #b87333); color: #000; }
+        .rank-info { flex: 1; }
+        .rank-name { font-weight: 600; font-size: 0.9rem; }
+        .rank-category { font-size: 0.75rem; color: var(--text-muted); }
+        .rank-stats { text-align: right; }
+        .rank-sold { font-weight: 700; color: var(--accent-green); }
+        .rank-revenue { font-size: 0.75rem; color: var(--text-secondary); }
+        .not-selling { color: var(--accent-red); }
+        
+        /* Promotions Styles */
+        .promo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; padding: 1rem; }
+        .promo-card { background: var(--bg-dark); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; position: relative; }
+        .promo-card.active { border-color: var(--accent-green); }
+        .promo-card.inactive { opacity: 0.6; }
+        .promo-badge { position: absolute; top: 0.5rem; right: 0.5rem; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.65rem; font-weight: 600; }
+        .promo-badge.active { background: var(--accent-green-dim); color: var(--accent-green); }
+        .promo-badge.scheduled { background: var(--accent-blue-dim); color: var(--accent-blue); }
+        .promo-badge.expired { background: var(--accent-red-dim); color: var(--accent-red); }
+        .promo-type { font-size: 0.7rem; color: var(--accent-purple); text-transform: uppercase; font-weight: 600; margin-bottom: 0.5rem; }
+        .promo-name { font-weight: 600; font-size: 1rem; margin-bottom: 0.25rem; }
+        .promo-desc { font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 0.75rem; }
+        .promo-details { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.75rem; }
+        .promo-details span { display: block; margin-bottom: 0.25rem; }
+        .promo-actions { display: flex; gap: 0.5rem; }
+        
+        .day-checkbox { display: flex; flex-direction: column; align-items: center; padding: 0.5rem; background: var(--bg-dark); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all 0.2s; }
+        .day-checkbox:hover { border-color: var(--accent-purple); }
+        .day-checkbox input { display: none; }
+        .day-checkbox input:checked + span { color: var(--accent-purple); }
+        .day-checkbox:has(input:checked) { background: var(--accent-purple-dim); border-color: var(--accent-purple); }
+        .day-checkbox span { font-size: 0.8rem; font-weight: 600; }
+        .custom-slot { background: var(--bg-dark); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 0.75rem; }
+        .custom-slot-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; }
+        .custom-slot-title { font-weight: 600; font-size: 0.9rem; color: var(--accent-purple); }
+        .custom-slot-days { display: flex; gap: 0.35rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+        .custom-slot-days label { padding: 0.35rem 0.6rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; cursor: pointer; font-size: 0.75rem; transition: all 0.2s; }
+        .custom-slot-days label:hover { border-color: var(--accent-purple); }
+        .custom-slot-days input { display: none; }
+        .custom-slot-days label:has(input:checked) { background: var(--accent-purple-dim); border-color: var(--accent-purple); color: var(--accent-purple); }
+        .custom-slot-times { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+        .custom-slot-times input { padding: 0.5rem; font-size: 0.85rem; }
+        
+        @media (max-width: 1200px) { .date-filters { order: 3; width: 100%; justify-content: center; } .analytics-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 900px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) { .tabs { flex-wrap: wrap; } .menu-grid { grid-template-columns: 1fr; } .promo-grid { grid-template-columns: 1fr; } .form-row, .form-row-3 { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <span class="logo-icon">🏪</span>
+                <span class="logo-text">YYC LocalFirst</span>
+                <span class="logo-badge">STORE</span>
+            </div>
+            <div class="header-right">
+                <div class="date-filters">
+                    <button class="date-btn active" data-range="today">Today</button>
+                    <button class="date-btn" data-range="yesterday">Yesterday</button>
+                    <button class="date-btn" data-range="week">7 Days</button>
+                    <button class="date-btn" data-range="biweek">14 Days</button>
+                    <button class="date-btn" data-range="month">30 Days</button>
+                    <button class="date-btn" data-range="quarter">90 Days</button>
+                    <button class="date-btn" data-range="half">6 Months</button>
+                    <button class="date-btn" data-range="year">1 Year</button>
+                    <button class="date-btn" data-range="all">All</button>
+                </div>
+                <div class="user-menu">
+                    <div class="user-info" onclick="toggleProfileDropdown()">
+                        <div class="user-avatar" id="userAvatar">👤</div>
+                        <div>
+                            <div class="user-name" id="userName">Loading...</div>
+                            <div class="user-role">Store Owner</div>
+                        </div>
+                        <div class="profile-dropdown" id="profileDropdown">
+                            <div class="profile-dropdown-item" onclick="openProfileModal(event)">📷 Change Picture</div>
+                        </div>
+                    </div>
+                    <!-- Notification Bell -->
+                    <div class="notification-bell" onclick="toggleStoreNotifications()">
+                        🔔
+                        <span class="notification-badge" id="storeNotifBadge" style="display: none;">0</span>
+                    </div>
+                    <button class="logout-btn" onclick="handleLogout()">🚪 Logout</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Store Owner Notification Panel -->
+    <div class="store-notif-panel" id="storeNotifPanel">
+        <div class="store-notif-header">
+            <span>🔔 Your Notifications</span>
+            <button onclick="closeStoreNotifications()" style="background:none;border:none;color:var(--text-secondary);cursor:pointer;font-size:1.2rem;">✕</button>
+        </div>
+        <div class="store-notif-list" id="storeNotifList">
+            <div class="store-notif-empty">No notifications</div>
+        </div>
+    </div>
+
+    <main class="main">
+        <div class="tabs">
+            <button class="tab active" data-tab="orders" onclick="switchTab('orders')">📋 Orders <span class="tab-count" id="ordersCount">0</span></button>
+            <button class="tab" data-tab="menu" onclick="switchTab('menu')">🍽️ Menu <span class="tab-count" id="menuCount">0</span></button>
+            <button class="tab" data-tab="promotions" onclick="switchTab('promotions')">🎁 Promotions <span class="tab-count" id="promoCount">0</span></button>
+            <button class="tab" data-tab="analytics" onclick="switchTab('analytics')">📊 Analytics</button>
+        </div>
+
+        <!-- Orders Tab -->
+        <div id="ordersTab">
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">Orders <span id="dateRangeLabel">(Today)</span></div>
+                    <div class="stat-value" id="statOrders">0</div>
+                    <div class="stat-sub" id="statPendingSub">0 pending</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Total Sales</div>
+                    <div class="stat-value blue" id="statTotalSales">$0</div>
+                    <div class="stat-sub">Before platform fee</div>
+                </div>
+                <div class="stat-card highlight">
+                    <div class="stat-label">💰 Your Revenue</div>
+                    <div class="stat-value green" id="statYourRevenue">$0</div>
+                    <div class="stat-sub">Your earnings</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg Order</div>
+                    <div class="stat-value" id="statAvgOrder">$0</div>
+                </div>
+            </div>
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">📋 Orders</div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadOrders()">🔄 Refresh</button>
+                </div>
+                <div class="orders-list" id="ordersList"><div class="empty-state"><div class="empty-state-icon">📭</div><div>No orders yet</div></div></div>
+            </div>
+        </div>
+
+        <!-- Menu Tab -->
+        <div id="menuTab" style="display: none;">
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">🍽️ Menu Items</div>
+                    <button class="btn btn-primary" onclick="openAddItemModal()">➕ Add Item</button>
+                </div>
+                <div class="search-bar">
+                    <input type="text" class="search-input" id="menuSearch" placeholder="Search menu items..." oninput="filterMenuItems()">
+                    <select class="form-select" style="width: auto;" id="categoryFilter" onchange="filterMenuItems()"><option value="">All Categories</option></select>
+                </div>
+                <div class="menu-grid" id="menuGrid"><div class="empty-state"><div class="empty-state-icon">🍽️</div><div>No menu items yet</div></div></div>
+            </div>
+        </div>
+
+        <!-- Promotions Tab -->
+        <div id="promotionsTab" style="display: none;">
+            <div class="stats-row">
+                <div class="stat-card purple">
+                    <div class="stat-label">Active Promotions</div>
+                    <div class="stat-value purple" id="activePromos">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Scheduled</div>
+                    <div class="stat-value blue" id="scheduledPromos">0</div>
+                </div>
+                <div class="stat-card highlight">
+                    <div class="stat-label">Promo Revenue</div>
+                    <div class="stat-value green" id="promoRevenue">$0</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-label">Promo Orders</div>
+                    <div class="stat-value orange" id="promoOrders">0</div>
+                </div>
+            </div>
+            <div class="section-card">
+                <div class="section-header">
+                    <div class="section-title">🎁 Promotions & Specials</div>
+                    <button class="btn btn-purple" onclick="openPromoModal()">➕ Create Promotion</button>
+                </div>
+                <div class="promo-grid" id="promoGrid">
+                    <div class="empty-state" style="grid-column: 1/-1;"><div class="empty-state-icon">🎁</div><div>No promotions yet</div><p style="margin-top:0.5rem; font-size:0.85rem;">Create combos, happy hours, and special deals!</p></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Analytics Tab -->
+        <div id="analyticsTab" style="display: none;">
+            <div class="stats-row">
+                <div class="stat-card highlight">
+                    <div class="stat-label">Period Revenue</div>
+                    <div class="stat-value green" id="statPeriodRevenue">$0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Items Sold</div>
+                    <div class="stat-value blue" id="statItemsSold">0</div>
+                </div>
+                <div class="stat-card warning">
+                    <div class="stat-label">Not Selling</div>
+                    <div class="stat-value orange" id="statNotSelling">0</div>
+                    <div class="stat-sub">Items with 0 orders</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Avg Item Price</div>
+                    <div class="stat-value" id="statAvgPrice">$0</div>
+                </div>
+            </div>
+            <div class="analytics-grid">
+                <div class="section-card">
+                    <div class="section-header"><div class="section-title">🏆 Top Sellers</div></div>
+                    <div id="topSellers"><div class="empty-state"><div class="empty-state-icon">📊</div><div>No sales data yet</div></div></div>
+                </div>
+                <div class="section-card">
+                    <div class="section-header"><div class="section-title">⚠️ Not Selling</div></div>
+                    <div id="notSelling"><div class="empty-state"><div class="empty-state-icon">✅</div><div>All items are selling!</div></div></div>
+                </div>
+            </div>
+            <div class="section-card">
+                <div class="section-header"><div class="section-title">📈 Category Performance</div></div>
+                <div id="categoryPerformance" style="padding: 1rem;"></div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Add/Edit Item Modal -->
+    <div class="modal-overlay" id="itemModal">
+        <div class="modal">
+            <div class="modal-header"><div class="modal-title" id="itemModalTitle">Add Menu Item</div><button class="modal-close" onclick="closeItemModal()">&times;</button></div>
+            <div class="modal-body">
+                <div class="alert" id="itemAlert"></div>
+                <form id="itemForm">
+                    <input type="hidden" id="itemId">
+                    <div class="form-group"><label class="form-label">Item Name *</label><input type="text" class="form-input" id="itemName" required></div>
+                    <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="itemDescription"></textarea></div>
+                    <div class="form-row">
+                        <div class="form-group"><label class="form-label">Price *</label><input type="number" class="form-input" id="itemPrice" step="0.01" min="0" required></div>
+                        <div class="form-group"><label class="form-label">Category *</label><select class="form-select" id="itemCategory" required><option value="">Select</option><option>Appetizers</option><option>Main Course</option><option>Pizza</option><option>Burgers</option><option>Sandwiches</option><option>Salads</option><option>Sides</option><option>Desserts</option><option>Beverages</option><option>Specials</option></select></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Image</label>
+                        <div style="border: 2px dashed var(--border); border-radius: 8px; padding: 1rem; text-align: center; cursor: pointer;" onclick="document.getElementById('itemImageFile').click()">
+                            <input type="file" id="itemImageFile" accept="image/*" style="display: none;" onchange="handleImageSelect(this)">
+                            <div style="color: var(--text-secondary);">📁 Click to upload</div>
+                        </div>
+                        <div id="imagePreview" style="display: none; margin-top: 0.5rem;"></div>
+                        <div style="text-align: center; color: var(--text-muted); font-size: 0.75rem; margin: 0.5rem 0;">— OR paste URL —</div>
+                        <input type="url" class="form-input" id="itemImage" placeholder="https://...">
+                    </div>
+                    <div class="form-group"><label class="form-checkbox"><input type="checkbox" id="itemAvailable" checked> Item is available</label></div>
+                </form>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeItemModal()">Cancel</button><button class="btn btn-primary" onclick="saveItem(event)">💾 Save</button></div>
+        </div>
+    </div>
+
+    <!-- Promotion Modal -->
+    <div class="modal-overlay" id="promoModal">
+        <div class="modal wide">
+            <div class="modal-header"><div class="modal-title" id="promoModalTitle">Create Promotion</div><button class="modal-close" onclick="closePromoModal()">&times;</button></div>
+            <div class="modal-body">
+                <div class="alert" id="promoAlert"></div>
+                <form id="promoForm">
+                    <input type="hidden" id="promoId">
+                    <div class="form-group">
+                        <label class="form-label">Promotion Type *</label>
+                        <select class="form-select" id="promoType" onchange="updatePromoForm()" required>
+                            <option value="">Select type...</option>
+                            <option value="combo">🍔 Combo Deal (Bundle items)</option>
+                            <option value="bogo">🎁 BOGO (Buy One Get One)</option>
+                            <option value="discount">💰 Discount (% or $ off)</option>
+                            <option value="freeitem">🆓 Free Item (with purchase)</option>
+                            <option value="happyhour">🕐 Happy Hour (time-based)</option>
+                            <option value="slowtime">⏰ Slow Time Special</option>
+                            <option value="firstorder">🆕 First Order Discount</option>
+                            <option value="loyalty">⭐ Loyalty Reward</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label class="form-label">Promotion Name *</label><input type="text" class="form-input" id="promoName" placeholder="e.g., Lunch Combo Special" required></div>
+                    <div class="form-group"><label class="form-label">Description</label><textarea class="form-textarea" id="promoDescription" placeholder="Describe your promotion..."></textarea></div>
+                    
+                    <div id="promoDetails">
+                        <!-- Dynamic fields based on promo type -->
+                    </div>
+                    
+                    <!-- Schedule Type -->
+                    <div class="form-group">
+                        <label class="form-label">Schedule Type *</label>
+                        <select class="form-select" id="promoScheduleType" onchange="updateScheduleFields()">
+                            <option value="always">🔄 Always Active (No time limit)</option>
+                            <option value="daterange">📅 Date Range (Start to End date)</option>
+                            <option value="daily">🕐 Daily Time Slot (Same time every day)</option>
+                            <option value="weekly">📆 Weekly Schedule (Specific days & times)</option>
+                            <option value="oneday">📌 One Day Only (Specific date)</option>
+                            <option value="custom">⚙️ Custom Schedule (Multiple time slots)</option>
+                        </select>
+                    </div>
+                    
+                    <!-- Date Range Fields -->
+                    <div id="dateRangeFields" style="display:none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">📅 Start Date</label>
+                                <input type="date" class="form-input" id="promoStartDate" onclick="this.showPicker()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">📅 End Date</label>
+                                <input type="date" class="form-input" id="promoEndDate" onclick="this.showPicker()">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- One Day Field -->
+                    <div id="oneDayFields" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label">📌 Select Date</label>
+                            <input type="date" class="form-input" id="promoOneDay" onclick="this.showPicker()">
+                        </div>
+                    </div>
+                    
+                    <!-- Time Slot Fields -->
+                    <div id="timeSlotFields" style="display:none;">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">🕐 Start Time</label>
+                                <input type="time" class="form-input" id="promoStartTime" onclick="this.showPicker()">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">🕐 End Time</label>
+                                <input type="time" class="form-input" id="promoEndTime" onclick="this.showPicker()">
+                            </div>
+                        </div>
+                        <div class="time-presets" style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem;">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="setTimePreset('breakfast')">🌅 Breakfast (6-11 AM)</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="setTimePreset('lunch')">☀️ Lunch (11-2 PM)</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="setTimePreset('happyhour')">🍺 Happy Hour (3-6 PM)</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="setTimePreset('dinner')">🌙 Dinner (5-9 PM)</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="setTimePreset('latenight')">🌃 Late Night (9 PM-12 AM)</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Weekly Days Selection -->
+                    <div id="weeklyDaysFields" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label">📆 Select Days</label>
+                            <div class="days-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem; margin-bottom: 1rem;">
+                                <label class="day-checkbox"><input type="checkbox" name="promoDays" value="0"><span>Sun</span></label>
+                                <label class="day-checkbox"><input type="checkbox" name="promoDays" value="1" checked><span>Mon</span></label>
+                                <label class="day-checkbox"><input type="checkbox" name="promoDays" value="2" checked><span>Tue</span></label>
+                                <label class="day-checkbox"><input type="checkbox" name="promoDays" value="3" checked><span>Wed</span></label>
+                                <label class="day-checkbox"><input type="checkbox" name="promoDays" value="4" checked><span>Thu</span></label>
+                                <label class="day-checkbox"><input type="checkbox" name="promoDays" value="5" checked><span>Fri</span></label>
+                                <label class="day-checkbox"><input type="checkbox" name="promoDays" value="6"><span>Sat</span></label>
+                            </div>
+                            <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="selectDays('weekdays')">Weekdays Only</button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="selectDays('weekends')">Weekends Only</button>
+                                <button type="button" class="btn btn-secondary btn-sm" onclick="selectDays('all')">Every Day</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Custom Schedule Fields -->
+                    <div id="customScheduleFields" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label">⚙️ Custom Time Slots</label>
+                            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Add multiple time slots for different days. Perfect for complex schedules like "Tuesday 2-4 PM and Thursday 6-8 PM"</p>
+                            <div id="customSlots"></div>
+                            <button type="button" class="btn btn-secondary" onclick="addCustomSlot()" style="margin-top: 0.5rem;">➕ Add Time Slot</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Optional: Also limit by date range for weekly/daily -->
+                    <div id="optionalDateRange" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-checkbox">
+                                <input type="checkbox" id="limitByDateRange" onchange="toggleOptionalDates()"> 
+                                Also limit to specific date range
+                            </label>
+                        </div>
+                        <div id="optionalDates" style="display:none;">
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label class="form-label">📅 From Date</label>
+                                    <input type="date" class="form-input" id="promoOptStartDate" onclick="this.showPicker()">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">📅 Until Date</label>
+                                    <input type="date" class="form-input" id="promoOptEndDate" onclick="this.showPicker()">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group"><label class="form-checkbox"><input type="checkbox" id="promoActive" checked> Promotion is active</label></div>
+                </form>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closePromoModal()">Cancel</button><button class="btn btn-purple" onclick="savePromo(event)">💾 Save Promotion</button></div>
+        </div>
+    </div>
+
+    <!-- Order Modal -->
+    <div class="modal-overlay" id="orderModal">
+        <div class="modal"><div class="modal-header"><div class="modal-title" id="orderModalTitle">Order</div><button class="modal-close" onclick="closeOrderModal()">&times;</button></div><div class="modal-body" id="orderModalBody"></div><div class="modal-footer" style="border-top:1px solid var(--border);padding:1rem;display:flex;gap:0.5rem;flex-wrap:wrap;"><button class="btn btn-secondary" onclick="printCustomerReceipt()" style="flex:1;">🧾 Customer Receipt</button><button class="btn btn-secondary" onclick="printKitchenReceipt()" style="flex:1;">👨‍🍳 Kitchen Ticket</button></div></div>
+    </div>
+
+    <!-- Delete Modal -->
+    <div class="modal-overlay" id="deleteModal">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header"><div class="modal-title">⚠️ Confirm Delete</div><button class="modal-close" onclick="closeDeleteModal()">&times;</button></div>
+            <div class="modal-body"><p>Delete "<span id="deleteItemName"></span>"?</p></div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button><button class="btn btn-danger" onclick="confirmDelete()">🗑️ Delete</button></div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal" style="max-width: 400px;">
+            <div class="modal-header"><div class="modal-title">📷 Change Picture</div><button class="modal-close" onclick="closeProfileModal()">&times;</button></div>
+            <div class="modal-body">
+                <div class="alert" id="profileAlert"></div>
+                <div style="text-align: center; margin-bottom: 1rem;"><div id="currentAvatarPreview" style="width: 100px; height: 100px; border-radius: 50%; background: var(--accent-orange); display: inline-flex; align-items: center; justify-content: center; font-size: 2.5rem; overflow: hidden;">👤</div></div>
+                <div style="border: 2px dashed var(--border); border-radius: 8px; padding: 1.5rem; text-align: center; cursor: pointer;" onclick="document.getElementById('profileImageFile').click()">
+                    <input type="file" id="profileImageFile" accept="image/*" style="display: none;" onchange="handleProfileImageSelect(this)">
+                    <div style="color: var(--text-secondary);">📁 Click to upload</div>
+                </div>
+                <div id="profileImagePreview" style="display: none; margin-top: 1rem; text-align: center;"></div>
+            </div>
+            <div class="modal-footer"><button class="btn btn-secondary" onclick="closeProfileModal()">Cancel</button><button class="btn btn-primary" onclick="saveProfilePicture()">💾 Save</button></div>
+        </div>
+    </div>
+
+    <script>
+        const SUPABASE_URL = 'https://htzozoordnftgkjyadsf.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh0em96b29yZG5mdGdranlhZHNmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MzM3MDUsImV4cCI6MjA4MzQwOTcwNX0.zWDiVBwgeRDlnvb2FQxAnU-VDX6Yee4EiLmyWHRYYjM';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const STORE_REVENUE_PERCENT = 85;
+
+        let currentUser = null, restaurantId = null, orders = [], allOrders = [], menuItems = [], promotions = [];
+        let currentTab = 'orders', currentDateRange = 'today', deleteItemId = null, deleteType = 'item', profileImageFile = null;
+
+        // Simulated order items for analytics (in production, this comes from order_items table)
+        let orderItems = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadUserInfo();
+            await loadRestaurant();
+            await loadAllOrders();
+            await loadMenuItems();
+            await loadPromotions();
+            setupDateFilters();
+            setupRealtime();
+            document.addEventListener('click', (e) => { if (!e.target.closest('.user-info')) document.getElementById('profileDropdown').classList.remove('visible'); });
+        });
+
+        async function loadUserInfo() {
+            const userJson = localStorage.getItem('user');
+            if (userJson) {
+                currentUser = JSON.parse(userJson);
+                document.getElementById('userName').textContent = currentUser.name || currentUser.email;
+                if (currentUser.id) {
+                    const { data } = await db.from('app_users').select('avatar_url').eq('id', currentUser.id).single();
+                    if (data && data.avatar_url) {
+                        currentUser.profilePicture = data.avatar_url;
+                        localStorage.setItem('user', JSON.stringify(currentUser));
+                    }
+                }
+                if (currentUser.profilePicture) document.getElementById('userAvatar').innerHTML = '<img src="' + currentUser.profilePicture + '">';
+                else document.getElementById('userAvatar').textContent = (currentUser.name || currentUser.email || 'U').split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+            }
+        }
+
+        async function loadRestaurant() {
+            if (currentUser && currentUser.restaurantId) restaurantId = currentUser.restaurantId;
+            else { const { data } = await db.from('restaurants').select('id').limit(1).single(); if (data) restaurantId = data.id; }
+        }
+
+        function handleLogout() { if (confirm('Logout?')) { localStorage.removeItem('user'); localStorage.removeItem('sessionToken'); window.location.href = 'login.html'; } }
+        function toggleProfileDropdown() { document.getElementById('profileDropdown').classList.toggle('visible'); }
+        
+        function openProfileModal(e) {
+            if (e) e.stopPropagation();
+            document.getElementById('profileDropdown').classList.remove('visible');
+            document.getElementById('profileAlert').className = 'alert';
+            document.getElementById('profileImagePreview').style.display = 'none';
+            profileImageFile = null;
+            document.getElementById('currentAvatarPreview').innerHTML = document.getElementById('userAvatar').innerHTML;
+            document.getElementById('profileModal').classList.add('visible');
+        }
+        function closeProfileModal() { document.getElementById('profileModal').classList.remove('visible'); }
+        
+        function handleProfileImageSelect(input) {
+            const file = input.files[0];
+            if (file) {
+                if (file.size > 2 * 1024 * 1024) { document.getElementById('profileAlert').className = 'alert error visible'; document.getElementById('profileAlert').textContent = 'Max 2MB'; return; }
+                profileImageFile = file;
+                const reader = new FileReader();
+                reader.onload = (e) => { document.getElementById('profileImagePreview').innerHTML = '<img src="' + e.target.result + '" style="width:100px;height:100px;border-radius:50%;object-fit:cover;">'; document.getElementById('profileImagePreview').style.display = 'block'; };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        async function saveProfilePicture() {
+            if (!profileImageFile) return;
+            document.getElementById('profileAlert').className = 'alert success visible';
+            document.getElementById('profileAlert').textContent = 'Uploading...';
+            try {
+                const fileName = 'profile-' + Date.now() + '.' + profileImageFile.name.split('.').pop();
+                const { error } = await db.storage.from('images').upload('profiles/' + fileName, profileImageFile, { upsert: true });
+                if (error) throw error;
+                const { data: urlData } = db.storage.from('images').getPublicUrl('profiles/' + fileName);
+                currentUser.profilePicture = urlData.publicUrl;
+                localStorage.setItem('user', JSON.stringify(currentUser));
+                if (currentUser.id) await db.from('app_users').update({ avatar_url: urlData.publicUrl }).eq('id', currentUser.id);
+                document.getElementById('userAvatar').innerHTML = '<img src="' + urlData.publicUrl + '">';
+                document.getElementById('profileAlert').textContent = 'Saved!';
+                setTimeout(closeProfileModal, 1000);
+            } catch (err) { document.getElementById('profileAlert').className = 'alert error visible'; document.getElementById('profileAlert').textContent = 'Failed'; }
+        }
+
+        function setupDateFilters() {
+            document.querySelectorAll('.date-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.date-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    currentDateRange = btn.dataset.range;
+                    filterOrdersByDate();
+                });
+            });
+        }
+
+        function getDateRange() {
+            const now = new Date();
+            let start = new Date();
+            switch(currentDateRange) {
+                case 'today': start.setHours(0,0,0,0); break;
+                case 'yesterday': start.setDate(start.getDate()-1); start.setHours(0,0,0,0); const endY = new Date(start); endY.setHours(23,59,59,999); return {start, end: endY};
+                case 'week': start.setDate(start.getDate()-7); start.setHours(0,0,0,0); break;
+                case 'biweek': start.setDate(start.getDate()-14); start.setHours(0,0,0,0); break;
+                case 'month': start.setDate(start.getDate()-30); start.setHours(0,0,0,0); break;
+                case 'quarter': start.setDate(start.getDate()-90); start.setHours(0,0,0,0); break;
+                case 'half': start.setMonth(start.getMonth()-6); start.setHours(0,0,0,0); break;
+                case 'year': start.setFullYear(start.getFullYear()-1); start.setHours(0,0,0,0); break;
+                case 'all': start = new Date('2020-01-01'); break;
+            }
+            return { start, end: now };
+        }
+
+        function filterOrdersByDate() {
+            const { start, end } = getDateRange();
+            orders = allOrders.filter(o => { const d = new Date(o.created_at); return d >= start && d <= end; });
+            renderOrders();
+            updateOrderStats();
+            updateAnalytics();
+            const labels = { today: 'Today', yesterday: 'Yesterday', week: '7 Days', biweek: '14 Days', month: '30 Days', quarter: '90 Days', half: '6 Months', year: '1 Year', all: 'All Time' };
+            document.getElementById('dateRangeLabel').textContent = '(' + labels[currentDateRange] + ')';
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelector('[data-tab="' + tab + '"]').classList.add('active');
+            document.getElementById('ordersTab').style.display = tab === 'orders' ? 'block' : 'none';
+            document.getElementById('menuTab').style.display = tab === 'menu' ? 'block' : 'none';
+            document.getElementById('promotionsTab').style.display = tab === 'promotions' ? 'block' : 'none';
+            document.getElementById('analyticsTab').style.display = tab === 'analytics' ? 'block' : 'none';
+            if (tab === 'analytics') updateAnalytics();
+        }
+
+        // ========== ORDERS ==========
+        async function loadAllOrders() {
+            let query = db.from('orders').select('*').order('created_at', { ascending: false });
+            if (restaurantId) query = query.eq('restaurant_id', restaurantId);
+            const { data } = await query;
+            allOrders = data || [];
+            // Generate simulated order items for analytics demo
+            generateOrderItems();
+            filterOrdersByDate();
+        }
+        
+        function generateOrderItems() {
+            // Simulate order items based on orders and menu items
+            orderItems = [];
+            allOrders.forEach(order => {
+                const numItems = Math.floor(Math.random() * 3) + 1;
+                for (let i = 0; i < numItems; i++) {
+                    if (menuItems.length > 0) {
+                        const randomItem = menuItems[Math.floor(Math.random() * menuItems.length)];
+                        orderItems.push({
+                            order_id: order.id,
+                            menu_item_id: randomItem.id,
+                            item_name: randomItem.name,
+                            category: randomItem.category,
+                            quantity: Math.floor(Math.random() * 2) + 1,
+                            price: randomItem.base_price,
+                            created_at: order.created_at
+                        });
+                    }
+                }
+            });
+        }
+        
+        async function loadOrders() { await loadAllOrders(); }
+
+        function renderOrders() {
+            const container = document.getElementById('ordersList');
+            document.getElementById('ordersCount').textContent = orders.length;
+            if (orders.length === 0) { container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📭</div><div>No orders for this period</div></div>'; return; }
+            container.innerHTML = orders.map(o => '<div class="order-item" onclick="openOrderModal(\'' + o.id + '\')"><div class="order-status ' + o.status + '"></div><div class="order-info"><div class="order-number">#' + (o.order_number || o.id.slice(0,6)) + '</div><div class="order-customer">' + (o.customer_name || 'Customer') + '</div></div><div class="order-meta"><div class="order-total">$' + (o.total || 0).toFixed(2) + '</div><div class="order-time">' + formatTime(o.created_at) + '</div><div class="order-type ' + (o.order_type || 'delivery') + '">' + (o.order_type === 'pickup' ? '🏃 Pickup' : '🚗 Delivery') + '</div></div></div>').join('');
+        }
+
+        function updateOrderStats() {
+            const totalSales = orders.reduce((sum, o) => sum + (o.total || 0), 0);
+            const yourRevenue = totalSales * (STORE_REVENUE_PERCENT / 100);
+            const pending = orders.filter(o => o.status === 'pending' || o.status === 'preparing').length;
+            const avgOrder = orders.length > 0 ? totalSales / orders.length : 0;
+            document.getElementById('statOrders').textContent = orders.length;
+            document.getElementById('statTotalSales').textContent = '$' + totalSales.toFixed(2);
+            document.getElementById('statYourRevenue').textContent = '$' + yourRevenue.toFixed(2);
+            document.getElementById('statAvgOrder').textContent = '$' + avgOrder.toFixed(2);
+            document.getElementById('statPendingSub').textContent = pending + ' pending';
+        }
+
+        function openOrderModal(orderId) {
+            const order = orders.find(o => o.id === orderId) || allOrders.find(o => o.id === orderId);
+            if (!order) return;
+            currentOrderForPrint = order;
+            const total = order.total || 0;
+            const yours = total * (STORE_REVENUE_PERCENT / 100);
+            document.getElementById('orderModalTitle').textContent = 'Order #' + (order.order_number || order.id.slice(0,6));
+            document.getElementById('orderModalBody').innerHTML = '<div style="margin-bottom:1rem;"><strong>Customer:</strong> ' + (order.customer_name || 'N/A') + '<br><strong>Phone:</strong> ' + (order.customer_phone || 'N/A') + '<br><strong>Address:</strong> ' + (order.customer_address || 'N/A') + '</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;"><div style="background:var(--accent-blue-dim);padding:1rem;border-radius:8px;text-align:center;"><div style="font-size:0.8rem;color:var(--text-secondary);">Order Total</div><div style="font-size:1.25rem;font-weight:700;color:var(--accent-blue);">$' + total.toFixed(2) + '</div></div><div style="background:var(--accent-green-dim);padding:1rem;border-radius:8px;text-align:center;"><div style="font-size:0.8rem;color:var(--text-secondary);">Your Revenue</div><div style="font-size:1.25rem;font-weight:700;color:var(--accent-green);">$' + yours.toFixed(2) + '</div></div></div><div><strong>Status:</strong><div class="order-status-buttons"><button class="status-btn ' + (order.status === 'pending' ? 'active' : '') + '" onclick="updateOrderStatus(\'' + order.id + '\',\'pending\')">📥 Pending</button><button class="status-btn ' + (order.status === 'confirmed' ? 'active' : '') + '" onclick="updateOrderStatus(\'' + order.id + '\',\'confirmed\')">✅ Confirmed</button><button class="status-btn ' + (order.status === 'preparing' ? 'active' : '') + '" onclick="updateOrderStatus(\'' + order.id + '\',\'preparing\')">👨‍🍳 Preparing</button><button class="status-btn ' + (order.status === 'ready' ? 'active' : '') + '" onclick="updateOrderStatus(\'' + order.id + '\',\'ready\')">🔔 Ready</button><button class="status-btn ' + (order.status === 'completed' ? 'active' : '') + '" onclick="updateOrderStatus(\'' + order.id + '\',\'completed\')">✔️ Done</button></div></div>';
+            document.getElementById('orderModal').classList.add('visible');
+        }
+        function closeOrderModal() { document.getElementById('orderModal').classList.remove('visible'); }
+
+        async function updateOrderStatus(orderId, status) {
+            await db.from('orders').update({ status }).eq('id', orderId);
+            const order = allOrders.find(o => o.id === orderId);
+            if (order) order.status = status;
+            filterOrdersByDate();
+            openOrderModal(orderId);
+        }
+
+        // ========== MENU ITEMS ==========
+        async function loadMenuItems() {
+            let query = db.from('menu_items').select('*').order('category', { ascending: true });
+            if (restaurantId) query = query.eq('restaurant_id', restaurantId);
+            const { data } = await query;
+            menuItems = data || [];
+            renderMenuItems();
+            updateCategoryFilter();
+            generateOrderItems(); // Regenerate after menu loads
+        }
+
+        function renderMenuItems() {
+            const container = document.getElementById('menuGrid');
+            document.getElementById('menuCount').textContent = menuItems.length;
+            const searchTerm = document.getElementById('menuSearch').value.toLowerCase();
+            const categoryFilter = document.getElementById('categoryFilter').value;
+            const filtered = menuItems.filter(item => {
+                const matchesSearch = item.name.toLowerCase().includes(searchTerm) || (item.description || '').toLowerCase().includes(searchTerm);
+                const matchesCategory = !categoryFilter || item.category === categoryFilter;
+                return matchesSearch && matchesCategory;
+            });
+            if (filtered.length === 0) { container.innerHTML = '<div class="empty-state" style="grid-column:1/-1;"><div class="empty-state-icon">🍽️</div><div>' + (menuItems.length === 0 ? 'No menu items yet' : 'No items match') + '</div></div>'; return; }
+            container.innerHTML = filtered.map(item => '<div class="menu-item-card ' + (item.is_available === false ? 'unavailable' : '') + '"><div class="menu-item-image">' + (item.image_url ? '<img src="' + item.image_url + '" onerror="this.parentElement.innerHTML=\'🍽️\'">' : '🍽️') + (item.is_available === false ? '<span class="unavailable-badge">Unavailable</span>' : '') + '</div><div class="menu-item-content"><div class="menu-item-name">' + item.name + '</div><div class="menu-item-category">' + (item.category || '') + '</div><div class="menu-item-description">' + (item.description || '') + '</div><div class="menu-item-footer"><div class="menu-item-price">$' + (item.base_price || 0).toFixed(2) + '</div><div class="menu-item-actions"><button class="btn btn-secondary btn-sm" onclick="editItem(\'' + item.id + '\')">✏️</button><button class="btn btn-danger btn-sm" onclick="openDeleteModal(\'' + item.id + '\',\'' + item.name.replace(/'/g, "\\'") + '\', \'item\')">🗑️</button></div></div></div></div>').join('');
+        }
+
+        function filterMenuItems() { renderMenuItems(); }
+        function updateCategoryFilter() {
+            const categories = [...new Set(menuItems.map(item => item.category).filter(Boolean))];
+            document.getElementById('categoryFilter').innerHTML = '<option value="">All</option>' + categories.map(cat => '<option>' + cat + '</option>').join('');
+        }
+
+        function openAddItemModal() {
+            document.getElementById('itemModalTitle').textContent = 'Add Menu Item';
+            document.getElementById('itemForm').reset();
+            document.getElementById('itemId').value = '';
+            document.getElementById('itemAvailable').checked = true;
+            document.getElementById('itemAlert').className = 'alert';
+            document.getElementById('imagePreview').style.display = 'none';
+            document.getElementById('itemImageFile').value = '';
+            document.getElementById('itemModal').classList.add('visible');
+        }
+
+        function editItem(itemId) {
+            const item = menuItems.find(i => i.id === itemId);
+            if (!item) return;
+            document.getElementById('itemModalTitle').textContent = 'Edit Menu Item';
+            document.getElementById('itemId').value = item.id;
+            document.getElementById('itemName').value = item.name || '';
+            document.getElementById('itemDescription').value = item.description || '';
+            document.getElementById('itemPrice').value = item.base_price || '';
+            document.getElementById('itemCategory').value = item.category || '';
+            document.getElementById('itemImage').value = item.image_url || '';
+            document.getElementById('itemAvailable').checked = item.is_available !== false;
+            document.getElementById('itemAlert').className = 'alert';
+            document.getElementById('itemImageFile').value = '';
+            const preview = document.getElementById('imagePreview');
+            if (item.image_url) { preview.innerHTML = '<img src="' + item.image_url + '" style="max-width:100%;max-height:150px;border-radius:8px;">'; preview.style.display = 'block'; }
+            else { preview.style.display = 'none'; }
+            document.getElementById('itemModal').classList.add('visible');
+        }
+
+        function closeItemModal() { document.getElementById('itemModal').classList.remove('visible'); }
+
+        async function saveItem(e) {
+            if (e) e.preventDefault();
+            const itemId = document.getElementById('itemId').value;
+            let imageUrl = document.getElementById('itemImage').value.trim() || null;
+            const imageFile = document.getElementById('itemImageFile').files[0];
+            if (imageFile) {
+                showItemAlert('success', 'Uploading...');
+                const uploadedUrl = await uploadImage(imageFile);
+                if (uploadedUrl) imageUrl = uploadedUrl;
+                else { showItemAlert('error', 'Upload failed'); return; }
+            }
+            const itemData = { name: document.getElementById('itemName').value.trim(), description: document.getElementById('itemDescription').value.trim(), base_price: parseFloat(document.getElementById('itemPrice').value) || 0, category: document.getElementById('itemCategory').value, image_url: imageUrl, is_available: document.getElementById('itemAvailable').checked, restaurant_id: restaurantId };
+            if (!itemData.name || !itemData.base_price || !itemData.category) { showItemAlert('error', 'Fill required fields'); return; }
+            
+            // Get old item data for comparison if editing
+            let oldItem = null;
+            if (itemId) {
+                oldItem = menuItems.find(i => i.id === itemId);
+            }
+            
+            let error, result;
+            if (itemId) { 
+                result = await db.from('menu_items').update(itemData).eq('id', itemId).select(); 
+                error = result.error; 
+            } else { 
+                result = await db.from('menu_items').insert([itemData]).select(); 
+                error = result.error; 
+            }
+            
+            if (error) {
+                showItemAlert('error', error.message);
+            } else {
+                // Create notification for admin
+                const newItem = result.data?.[0];
+                await createMenuNotification(itemId ? 'update' : 'create', oldItem, { ...itemData, id: newItem?.id || itemId });
+                showItemAlert('success', 'Saved! Pending admin approval.'); 
+                setTimeout(() => { closeItemModal(); loadMenuItems(); }, 1000); 
+            }
+        }
+        
+        async function createMenuNotification(action, oldItem, newItem) {
+            const storeName = currentUser?.storeName || currentUser?.name || 'Store';
+            let title, message, details = {};
+            
+            if (action === 'create') {
+                title = '🆕 New Menu Item Added';
+                message = `${storeName} added "${newItem.name}" at $${newItem.base_price.toFixed(2)}`;
+                details = { action: 'create', item: newItem };
+            } else if (action === 'update') {
+                const changes = [];
+                if (oldItem?.name !== newItem.name) changes.push(`Name: "${oldItem?.name}" → "${newItem.name}"`);
+                if (oldItem?.base_price !== newItem.base_price) changes.push(`Price: $${oldItem?.base_price?.toFixed(2)} → $${newItem.base_price.toFixed(2)}`);
+                if (oldItem?.description !== newItem.description) changes.push('Description changed');
+                if (oldItem?.category !== newItem.category) changes.push(`Category: ${oldItem?.category} → ${newItem.category}`);
+                if (oldItem?.is_available !== newItem.is_available) changes.push(`Availability: ${newItem.is_available ? 'Now Available' : 'Now Unavailable'}`);
+                
+                title = '✏️ Menu Item Updated';
+                message = `${storeName} updated "${newItem.name}"`;
+                details = { action: 'update', old: oldItem, new: newItem, changes };
+            } else if (action === 'delete') {
+                title = '🗑️ Menu Item Deleted';
+                message = `${storeName} deleted "${oldItem.name}"`;
+                details = { action: 'delete', item: oldItem };
+            }
+            
+            try {
+                await db.from('notifications').insert([{
+                    type: action === 'create' ? 'new_item' : action === 'delete' ? 'delete_item' : 'menu_change',
+                    store_id: restaurantId,
+                    store_name: storeName,
+                    user_id: currentUser?.id,
+                    user_name: currentUser?.name || currentUser?.email,
+                    title,
+                    message,
+                    details,
+                    status: 'pending'
+                }]);
+                
+                // Also try to send email notification (would need backend function)
+                console.log('Notification created:', title);
+            } catch (err) {
+                console.error('Failed to create notification:', err);
+            }
+        }
+        
+        async function createPromoNotification(action, promo) {
+            const storeName = currentUser?.storeName || currentUser?.name || 'Store';
+            let title, message;
+            
+            if (action === 'create') {
+                title = '🎁 New Promotion Created';
+                message = `${storeName} created promotion "${promo.name}"`;
+            } else if (action === 'update') {
+                title = '✏️ Promotion Updated';
+                message = `${storeName} updated promotion "${promo.name}"`;
+            } else if (action === 'delete') {
+                title = '🗑️ Promotion Deleted';
+                message = `${storeName} deleted promotion "${promo.name}"`;
+            }
+            
+            try {
+                await db.from('notifications').insert([{
+                    type: 'promotion',
+                    store_id: restaurantId,
+                    store_name: storeName,
+                    user_id: currentUser?.id,
+                    user_name: currentUser?.name || currentUser?.email,
+                    title,
+                    message,
+                    details: { action, promotion: promo },
+                    status: 'pending'
+                }]);
+            } catch (err) {
+                console.error('Failed to create notification:', err);
+            }
+        }
+
+        async function uploadImage(file) {
+            try {
+                const fileName = Date.now() + '-' + Math.random().toString(36).substring(7) + '.' + file.name.split('.').pop();
+                const { error } = await db.storage.from('images').upload('menu-items/' + fileName, file);
+                if (error) return null;
+                const { data: urlData } = db.storage.from('images').getPublicUrl('menu-items/' + fileName);
+                return urlData.publicUrl;
+            } catch (err) { return null; }
+        }
+
+        function handleImageSelect(input) {
+            const file = input.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => { document.getElementById('imagePreview').innerHTML = '<img src="' + e.target.result + '" style="max-width:100%;max-height:150px;border-radius:8px;">'; document.getElementById('imagePreview').style.display = 'block'; };
+                reader.readAsDataURL(file);
+                document.getElementById('itemImage').value = '';
+            }
+        }
+
+        function showItemAlert(type, message) { const alert = document.getElementById('itemAlert'); alert.className = 'alert ' + type + ' visible'; alert.textContent = message; }
+
+        // ========== PROMOTIONS ==========
+        async function loadPromotions() {
+            // In production, load from database
+            // For now, use localStorage
+            const saved = localStorage.getItem('store_promotions_' + restaurantId);
+            promotions = saved ? JSON.parse(saved) : [];
+            renderPromotions();
+            updatePromoStats();
+        }
+        
+        function savePromotionsLocal() {
+            localStorage.setItem('store_promotions_' + restaurantId, JSON.stringify(promotions));
+        }
+
+        function renderPromotions() {
+            const container = document.getElementById('promoGrid');
+            document.getElementById('promoCount').textContent = promotions.filter(p => p.is_active).length;
+            
+            if (promotions.length === 0) {
+                container.innerHTML = '<div class="empty-state" style="grid-column: 1/-1;"><div class="empty-state-icon">🎁</div><div>No promotions yet</div><p style="margin-top:0.5rem; font-size:0.85rem;">Create combos, happy hours, and special deals!</p></div>';
+                return;
+            }
+            
+            container.innerHTML = promotions.map(p => {
+                const status = getPromoStatus(p);
+                return '<div class="promo-card ' + (p.is_active ? 'active' : 'inactive') + '"><span class="promo-badge ' + status + '">' + status.toUpperCase() + '</span><div class="promo-type">' + getPromoTypeLabel(p.type) + '</div><div class="promo-name">' + p.name + '</div><div class="promo-desc">' + (p.description || '') + '</div><div class="promo-details">' + getPromoDetails(p) + '</div><div class="promo-actions"><button class="btn btn-secondary btn-sm" onclick="editPromo(\'' + p.id + '\')">✏️ Edit</button><button class="btn btn-danger btn-sm" onclick="openDeleteModal(\'' + p.id + '\',\'' + p.name.replace(/'/g, "\\'") + '\', \'promo\')">🗑️</button></div></div>';
+            }).join('');
+        }
+        
+        function getPromoStatus(p) {
+            if (!p.is_active) return 'expired';
+            const now = new Date();
+            const currentDay = now.getDay();
+            const currentTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            
+            // Check date range limits
+            if (p.schedule_type === 'daterange') {
+                if (p.start_date && new Date(p.start_date) > now) return 'scheduled';
+                if (p.end_date && new Date(p.end_date + 'T23:59:59') < now) return 'expired';
+            }
+            
+            // Check one day
+            if (p.schedule_type === 'oneday' && p.start_date) {
+                const promoDate = new Date(p.start_date);
+                const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                if (promoDate > today) return 'scheduled';
+                if (promoDate < today) return 'expired';
+            }
+            
+            // Check optional date limits for recurring promos
+            if (p.limit_by_date) {
+                if (p.opt_start_date && new Date(p.opt_start_date) > now) return 'scheduled';
+                if (p.opt_end_date && new Date(p.opt_end_date + 'T23:59:59') < now) return 'expired';
+            }
+            
+            // Check if currently active (for time/day based)
+            if (p.schedule_type === 'weekly' && p.days && p.days.length > 0) {
+                if (!p.days.includes(currentDay)) return 'scheduled'; // Not today
+                if (p.start_time && p.end_time) {
+                    if (currentTime < p.start_time || currentTime > p.end_time) return 'scheduled';
+                }
+            }
+            
+            if (p.schedule_type === 'daily' && p.start_time && p.end_time) {
+                if (currentTime < p.start_time || currentTime > p.end_time) return 'scheduled';
+            }
+            
+            // Check custom slots
+            if (p.schedule_type === 'custom' && p.custom_slots && p.custom_slots.length > 0) {
+                let isActiveNow = false;
+                for (const slot of p.custom_slots) {
+                    if (slot.days.includes(currentDay)) {
+                        if (currentTime >= slot.start_time && currentTime <= slot.end_time) {
+                            isActiveNow = true;
+                            break;
+                        }
+                    }
+                }
+                if (!isActiveNow) return 'scheduled';
+            }
+            
+            return 'active';
+        }
+        
+        function getPromoTypeLabel(type) {
+            const labels = { combo: '🍔 Combo Deal', bogo: '🎁 BOGO', discount: '💰 Discount', freeitem: '🆓 Free Item', happyhour: '🕐 Happy Hour', slowtime: '⏰ Slow Time', firstorder: '🆕 First Order', loyalty: '⭐ Loyalty' };
+            return labels[type] || type;
+        }
+        
+        function getPromoDetails(p) {
+            let html = '';
+            if (p.discount_percent) html += '<span>💰 ' + p.discount_percent + '% off</span>';
+            if (p.discount_amount) html += '<span>💵 $' + p.discount_amount + ' off</span>';
+            if (p.combo_price) html += '<span>🏷️ Combo: $' + p.combo_price + '</span>';
+            if (p.free_item) html += '<span>🆓 Free: ' + p.free_item + '</span>';
+            if (p.min_purchase) html += '<span>🛒 Min: $' + p.min_purchase + '</span>';
+            
+            // Schedule info
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            if (p.schedule_type === 'always') {
+                html += '<span>🔄 Always active</span>';
+            } else if (p.schedule_type === 'daily' && p.start_time && p.end_time) {
+                html += '<span>🕐 Daily ' + formatTime12(p.start_time) + ' - ' + formatTime12(p.end_time) + '</span>';
+            } else if (p.schedule_type === 'weekly' && p.days && p.days.length > 0) {
+                const daysStr = p.days.map(d => dayNames[d]).join(', ');
+                html += '<span>📆 ' + daysStr + '</span>';
+                if (p.start_time && p.end_time) {
+                    html += '<span>🕐 ' + formatTime12(p.start_time) + ' - ' + formatTime12(p.end_time) + '</span>';
+                }
+            } else if (p.schedule_type === 'oneday' && p.start_date) {
+                html += '<span>📌 ' + formatDate(p.start_date) + '</span>';
+                if (p.start_time && p.end_time) {
+                    html += '<span>🕐 ' + formatTime12(p.start_time) + ' - ' + formatTime12(p.end_time) + '</span>';
+                }
+            } else if (p.schedule_type === 'daterange') {
+                if (p.start_date) html += '<span>📅 From: ' + formatDate(p.start_date) + '</span>';
+                if (p.end_date) html += '<span>📅 Until: ' + formatDate(p.end_date) + '</span>';
+            } else if (p.schedule_type === 'custom' && p.custom_slots && p.custom_slots.length > 0) {
+                html += '<span>⚙️ Custom Schedule:</span>';
+                p.custom_slots.forEach((slot, i) => {
+                    const slotDays = slot.days.map(d => dayNames[d]).join(', ');
+                    html += '<span style="margin-left:0.5rem;">• ' + slotDays + ' ' + formatTime12(slot.start_time) + '-' + formatTime12(slot.end_time) + '</span>';
+                });
+            }
+            
+            // Additional date limits
+            if (p.limit_by_date && p.opt_start_date) {
+                html += '<span>📅 ' + formatDate(p.opt_start_date) + ' - ' + formatDate(p.opt_end_date || 'ongoing') + '</span>';
+            }
+            
+            return html || '<span>No restrictions</span>';
+        }
+        
+        function formatTime12(time24) {
+            if (!time24) return '';
+            const [hours, minutes] = time24.split(':');
+            const h = parseInt(hours);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            const h12 = h % 12 || 12;
+            return h12 + ':' + minutes + ' ' + ampm;
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+        
+        function updatePromoStats() {
+            const active = promotions.filter(p => getPromoStatus(p) === 'active').length;
+            const scheduled = promotions.filter(p => getPromoStatus(p) === 'scheduled').length;
+            document.getElementById('activePromos').textContent = active;
+            document.getElementById('scheduledPromos').textContent = scheduled;
+            // Simulated promo stats
+            document.getElementById('promoRevenue').textContent = '$' + (active * 150).toFixed(0);
+            document.getElementById('promoOrders').textContent = active * 12;
+        }
+
+        function openPromoModal() {
+            document.getElementById('promoModalTitle').textContent = 'Create Promotion';
+            document.getElementById('promoForm').reset();
+            document.getElementById('promoId').value = '';
+            document.getElementById('promoActive').checked = true;
+            document.getElementById('promoAlert').className = 'alert';
+            document.getElementById('promoDetails').innerHTML = '';
+            document.getElementById('promoScheduleType').value = 'always';
+            document.getElementById('customSlots').innerHTML = '';
+            customSlotCount = 0;
+            updateScheduleFields();
+            document.getElementById('promoModal').classList.add('visible');
+        }
+        
+        function editPromo(promoId) {
+            const promo = promotions.find(p => p.id === promoId);
+            if (!promo) return;
+            document.getElementById('promoModalTitle').textContent = 'Edit Promotion';
+            document.getElementById('promoId').value = promo.id;
+            document.getElementById('promoType').value = promo.type;
+            document.getElementById('promoName').value = promo.name;
+            document.getElementById('promoDescription').value = promo.description || '';
+            document.getElementById('promoActive').checked = promo.is_active;
+            
+            // Set schedule type
+            document.getElementById('promoScheduleType').value = promo.schedule_type || 'always';
+            
+            // Clear existing custom slots
+            document.getElementById('customSlots').innerHTML = '';
+            customSlotCount = 0;
+            
+            updateScheduleFields();
+            
+            // Set schedule fields
+            setTimeout(() => {
+                if (promo.start_date) {
+                    if (promo.schedule_type === 'oneday') {
+                        document.getElementById('promoOneDay').value = promo.start_date;
+                    } else {
+                        document.getElementById('promoStartDate').value = promo.start_date;
+                    }
+                }
+                if (promo.end_date) document.getElementById('promoEndDate').value = promo.end_date;
+                if (promo.start_time) document.getElementById('promoStartTime').value = promo.start_time;
+                if (promo.end_time) document.getElementById('promoEndTime').value = promo.end_time;
+                
+                // Set days
+                if (promo.days && promo.days.length > 0) {
+                    document.querySelectorAll('input[name="promoDays"]').forEach(cb => {
+                        cb.checked = promo.days.includes(parseInt(cb.value));
+                    });
+                }
+                
+                // Restore custom slots
+                if (promo.schedule_type === 'custom' && promo.custom_slots && promo.custom_slots.length > 0) {
+                    promo.custom_slots.forEach((slot, index) => {
+                        addCustomSlot();
+                        const slotId = 'slot_' + (index + 1);
+                        setTimeout(() => {
+                            // Set days for this slot
+                            document.querySelectorAll(`input[name="${slotId}_days"]`).forEach(cb => {
+                                cb.checked = slot.days.includes(parseInt(cb.value));
+                            });
+                            // Set times
+                            document.getElementById(slotId + '_start').value = slot.start_time;
+                            document.getElementById(slotId + '_end').value = slot.end_time;
+                        }, 50);
+                    });
+                }
+                
+                // Optional date range
+                if (promo.limit_by_date) {
+                    document.getElementById('limitByDateRange').checked = true;
+                    toggleOptionalDates();
+                    if (promo.opt_start_date) document.getElementById('promoOptStartDate').value = promo.opt_start_date;
+                    if (promo.opt_end_date) document.getElementById('promoOptEndDate').value = promo.opt_end_date;
+                }
+            }, 50);
+            
+            // Update promo type fields
+            updatePromoForm();
+            
+            // Fill type-specific fields after form update
+            setTimeout(() => {
+                if (promo.discount_percent) document.getElementById('discountPercent') && (document.getElementById('discountPercent').value = promo.discount_percent);
+                if (promo.discount_amount) document.getElementById('discountAmount') && (document.getElementById('discountAmount').value = promo.discount_amount);
+                if (promo.combo_price) document.getElementById('comboPrice') && (document.getElementById('comboPrice').value = promo.combo_price);
+                if (promo.min_purchase) document.getElementById('minPurchase') && (document.getElementById('minPurchase').value = promo.min_purchase);
+                if (promo.free_item) document.getElementById('freeItem') && (document.getElementById('freeItem').value = promo.free_item);
+                if (promo.combo_items) document.getElementById('comboItems') && (document.getElementById('comboItems').value = promo.combo_items);
+                if (promo.buy_item) document.getElementById('buyItem') && (document.getElementById('buyItem').value = promo.buy_item);
+                if (promo.get_item) document.getElementById('getItem') && (document.getElementById('getItem').value = promo.get_item);
+                if (promo.applies_to) document.getElementById('appliesTo') && (document.getElementById('appliesTo').value = promo.applies_to);
+            }, 100);
+            document.getElementById('promoModal').classList.add('visible');
+        }
+        
+        function closePromoModal() { document.getElementById('promoModal').classList.remove('visible'); }
+        
+        function updatePromoForm() {
+            const type = document.getElementById('promoType').value;
+            const details = document.getElementById('promoDetails');
+            
+            // Auto-select schedule type based on promo type
+            if (['happyhour', 'slowtime'].includes(type)) {
+                document.getElementById('promoScheduleType').value = 'weekly';
+                updateScheduleFields();
+            }
+            
+            let html = '';
+            switch(type) {
+                case 'combo':
+                    html = '<div class="form-group"><label class="form-label">Items in Combo</label><textarea class="form-textarea" id="comboItems" placeholder="e.g., Burger + Fries + Drink"></textarea></div><div class="form-group"><label class="form-label">Combo Price ($)</label><input type="number" class="form-input" id="comboPrice" step="0.01" placeholder="9.99"></div>';
+                    break;
+                case 'bogo':
+                    html = '<div class="form-group"><label class="form-label">Buy Item</label><input type="text" class="form-input" id="buyItem" placeholder="e.g., Any Pizza"></div><div class="form-group"><label class="form-label">Get Item</label><input type="text" class="form-input" id="getItem" placeholder="e.g., Second Pizza 50% off"></div>';
+                    break;
+                case 'discount':
+                    html = '<div class="form-row"><div class="form-group"><label class="form-label">Discount %</label><input type="number" class="form-input" id="discountPercent" placeholder="e.g., 20"></div><div class="form-group"><label class="form-label">OR $ Off</label><input type="number" class="form-input" id="discountAmount" step="0.01" placeholder="e.g., 5.00"></div></div><div class="form-group"><label class="form-label">Min Purchase ($)</label><input type="number" class="form-input" id="minPurchase" step="0.01" placeholder="e.g., 25.00"></div>';
+                    break;
+                case 'freeitem':
+                    html = '<div class="form-group"><label class="form-label">Free Item</label><input type="text" class="form-input" id="freeItem" placeholder="e.g., Free Pop, Free Garlic Bread"></div><div class="form-group"><label class="form-label">Min Purchase ($)</label><input type="number" class="form-input" id="minPurchase" step="0.01" placeholder="e.g., 20.00"></div>';
+                    break;
+                case 'happyhour':
+                case 'slowtime':
+                    html = '<div class="form-row"><div class="form-group"><label class="form-label">Discount %</label><input type="number" class="form-input" id="discountPercent" placeholder="e.g., 25"></div><div class="form-group"><label class="form-label">Applies To</label><select class="form-select" id="appliesTo"><option value="all">All Items</option><option value="drinks">Drinks Only</option><option value="appetizers">Appetizers Only</option><option value="selected">Selected Items</option></select></div></div>';
+                    break;
+                case 'firstorder':
+                    html = '<div class="form-row"><div class="form-group"><label class="form-label">Discount %</label><input type="number" class="form-input" id="discountPercent" placeholder="e.g., 15"></div><div class="form-group"><label class="form-label">OR $ Off</label><input type="number" class="form-input" id="discountAmount" step="0.01" placeholder="e.g., 10.00"></div></div>';
+                    break;
+                case 'loyalty':
+                    html = '<div class="form-group"><label class="form-label">Orders Required</label><input type="number" class="form-input" id="ordersRequired" placeholder="e.g., 10"></div><div class="form-group"><label class="form-label">Reward</label><input type="text" class="form-input" id="rewardItem" placeholder="e.g., Free Meal up to $15"></div>';
+                    break;
+            }
+            details.innerHTML = html;
+        }
+        
+        function updateScheduleFields() {
+            const scheduleType = document.getElementById('promoScheduleType').value;
+            
+            // Hide all schedule fields first
+            document.getElementById('dateRangeFields').style.display = 'none';
+            document.getElementById('oneDayFields').style.display = 'none';
+            document.getElementById('timeSlotFields').style.display = 'none';
+            document.getElementById('weeklyDaysFields').style.display = 'none';
+            document.getElementById('optionalDateRange').style.display = 'none';
+            document.getElementById('customScheduleFields').style.display = 'none';
+            
+            // Show relevant fields based on schedule type
+            switch(scheduleType) {
+                case 'daterange':
+                    document.getElementById('dateRangeFields').style.display = 'block';
+                    break;
+                case 'daily':
+                    document.getElementById('timeSlotFields').style.display = 'block';
+                    document.getElementById('optionalDateRange').style.display = 'block';
+                    break;
+                case 'weekly':
+                    document.getElementById('timeSlotFields').style.display = 'block';
+                    document.getElementById('weeklyDaysFields').style.display = 'block';
+                    document.getElementById('optionalDateRange').style.display = 'block';
+                    break;
+                case 'oneday':
+                    document.getElementById('oneDayFields').style.display = 'block';
+                    document.getElementById('timeSlotFields').style.display = 'block';
+                    break;
+                case 'custom':
+                    document.getElementById('customScheduleFields').style.display = 'block';
+                    document.getElementById('optionalDateRange').style.display = 'block';
+                    // Add first slot if empty
+                    if (document.getElementById('customSlots').children.length === 0) {
+                        addCustomSlot();
+                    }
+                    break;
+            }
+        }
+        
+        let customSlotCount = 0;
+        
+        function addCustomSlot() {
+            customSlotCount++;
+            const slotId = 'slot_' + customSlotCount;
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            
+            const slotHtml = `
+                <div class="custom-slot" id="${slotId}">
+                    <div class="custom-slot-header">
+                        <span class="custom-slot-title">Time Slot ${customSlotCount}</span>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeCustomSlot('${slotId}')">✕ Remove</button>
+                    </div>
+                    <div class="custom-slot-days">
+                        ${dayNames.map((day, i) => `<label><input type="checkbox" name="${slotId}_days" value="${i}"><span>${day}</span></label>`).join('')}
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 0.75rem; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="selectSlotDays('${slotId}', 'weekdays')">Weekdays</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="selectSlotDays('${slotId}', 'weekends')">Weekends</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="selectSlotDays('${slotId}', 'all')">All</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="selectSlotDays('${slotId}', 'tue')">Tuesday Only</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="selectSlotDays('${slotId}', 'midweek')">Midweek (Tue-Thu)</button>
+                    </div>
+                    <div class="custom-slot-times">
+                        <div>
+                            <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.25rem;">Start Time</label>
+                            <input type="time" class="form-input" id="${slotId}_start" onclick="this.showPicker()">
+                        </div>
+                        <div>
+                            <label style="font-size:0.75rem;color:var(--text-muted);display:block;margin-bottom:0.25rem;">End Time</label>
+                            <input type="time" class="form-input" id="${slotId}_end" onclick="this.showPicker()">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; margin-top: 0.75rem; flex-wrap: wrap;">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="setSlotTimePreset('${slotId}', 'lunch')">☀️ Lunch</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="setSlotTimePreset('${slotId}', 'happyhour')">🍺 Happy Hour</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="setSlotTimePreset('${slotId}', 'dinner')">🌙 Dinner</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="setSlotTimePreset('${slotId}', 'custom2to4')">⏰ 2-4 PM</button>
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="setSlotTimePreset('${slotId}', 'custom4to6')">⏰ 4-6 PM</button>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('customSlots').insertAdjacentHTML('beforeend', slotHtml);
+        }
+        
+        function removeCustomSlot(slotId) {
+            const slot = document.getElementById(slotId);
+            if (slot) slot.remove();
+            // Renumber remaining slots
+            const slots = document.querySelectorAll('.custom-slot');
+            slots.forEach((slot, i) => {
+                slot.querySelector('.custom-slot-title').textContent = 'Time Slot ' + (i + 1);
+            });
+        }
+        
+        function selectSlotDays(slotId, selection) {
+            const checkboxes = document.querySelectorAll(`input[name="${slotId}_days"]`);
+            checkboxes.forEach(cb => {
+                const day = parseInt(cb.value);
+                if (selection === 'all') cb.checked = true;
+                else if (selection === 'weekdays') cb.checked = day >= 1 && day <= 5;
+                else if (selection === 'weekends') cb.checked = day === 0 || day === 6;
+                else if (selection === 'tue') cb.checked = day === 2;
+                else if (selection === 'midweek') cb.checked = day >= 2 && day <= 4;
+            });
+        }
+        
+        function setSlotTimePreset(slotId, preset) {
+            const times = {
+                breakfast: ['06:00', '11:00'],
+                lunch: ['11:00', '14:00'],
+                happyhour: ['15:00', '18:00'],
+                dinner: ['17:00', '21:00'],
+                latenight: ['21:00', '23:59'],
+                custom2to4: ['14:00', '16:00'],
+                custom4to6: ['16:00', '18:00']
+            };
+            if (times[preset]) {
+                document.getElementById(slotId + '_start').value = times[preset][0];
+                document.getElementById(slotId + '_end').value = times[preset][1];
+            }
+        }
+        
+        function getCustomSlots() {
+            const slots = [];
+            document.querySelectorAll('.custom-slot').forEach(slotEl => {
+                const slotId = slotEl.id;
+                const days = [];
+                document.querySelectorAll(`input[name="${slotId}_days"]:checked`).forEach(cb => {
+                    days.push(parseInt(cb.value));
+                });
+                const startTime = document.getElementById(slotId + '_start')?.value;
+                const endTime = document.getElementById(slotId + '_end')?.value;
+                if (days.length > 0 && startTime && endTime) {
+                    slots.push({ days, start_time: startTime, end_time: endTime });
+                }
+            });
+            return slots;
+        }
+        
+        function setTimePreset(preset) {
+            const times = {
+                breakfast: ['06:00', '11:00'],
+                lunch: ['11:00', '14:00'],
+                happyhour: ['15:00', '18:00'],
+                dinner: ['17:00', '21:00'],
+                latenight: ['21:00', '23:59']
+            };
+            if (times[preset]) {
+                document.getElementById('promoStartTime').value = times[preset][0];
+                document.getElementById('promoEndTime').value = times[preset][1];
+            }
+        }
+        
+        function selectDays(selection) {
+            const checkboxes = document.querySelectorAll('input[name="promoDays"]');
+            checkboxes.forEach(cb => {
+                const day = parseInt(cb.value);
+                if (selection === 'all') cb.checked = true;
+                else if (selection === 'weekdays') cb.checked = day >= 1 && day <= 5;
+                else if (selection === 'weekends') cb.checked = day === 0 || day === 6;
+            });
+        }
+        
+        function toggleOptionalDates() {
+            const show = document.getElementById('limitByDateRange').checked;
+            document.getElementById('optionalDates').style.display = show ? 'block' : 'none';
+        }
+        
+        async function savePromo(e) {
+            if (e) e.preventDefault();
+            const type = document.getElementById('promoType').value;
+            const name = document.getElementById('promoName').value.trim();
+            if (!type || !name) { showPromoAlert('error', 'Fill required fields'); return; }
+            
+            // Get selected days for weekly schedule
+            const selectedDays = [];
+            document.querySelectorAll('input[name="promoDays"]:checked').forEach(cb => {
+                selectedDays.push(parseInt(cb.value));
+            });
+            
+            const scheduleType = document.getElementById('promoScheduleType').value;
+            
+            // Get custom slots if using custom schedule
+            const customSlots = scheduleType === 'custom' ? getCustomSlots() : null;
+            
+            const promoData = {
+                id: document.getElementById('promoId').value || 'promo_' + Date.now(),
+                type,
+                name,
+                description: document.getElementById('promoDescription').value.trim(),
+                schedule_type: scheduleType,
+                start_date: document.getElementById('promoStartDate')?.value || document.getElementById('promoOneDay')?.value || null,
+                end_date: document.getElementById('promoEndDate')?.value || null,
+                start_time: document.getElementById('promoStartTime')?.value || null,
+                end_time: document.getElementById('promoEndTime')?.value || null,
+                days: selectedDays.length > 0 ? selectedDays : null,
+                custom_slots: customSlots,
+                limit_by_date: document.getElementById('limitByDateRange')?.checked || false,
+                opt_start_date: document.getElementById('promoOptStartDate')?.value || null,
+                opt_end_date: document.getElementById('promoOptEndDate')?.value || null,
+                is_active: document.getElementById('promoActive').checked,
+                discount_percent: document.getElementById('discountPercent')?.value || null,
+                discount_amount: document.getElementById('discountAmount')?.value || null,
+                combo_price: document.getElementById('comboPrice')?.value || null,
+                min_purchase: document.getElementById('minPurchase')?.value || null,
+                free_item: document.getElementById('freeItem')?.value || null,
+                combo_items: document.getElementById('comboItems')?.value || null,
+                buy_item: document.getElementById('buyItem')?.value || null,
+                get_item: document.getElementById('getItem')?.value || null,
+                applies_to: document.getElementById('appliesTo')?.value || null,
+                restaurant_id: restaurantId,
+                created_at: new Date().toISOString()
+            };
+            
+            const existingIndex = promotions.findIndex(p => p.id === promoData.id);
+            const isUpdate = existingIndex >= 0;
+            
+            if (isUpdate) promotions[existingIndex] = promoData;
+            else promotions.push(promoData);
+            
+            // Create notification for admin
+            await createPromoNotification(isUpdate ? 'update' : 'create', promoData);
+            
+            savePromotionsLocal();
+            showPromoAlert('success', 'Saved! Pending admin review.');
+            setTimeout(() => { closePromoModal(); renderPromotions(); updatePromoStats(); }, 1000);
+        }
+        
+        function showPromoAlert(type, message) { const alert = document.getElementById('promoAlert'); alert.className = 'alert ' + type + ' visible'; alert.textContent = message; }
+
+        // ========== ANALYTICS ==========
+        function updateAnalytics() {
+            const { start, end } = getDateRange();
+            const periodItems = orderItems.filter(i => { const d = new Date(i.created_at); return d >= start && d <= end; });
+            
+            // Calculate item sales
+            const itemSales = {};
+            periodItems.forEach(item => {
+                if (!itemSales[item.menu_item_id]) {
+                    itemSales[item.menu_item_id] = { id: item.menu_item_id, name: item.item_name, category: item.category, quantity: 0, revenue: 0 };
+                }
+                itemSales[item.menu_item_id].quantity += item.quantity;
+                itemSales[item.menu_item_id].revenue += item.quantity * item.price;
+            });
+            
+            const salesArray = Object.values(itemSales).sort((a, b) => b.quantity - a.quantity);
+            const totalItemsSold = salesArray.reduce((sum, i) => sum + i.quantity, 0);
+            const totalRevenue = salesArray.reduce((sum, i) => sum + i.revenue, 0);
+            const notSellingItems = menuItems.filter(m => !salesArray.find(s => s.id === m.id));
+            const avgPrice = menuItems.length > 0 ? menuItems.reduce((sum, m) => sum + (m.base_price || 0), 0) / menuItems.length : 0;
+            
+            document.getElementById('statPeriodRevenue').textContent = '$' + (totalRevenue * STORE_REVENUE_PERCENT / 100).toFixed(2);
+            document.getElementById('statItemsSold').textContent = totalItemsSold;
+            document.getElementById('statNotSelling').textContent = notSellingItems.length;
+            document.getElementById('statAvgPrice').textContent = '$' + avgPrice.toFixed(2);
+            
+            // Top Sellers
+            const topContainer = document.getElementById('topSellers');
+            if (salesArray.length === 0) {
+                topContainer.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><div>No sales data yet</div></div>';
+            } else {
+                topContainer.innerHTML = salesArray.slice(0, 10).map((item, i) => {
+                    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+                    return '<div class="item-rank"><div class="rank-number ' + rankClass + '">' + (i + 1) + '</div><div class="rank-info"><div class="rank-name">' + item.name + '</div><div class="rank-category">' + (item.category || '') + '</div></div><div class="rank-stats"><div class="rank-sold">' + item.quantity + ' sold</div><div class="rank-revenue">$' + item.revenue.toFixed(2) + '</div></div></div>';
+                }).join('');
+            }
+            
+            // Not Selling
+            const notContainer = document.getElementById('notSelling');
+            if (notSellingItems.length === 0) {
+                notContainer.innerHTML = '<div class="empty-state"><div class="empty-state-icon">✅</div><div>All items are selling!</div></div>';
+            } else {
+                notContainer.innerHTML = notSellingItems.slice(0, 10).map(item => '<div class="item-rank"><div class="rank-number" style="background:var(--accent-red-dim);color:var(--accent-red);">⚠️</div><div class="rank-info"><div class="rank-name">' + item.name + '</div><div class="rank-category">' + (item.category || '') + '</div></div><div class="rank-stats"><div class="rank-sold not-selling">0 sold</div><div class="rank-revenue">$' + (item.base_price || 0).toFixed(2) + '</div></div></div>').join('');
+            }
+            
+            // Category Performance
+            const catPerf = {};
+            salesArray.forEach(item => {
+                const cat = item.category || 'Other';
+                if (!catPerf[cat]) catPerf[cat] = { quantity: 0, revenue: 0 };
+                catPerf[cat].quantity += item.quantity;
+                catPerf[cat].revenue += item.revenue;
+            });
+            
+            const catContainer = document.getElementById('categoryPerformance');
+            const catArray = Object.entries(catPerf).sort((a, b) => b[1].revenue - a[1].revenue);
+            if (catArray.length === 0) {
+                catContainer.innerHTML = '<div class="empty-state"><div class="empty-state-icon">📊</div><div>No category data yet</div></div>';
+            } else {
+                const maxRev = Math.max(...catArray.map(c => c[1].revenue));
+                catContainer.innerHTML = catArray.map(([cat, data]) => {
+                    const pct = maxRev > 0 ? (data.revenue / maxRev * 100) : 0;
+                    return '<div style="margin-bottom:1rem;"><div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;"><span style="font-weight:600;">' + cat + '</span><span style="color:var(--accent-green);">$' + data.revenue.toFixed(2) + ' (' + data.quantity + ' items)</span></div><div style="background:var(--bg-dark);border-radius:4px;height:8px;overflow:hidden;"><div style="background:var(--accent-green);height:100%;width:' + pct + '%;border-radius:4px;"></div></div></div>';
+                }).join('');
+            }
+        }
+
+        // ========== DELETE ==========
+        function openDeleteModal(id, name, type) { 
+            deleteItemId = id; 
+            deleteType = type;
+            document.getElementById('deleteItemName').textContent = name; 
+            document.getElementById('deleteModal').classList.add('visible'); 
+        }
+        function closeDeleteModal() { document.getElementById('deleteModal').classList.remove('visible'); deleteItemId = null; }
+        async function confirmDelete() { 
+            if (!deleteItemId) return; 
+            if (deleteType === 'promo') {
+                const deletedPromo = promotions.find(p => p.id === deleteItemId);
+                if (deletedPromo) await createPromoNotification('delete', deletedPromo);
+                promotions = promotions.filter(p => p.id !== deleteItemId);
+                savePromotionsLocal();
+                renderPromotions();
+                updatePromoStats();
+            } else {
+                const deletedItem = menuItems.find(i => i.id === deleteItemId);
+                if (deletedItem) await createMenuNotification('delete', deletedItem, null);
+                await db.from('menu_items').delete().eq('id', deleteItemId); 
+                loadMenuItems(); 
+            }
+            closeDeleteModal(); 
+        }
+
+        function setupRealtime() { 
+            db.channel('store-orders').on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => loadAllOrders()).subscribe(); 
+            // Listen for notification responses
+            db.channel('store-notifications')
+                .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications' }, (payload) => {
+                    if (payload.new?.store_id === restaurantId && payload.new?.type === 'approval_response') {
+                        loadStoreNotifications();
+                        showToast(payload.new.title);
+                    }
+                })
+                .subscribe();
+        }
+        
+        // ========== STORE OWNER NOTIFICATIONS ==========
+        let storeNotifications = [];
+        
+        async function loadStoreNotifications() {
+            try {
+                const { data, error } = await db
+                    .from('notifications')
+                    .select('*')
+                    .eq('store_id', restaurantId)
+                    .eq('type', 'approval_response')
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+                
+                if (!error && data) {
+                    storeNotifications = data;
+                    updateStoreNotifBadge();
+                    renderStoreNotifications();
+                }
+            } catch (err) {
+                console.error('Error loading notifications:', err);
+            }
+        }
+        
+        function updateStoreNotifBadge() {
+            const unread = storeNotifications.filter(n => !n.read_at).length;
+            const badge = document.getElementById('storeNotifBadge');
+            if (unread > 0) {
+                badge.textContent = unread > 99 ? '99+' : unread;
+                badge.style.display = 'flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+        
+        function toggleStoreNotifications() {
+            const panel = document.getElementById('storeNotifPanel');
+            panel.classList.toggle('visible');
+            if (panel.classList.contains('visible')) {
+                loadStoreNotifications();
+            }
+        }
+        
+        function closeStoreNotifications() {
+            document.getElementById('storeNotifPanel').classList.remove('visible');
+        }
+        
+        function renderStoreNotifications() {
+            const container = document.getElementById('storeNotifList');
+            
+            if (storeNotifications.length === 0) {
+                container.innerHTML = '<div class="store-notif-empty">✅ No notifications yet.<br>You\'ll see admin responses here.</div>';
+                return;
+            }
+            
+            container.innerHTML = storeNotifications.map(n => {
+                const isApproved = n.details?.response === 'approved';
+                const isRejected = n.details?.response === 'rejected';
+                return `
+                    <div class="store-notif-item ${isApproved ? 'approved' : ''} ${isRejected ? 'rejected' : 'info'}">
+                        <div class="store-notif-title">${n.title}</div>
+                        <div class="store-notif-message">${n.message}</div>
+                        ${n.details?.reason ? `<div style="color: var(--accent-orange); font-size: 0.8rem; margin-top: 0.25rem;">📝 Reason: ${n.details.reason}</div>` : ''}
+                        <div class="store-notif-time">${formatTime(n.created_at)}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        // ========== RECEIPT PRINTING ==========
+        let currentOrderForPrint = null;
+        
+        // Owner info - Fatima from AB King Pizza
+        const ownerInfo = {
+            name: 'Fatima',
+            image: 'data:image/jpeg;base64,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',
+            story: "I put my heart into every pizza I make. When you order from me, you're supporting a local Calgary family, not a corporation. Thank you for believing in local! 🙏"
+        };
+        
+        // Driver info - Ahmed
+        const driverInfo = {
+            name: 'Ahmed',
+            image: 'data:image/jpeg;base64,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',
+            story: "Proud to deliver for LocalFirst YYC! Your order supports local Calgary families — thank you for choosing us. 💚"
+        };
+        
+        async function loadImageAsBase64(url) {
+            return new Promise((resolve) => {
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/jpeg', 0.8));
+                };
+                img.onerror = () => resolve(null);
+                img.src = url;
+            });
+        }
+        
+        async function printCustomerReceipt() {
+            if (!currentOrderForPrint) return;
+            const order = currentOrderForPrint;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            let y = 20;
+            const margin = 20;
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const contentWidth = pageWidth - (margin * 2);
+            
+            // Header
+            doc.setFontSize(24);
+            doc.setTextColor(37, 211, 102);
+            doc.text('🍕 LocalFirst YYC', pageWidth / 2, y, { align: 'center' });
+            y += 8;
+            doc.setFontSize(10);
+            doc.setTextColor(128, 128, 128);
+            doc.text('Support Local. Eat Amazing.', pageWidth / 2, y, { align: 'center' });
+            y += 12;
+            
+            // Order info
+            doc.setFontSize(14);
+            doc.setTextColor(0, 0, 0);
+            doc.text('Order #' + (order.order_number || order.id.slice(0,6)), margin, y);
+            y += 6;
+            doc.setFontSize(10);
+            doc.setTextColor(128, 128, 128);
+            doc.text(new Date(order.created_at).toLocaleString(), margin, y);
+            y += 12;
+            
+            // Customer info
+            doc.setFontSize(11);
+            doc.setTextColor(0, 0, 0);
+            doc.text('Customer: ' + (order.customer_name || 'N/A'), margin, y);
+            y += 6;
+            doc.text('Phone: ' + (order.customer_phone || 'N/A'), margin, y);
+            y += 6;
+            doc.text('Address: ' + (order.customer_address || 'N/A'), margin, y);
+            y += 10;
+            
+            // Line
+            doc.setDrawColor(200, 200, 200);
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 10;
+            
+            // Order items
+            doc.setFontSize(12);
+            doc.setTextColor(37, 211, 102);
+            doc.text('Order Items', margin, y);
+            y += 8;
+            
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            
+            // Parse order items if available
+            const items = order.items || order.order_items || [];
+            if (items.length > 0) {
+                items.forEach(item => {
+                    const itemName = item.name || item.menu_item_name || 'Item';
+                    const qty = item.quantity || 1;
+                    const price = item.price || item.unit_price || 0;
+                    doc.text(qty + 'x ' + itemName, margin, y);
+                    doc.text('$' + (price * qty).toFixed(2), pageWidth - margin, y, { align: 'right' });
+                    y += 6;
+                });
+            } else {
+                doc.text('Order details not available', margin, y);
+                y += 6;
+            }
+            
+            y += 4;
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 8;
+            
+            // Totals
+            doc.setFontSize(11);
+            doc.text('Subtotal:', margin, y);
+            doc.text('$' + ((order.subtotal || order.total || 0)).toFixed(2), pageWidth - margin, y, { align: 'right' });
+            y += 6;
+            
+            if (order.tip && order.tip > 0) {
+                doc.text('Tip:', margin, y);
+                doc.text('$' + order.tip.toFixed(2), pageWidth - margin, y, { align: 'right' });
+                y += 6;
+            }
+            
+            doc.setFontSize(14);
+            doc.setTextColor(37, 211, 102);
+            doc.text('Total:', margin, y);
+            doc.text('$' + (order.total || 0).toFixed(2), pageWidth - margin, y, { align: 'right' });
+            y += 6;
+            
+            // Payment method
+            doc.setFontSize(10);
+            doc.setTextColor(0, 0, 0);
+            const paymentMethod = order.payment_method === 'cash' ? '💵 Cash on Delivery' : '💳 Paid';
+            doc.text('Payment: ' + paymentMethod, margin, y);
+            y += 15;
+            
+            // Owner section
+            doc.setFillColor(245, 245, 245);
+            doc.roundedRect(margin, y, contentWidth, 35, 3, 3, 'F');
+            y += 8;
+            doc.setFontSize(11);
+            doc.setTextColor(37, 211, 102);
+            doc.text('👩‍🍳 Meet ' + ownerInfo.name, margin + 5, y);
+            y += 8;
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80);
+            const storyLines = doc.splitTextToSize('"' + ownerInfo.story + '"', contentWidth - 10);
+            doc.text(storyLines, margin + 5, y);
+            y += storyLines.length * 4 + 15;
+            
+            // Footer
+            doc.setFontSize(10);
+            doc.setTextColor(37, 211, 102);
+            doc.text('💚 Thank you for supporting local!', pageWidth / 2, y, { align: 'center' });
+            y += 6;
+            doc.setFontSize(8);
+            doc.setTextColor(128, 128, 128);
+            doc.text('LocalFirst YYC • (403) 826-5529 • localhubyyc@gmail.com', pageWidth / 2, y, { align: 'center' });
+            
+            // Save
+            doc.save('LocalFirst-Receipt-' + (order.order_number || order.id.slice(0,6)) + '.pdf');
+        }
+        
+        function printKitchenReceipt() {
+            if (!currentOrderForPrint) return;
+            const order = currentOrderForPrint;
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ format: [80, 150], unit: 'mm' });
+            
+            let y = 5;
+            const margin = 3;
+            const pageWidth = 80;
+            
+            // Header
+            doc.setFontSize(14);
+            doc.setTextColor(0, 0, 0);
+            doc.text('KITCHEN ORDER', pageWidth / 2, y, { align: 'center' });
+            y += 6;
+            
+            // Order number - BIG
+            doc.setFontSize(20);
+            doc.text('#' + (order.order_number || order.id.slice(0,6)), pageWidth / 2, y, { align: 'center' });
+            y += 8;
+            
+            // Time
+            doc.setFontSize(10);
+            doc.text(new Date(order.created_at).toLocaleTimeString(), pageWidth / 2, y, { align: 'center' });
+            y += 5;
+            
+            // Order type
+            const orderType = order.order_type === 'pickup' ? '🏃 PICKUP' : '🚗 DELIVERY';
+            doc.setFontSize(12);
+            doc.text(orderType, pageWidth / 2, y, { align: 'center' });
+            y += 6;
+            
+            // Line
+            doc.setDrawColor(0, 0, 0);
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 5;
+            
+            // Customer
+            doc.setFontSize(10);
+            doc.text('Customer: ' + (order.customer_name || 'N/A'), margin, y);
+            y += 4;
+            if (order.order_type !== 'pickup') {
+                doc.setFontSize(8);
+                const addrLines = doc.splitTextToSize(order.customer_address || '', pageWidth - (margin * 2));
+                doc.text(addrLines, margin, y);
+                y += addrLines.length * 3 + 2;
+            }
+            
+            // Line
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 5;
+            
+            // Items
+            doc.setFontSize(11);
+            const items = order.items || order.order_items || [];
+            if (items.length > 0) {
+                items.forEach(item => {
+                    const itemName = item.name || item.menu_item_name || 'Item';
+                    const qty = item.quantity || 1;
+                    doc.text(qty + 'x ' + itemName, margin, y);
+                    y += 5;
+                    if (item.special_instructions) {
+                        doc.setFontSize(8);
+                        doc.text('   → ' + item.special_instructions, margin, y);
+                        y += 4;
+                        doc.setFontSize(11);
+                    }
+                });
+            } else {
+                doc.text('See order details in system', margin, y);
+                y += 5;
+            }
+            
+            y += 3;
+            doc.line(margin, y, pageWidth - margin, y);
+            y += 5;
+            
+            // Payment warning for COD
+            if (order.payment_method === 'cash') {
+                doc.setFontSize(12);
+                doc.text('💵 CASH ON DELIVERY', pageWidth / 2, y, { align: 'center' });
+                y += 5;
+                doc.setFontSize(10);
+                doc.text('$' + (order.total || 0).toFixed(2) + ' DUE', pageWidth / 2, y, { align: 'center' });
+            } else {
+                doc.setFontSize(10);
+                doc.text('✅ PAID', pageWidth / 2, y, { align: 'center' });
+            }
+            
+            // Save
+            doc.save('Kitchen-' + (order.order_number || order.id.slice(0,6)) + '.pdf');
+        }
+        
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:var(--bg-card);border:1px solid var(--accent-green);color:var(--text-primary);padding:1rem 1.5rem;border-radius:10px;z-index:9999;animation:slideIn 0.3s ease;box-shadow:0 10px 30px rgba(0,0,0,0.3);';
+            toast.innerHTML = `<div style="display:flex;align-items:center;gap:0.5rem;">🔔 ${message}</div>`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+        }
+        
+        // Load notifications on page load
+        setTimeout(() => loadStoreNotifications(), 1000);
+        function formatTime(dateString) { if (!dateString) return ''; const date = new Date(dateString); const diff = new Date() - date; if (diff < 60000) return 'Just now'; if (diff < 3600000) return Math.floor(diff / 60000) + 'm ago'; if (diff < 86400000) return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }); return date.toLocaleDateString(); }
+    </script>
+</body>
+</html>
